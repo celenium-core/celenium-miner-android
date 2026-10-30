@@ -1,0 +1,36 @@
+name: cenium_miner
+description: "Cenium (CEN) mining control for desktop and Android."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  http: ^1.2.2
+  shared_preferences: ^2.3.2
+
+  # Wallet: secp256k1 for key derivation, bech32 for the CEN address format,
+  # secure storage so a private key never sits in plain SharedPreferences.
+  pointycastle: ^3.9.1
+  bech32: ^0.2.2
+  flutter_secure_storage: ^9.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: Sora
+      fonts:
+        - asset: assets/fonts/Sora.ttf
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope.ttf
