@@ -182,23 +182,34 @@ class _Actions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // Three capsules, send first and in gold: moving coins is the reason
+        // the screen exists, so it takes the primary slot.
         Row(
           children: [
             Expanded(
               child: _ActionButton(
+                label: 'Send',
+                icon: Icons.north_east,
+                primary: true,
+                onTap: () => _showSendUnavailable(context),
+              ),
+            ),
+            const SizedBox(width: Palette.sm),
+            Expanded(
+              child: _ActionButton(
                 label: 'Receive',
                 icon: Icons.south_west,
-                primary: true,
+                primary: false,
                 onTap: address == null ? null : () => _showReceiveSheet(context, address!),
               ),
             ),
-            const SizedBox(width: Palette.md),
+            const SizedBox(width: Palette.sm),
             Expanded(
               child: _ActionButton(
-                label: 'Send',
-                icon: Icons.north_east,
+                label: 'Swap',
+                icon: Icons.swap_horiz,
                 primary: false,
-                onTap: () => _showSendUnavailable(context),
+                onTap: () => _showSwapUnavailable(context),
               ),
             ),
           ],
@@ -212,6 +223,24 @@ class _Actions extends StatelessWidget {
       ],
     );
   }
+}
+
+void _showSwapUnavailable(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text('Swap is not available', style: TypeScale.headline(context)),
+      content: Text(
+        'Swapping CEN for another asset needs a market to swap against. CEN is not '
+        'listed on any exchange or decentralised venue yet, so there is nothing to '
+        'swap with.',
+        style: TypeScale.label(context),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+      ],
+    ),
+  );
 }
 
 class _ActionButton extends StatelessWidget {

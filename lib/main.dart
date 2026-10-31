@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,7 @@ import 'theme/app_theme.dart';
 import 'theme/palette.dart';
 import 'theme/typography.dart';
 import 'widgets/ad_banner.dart';
+import 'widgets/hacker_fx.dart';
 import 'widgets/brand_mark.dart';
 import 'widgets/cen_ui.dart';
 
@@ -52,9 +54,16 @@ class _Boot extends StatefulWidget {
 class _BootState extends State<_Boot> {
   MinerSnapshot? _snapshot;
 
+  /// Which tab to open once the splash clears. Read from the `--tab`
+  /// argument; defaults to the mining screen.
+  _Tab _initialTab = _Tab.mine;
+
   @override
   void initState() {
     super.initState();
+    final args = Platform.environment['CEN_TAB'] ?? '';
+    if (args == 'wallet') _initialTab = _Tab.wallet;
+    if (args == 'profile') _initialTab = _Tab.profile;
     _probe();
   }
 
@@ -73,7 +82,9 @@ class _BootState extends State<_Boot> {
       nodeVersion: _snapshot?.status?.celeniumdVersion,
       blockCount: _snapshot?.stats?.totalBlocks,
       onDone: () => Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const MinerHome()),
+        MaterialPageRoute<void>(
+          builder: (_) => MinerHome(initialTab: _initialTab),
+        ),
       ),
     );
   }
@@ -92,7 +103,11 @@ const _tabLabels = {
 enum _Route { bridge, workers, activity, backup, about }
 
 class MinerHome extends StatefulWidget {
-  const MinerHome({super.key});
+  const MinerHome({super.key, this.initialTab = _Tab.mine});
+
+  /// Which tab opens first. Set from the `--tab` argument so a screenshot run
+  /// can land directly on a screen instead of driving the bottom nav.
+  final _Tab initialTab;
 
   @override
   State<MinerHome> createState() => _MinerHomeState();
@@ -109,9 +124,8 @@ class _MinerHomeState extends State<MinerHome> {
   MinerSnapshot? _snapshot;
   bool _connected = false;
   bool _polling = false;
-  _Tab _tab = _Tab.mine;
+  late _Tab _tab = widget.initialTab;
   _Route? _route;
-
   String? _adUnitId;
   bool _adDismissed = false;
 
@@ -254,6 +268,13 @@ class _MinerHomeState extends State<MinerHome> {
             Padding(
               padding: EdgeInsets.only(bottom: showBanner ? AdBanner.footprint : 0),
               child: _buildTab(snapshot),
+            ),
+            // Faint CRT scanlines over the whole app: the console look with
+            // no motion, so it never competes with the readings.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: ScanlineOverlay(opacity: 0.035, spacing: 3),
+              ),
             ),
             // Floating overlay, not an inline row: it never pushes the
             // content, so the layout does not move when the ad loads or fails.

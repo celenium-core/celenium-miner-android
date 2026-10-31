@@ -2,3 +2,6 @@
 /.dart_tool/
 /.idea/
 *.iml
+
+# Native libs emitted by the Android release build into the project root.
+/lib/

@@ -6,6 +6,7 @@ import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/cen_ui.dart';
+import '../widgets/hacker_fx.dart';
 import '../widgets/mining_dial.dart';
 
 /// Mining console.
@@ -41,6 +42,10 @@ class MiningScreen extends StatelessWidget {
         _DialBlock(readout: readout, onTap: onOpenWorkers),
         const SizedBox(height: Palette.xl),
         _StatsStrip(readout: readout),
+        const SizedBox(height: Palette.lg),
+        // A hex stream that runs only while the bridge reports hashing: the
+        // motion is the app saying data is arriving right now.
+        HexTicker(active: readout.active),
         const SizedBox(height: Palette.lg),
         _LatestLine(readout: readout, onTap: onOpenActivity),
       ],
