@@ -1,4 +1,4 @@
-import 'package:cenium_miner/services/cen_wallet.dart';
+import 'package:celenium_miner/services/cen_wallet.dart';
 
 /// Recomputes the two hardcoded addresses in crypto/txscript/src/standard.rs
 /// after the prefix rename. The checksum depends on the prefix, so these

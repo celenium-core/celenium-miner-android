@@ -1,4 +1,4 @@
-import 'package:cenium_miner/services/cen_wallet.dart';
+import 'package:celenium_miner/services/cen_wallet.dart';
 
 /// Prints the address strings the Rust test vectors should expect after the
 /// prefix rename. The checksum depends on the prefix, so the expected values

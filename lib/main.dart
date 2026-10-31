@@ -112,6 +112,29 @@ class MinerHome extends StatefulWidget {
   State<MinerHome> createState() => _MinerHomeState();
 }
 
+/// What a back press should do, given the shell's current state.
+enum BackAction {
+  /// A settings screen is open: close it and stay in the app.
+  closeRoute,
+
+  /// Another tab is showing: return to the Mine tab.
+  goToMineTab,
+
+  /// Nothing left to unwind: the app may close.
+  exitApp,
+}
+
+/// Decides what the hardware back button does.
+///
+/// Unwinds one level at a time so a back press never throws away the session:
+/// an open settings screen closes first, then another tab returns to Mine,
+/// and only at the root does the app close.
+BackAction decideBackAction({required bool hasOpenRoute, required bool isOnMineTab}) {
+  if (hasOpenRoute) return BackAction.closeRoute;
+  if (!isOnMineTab) return BackAction.goToMineTab;
+  return BackAction.exitApp;
+}
+
 class _MinerHomeState extends State<MinerHome> {
   final SettingsStore _settings = SettingsStore();
   final List<LogEntry> _log = [];
@@ -252,17 +275,19 @@ class _MinerHomeState extends State<MinerHome> {
   /// The shell holds two levels: the three tabs, and the settings screens
   /// opened from Profile. Back unwinds one level at a time instead of closing
   /// the app, which is what a phone user expects from a back gesture.
+  ///
+  /// The decision itself lives in [decideBackAction] so it can be tested
+  /// without driving a real back gesture.
   void _handleBack() {
-    if (_route != null) {
-      _closeRoute();
-      return;
+    switch (decideBackAction(hasOpenRoute: _route != null, isOnMineTab: _tab == _Tab.mine)) {
+      case BackAction.closeRoute:
+        _closeRoute();
+      case BackAction.goToMineTab:
+        setState(() => _tab = _Tab.mine);
+      case BackAction.exitApp:
+        // Already at the root: let the system handle it, which closes the app.
+        SystemNavigator.pop();
     }
-    if (_tab != _Tab.mine) {
-      setState(() => _tab = _Tab.mine);
-      return;
-    }
-    // Already at the root: let the system handle it, which closes the app.
-    SystemNavigator.pop();
   }
 
   @override

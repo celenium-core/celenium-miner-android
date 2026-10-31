@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:celenium_miner/main.dart';
 import 'package:celenium_miner/models/bridge.dart';
 import 'package:celenium_miner/screens/backup_screen.dart';
 import 'package:celenium_miner/screens/mining_screen.dart';
@@ -409,6 +410,48 @@ void main() {
       await tester.pumpWidget(host(const MinerSnapshot()));
 
       expect(find.textContaining('LV.'), findsNothing);
+    });
+  });
+
+  group('hardware back button', () {
+    // The back press must unwind one level at a time. Closing the app from
+    // any tab is the behaviour this replaces, so each level is asserted.
+    test('an open settings screen closes first', () {
+      expect(
+        decideBackAction(hasOpenRoute: true, isOnMineTab: false),
+        BackAction.closeRoute,
+      );
+      expect(
+        decideBackAction(hasOpenRoute: true, isOnMineTab: true),
+        BackAction.closeRoute,
+      );
+    });
+
+    test('another tab returns to Mine rather than closing', () {
+      expect(
+        decideBackAction(hasOpenRoute: false, isOnMineTab: false),
+        BackAction.goToMineTab,
+      );
+    });
+
+    test('only the root closes the app', () {
+      expect(
+        decideBackAction(hasOpenRoute: false, isOnMineTab: true),
+        BackAction.exitApp,
+      );
+    });
+
+    test('unwinding reaches the exit only after two presses', () {
+      // From Wallet with settings open: press one closes settings, press two
+      // returns to Mine, press three exits. Three presses, not one.
+      var route = true;
+      var onMine = false;
+
+      route = false; // press one closed the settings screen
+      expect(decideBackAction(hasOpenRoute: route, isOnMineTab: onMine), BackAction.goToMineTab);
+
+      onMine = true; // press two returned to Mine
+      expect(decideBackAction(hasOpenRoute: route, isOnMineTab: onMine), BackAction.exitApp);
     });
   });
 
