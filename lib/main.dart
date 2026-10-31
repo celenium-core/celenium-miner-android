@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,57 +35,7 @@ class CeleniumMinerApp extends StatelessWidget {
       title: 'Celenium Miner',
       debugShowCheckedModeBanner: false,
       theme: buildCenTheme(),
-      home: const _Boot(),
-    );
-  }
-}
-
-/// Holds the splash until the first poll has had a chance to answer, so the
-/// boot readout can show real values instead of an empty block.
-class _Boot extends StatefulWidget {
-  const _Boot();
-
-  @override
-  State<_Boot> createState() => _BootState();
-}
-
-class _BootState extends State<_Boot> {
-  MinerSnapshot? _snapshot;
-
-  /// Which tab to open once the splash clears. Read from the `--tab`
-  /// argument; defaults to the mining screen.
-  _Tab _initialTab = _Tab.mine;
-
-  @override
-  void initState() {
-    super.initState();
-    final args = Platform.environment['CEN_TAB'] ?? '';
-    if (args == 'wallet') _initialTab = _Tab.wallet;
-    if (args == 'profile') _initialTab = _Tab.profile;
-    _probe();
-  }
-
-  Future<void> _probe() async {
-    final settings = SettingsStore();
-    final url = await settings.baseUrl();
-    final snapshot = await BridgeApi(baseUrl: url).fetchSnapshot();
-    if (!mounted) return;
-    setState(() => _snapshot = snapshot);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SplashScreen(
-      network: 'simnet',
-      nodeVersion: _snapshot?.status?.celeniumdVersion,
-      blockCount: _snapshot?.stats?.totalBlocks,
-      hashrateGhs: _snapshot?.stats?.internalCpu?.hashrateGhs,
-      workerCount: _snapshot?.stats?.workers.length,
-      onDone: () => Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => MinerHome(initialTab: _initialTab),
-        ),
-      ),
+      home: const MinerHome(),
     );
   }
 }
@@ -163,6 +112,14 @@ class _MinerHomeState extends State<MinerHome> {
   /// of reserving space for an ad that never arrived.
   Widget? _adWidget;
 
+  /// True until the entry button on the splash is pressed.
+  ///
+  /// The splash is the first thing the shell shows, and it stays until the
+  /// user asks to enter. It used to be a separate route that waited on a
+  /// bridge poll, but the splash no longer reports anything, so there is
+  /// nothing to wait for.
+  bool _booting = true;
+
   @override
   void initState() {
     super.initState();
@@ -173,6 +130,10 @@ class _MinerHomeState extends State<MinerHome> {
   void dispose() {
     _pollTimer?.cancel();
     super.dispose();
+  }
+
+  void _finishBoot() {
+    if (mounted) setState(() => _booting = false);
   }
 
   Future<void> _loadSettings() async {
@@ -294,6 +255,12 @@ class _MinerHomeState extends State<MinerHome> {
 
   @override
   Widget build(BuildContext context) {
+    // The splash owns the shell until the user asks to enter, so the tabs,
+    // the ad banner and the polling all stay dormant behind it.
+    if (_booting) {
+      return SplashScreen(onDone: _finishBoot);
+    }
+
     final route = _route;
     if (route != null) {
       return PopScope(

@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../services/mining_readout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/brand_mark.dart';
@@ -15,22 +14,9 @@ import '../widgets/hacker_fx.dart';
 /// bridge has answered, and stays blank when it has not, so the screen never
 /// claims a connection it does not have.
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({
-    super.key,
-    required this.onDone,
-    this.network,
-    this.nodeVersion,
-    this.blockCount,
-    this.hashrateGhs,
-    this.workerCount,
-  });
+  const SplashScreen({super.key, required this.onDone});
 
   final VoidCallback onDone;
-  final String? network;
-  final String? nodeVersion;
-  final int? blockCount;
-  final double? hashrateGhs;
-  final int? workerCount;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -82,13 +68,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             // until the raster actually reads on a dark field, where a
             // faint line would disappear entirely.
             Positioned.fill(child: ScanlineOverlay(opacity: 0.32, spacing: 2)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Palette.xl),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            // The button is pinned to the foot rather than sitting in the
+            // scroll, so it never drifts with the content and the emblem
+            // above it owns the whole remaining height.
+            Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Palette.xl),
                       child: Column(
                         children: [
                           const SizedBox(height: Palette.xxl),
@@ -102,43 +90,41 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           Text('C E L E N I U M   C O R E',
                               style: TypeScale.monoMuted(context, size: 9)),
                           const SizedBox(height: Palette.xl),
-                            // The rain runs for as long as the splash is up.
-                            // It used to stop once the readout began typing,
-                            // which left the screen plain for the whole time
-                            // the user spent deciding to swipe; the boot
-                            // texture is the point of this screen, and the
-                            // band sits clear of the readout so nothing is
-                            // obscured.
-                            const _BinaryRain(running: true),
-                            const SizedBox(height: Palette.xl),
-                            _Readout(
-                              network: widget.network,
-                              nodeVersion: widget.nodeVersion,
-                              blockCount: widget.blockCount,
-                              hashrateGhs: widget.hashrateGhs,
-                              workerCount: widget.workerCount,
-                            ),
-                            const SizedBox(height: Palette.xxl),
-                            _Emblem(progress: _controller),
-                            const SizedBox(height: Palette.md),
-                            // The ticker glitches on a slow loop rather than
-                            // once: the splash is up for as long as the user
-                            // takes to swipe, so a single glitch would be over
-                            // before most people looked.
-                            const _TickerGlitch(text: 'C . E . N'),
-                            const SizedBox(height: Palette.xl),
-                            _EnterButton(onTap: widget.onDone, fade: _entry),
-                            const SizedBox(height: Palette.lg),
-                          ],
-                        ),
+                          // The rain runs for as long as the splash is up.
+                          // It used to stop once the readout began typing,
+                          // which left the screen plain for the whole time
+                          // the user spent on this screen; the boot texture
+                          // is the point of the splash, and the band sits
+                          // clear of everything below it.
+                          const _BinaryRain(running: true),
+                          // The emblem follows the rain directly. The bridge
+                          // readout that used to sit between them is gone:
+                          // it reported a network label and nothing else
+                          // useful before the bridge answers, which is
+                          // exactly when this screen is on screen.
+                          const SizedBox(height: Palette.xxl),
+                          _Emblem(progress: _controller),
+                          const SizedBox(height: Palette.md),
+                          // The ticker glitches on a slow loop rather than
+                          // once: the splash is up for as long as the user
+                          // takes to enter, so a single glitch would be over
+                          // before most people looked.
+                          const _TickerGlitch(text: 'C . E . N'),
+                          const SizedBox(height: Palette.xxl),
+                        ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Palette.xl, 0, Palette.xl, Palette.lg),
+                  child: _EnterButton(onTap: widget.onDone, fade: _entry),
+                ),
+              ],
+            ),
+          ],
         ),
+      ),
     );
   }
 }
@@ -287,121 +273,6 @@ class _BinaryRain extends StatelessWidget {
 ///
 /// The values type themselves out, so the splash reads as a machine reporting
 /// what it found rather than as a static label.
-class _Readout extends StatelessWidget {
-  const _Readout({
-    this.network,
-    this.nodeVersion,
-    this.blockCount,
-    this.hashrateGhs,
-    this.workerCount,
-  });
-
-  final String? network;
-  final String? nodeVersion;
-  final int? blockCount;
-  final double? hashrateGhs;
-  final int? workerCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = <(String, String)>[];
-
-    if (network != null) entries.add(('NETWORK', network!));
-    if (nodeVersion != null) entries.add(('NODE', nodeVersion!));
-    if (blockCount != null) entries.add(('BLOCK', '#$blockCount'));
-    if (hashrateGhs != null) entries.add(('HASHRATE', formatHashrate(hashrateGhs!)));
-    if (workerCount != null && workerCount! > 0) entries.add(('WORKERS', '$workerCount'));
-
-    if (entries.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(Palette.lg),
-      decoration: BoxDecoration(
-        color: Palette.surface,
-        borderRadius: BorderRadius.circular(Palette.rowRadius),
-        border: Border.all(color: Palette.greenDim.withValues(alpha: 0.18)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var i = 0; i < entries.length; i++) ...[
-            if (i > 0) const SizedBox(height: Palette.sm),
-            _ReadoutRow(
-              entries[i].$1,
-              entries[i].$2,
-              // The first line waits 1500ms so the binary rain is on screen
-              // long enough to be seen before the boot readout starts typing
-              // and stops it. Later lines stagger behind so they arrive one
-              // after another.
-              delay: Duration(milliseconds: 1500 + 260 * i),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ReadoutRow extends StatefulWidget {
-  const _ReadoutRow(this.label, this.value, {this.delay = Duration.zero});
-
-  final String label;
-  final String value;
-
-  /// How long to wait before this line starts typing. The first line waits
-  /// long enough for the binary rain to be seen before the screen settles.
-  final Duration delay;
-
-  @override
-  State<_ReadoutRow> createState() => _ReadoutRowState();
-}
-
-class _ReadoutRowState extends State<_ReadoutRow> {
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _arm();
-  }
-
-  Future<void> _arm() async {
-    await Future<void>.delayed(widget.delay);
-    if (!mounted) return;
-    setState(() => _ready = true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final valueStyle = TypeScale.mono(context, size: 11).copyWith(color: Palette.greenDim);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 64,
-          child: Text(
-            widget.label,
-            style: TypeScale.monoMuted(context, size: 9).copyWith(letterSpacing: 1.4),
-          ),
-        ),
-        Expanded(
-          child: _ready
-              ? TypewriterText(
-                  text: widget.value,
-                  style: valueStyle,
-                  duration: const Duration(milliseconds: 420),
-                )
-              : const SizedBox(height: 15),
-        ),
-      ],
-    );
-  }
-}
-
 /// Cream disc with the navy flower inside, and a gold arc that sweeps once.
 class _Emblem extends StatelessWidget {
   const _Emblem({required this.progress});
