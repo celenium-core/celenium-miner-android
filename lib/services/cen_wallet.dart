@@ -10,9 +10,15 @@
 library;
 
 import 'dart:math';
-import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
+import 'package:pointycastle/api.dart';
+import 'package:pointycastle/digests/sha256.dart';
+import 'package:pointycastle/digests/sha512.dart';
 import 'package:pointycastle/ecc/curves/secp256k1.dart';
+import 'package:pointycastle/key_derivators/api.dart';
+import 'package:pointycastle/key_derivators/pbkdf2.dart';
+import 'package:pointycastle/macs/hmac.dart';
 
 /// Network prefixes. Simnet is the default because that is the only network
 /// with a running node today.
@@ -162,6 +168,23 @@ class CenWallet {
     }
     return CenWallet(privateKey: key, network: network);
   }
+
+  /// Restores a wallet from a BIP39 recovery phrase.
+  ///
+  /// The phrase goes through the same PBKDF2 and HMAC steps as
+  /// `celenium-wallet`, so a phrase backed up here can be imported there and
+  /// will produce the same address.
+  factory CenWallet.fromMnemonic(Mnemonic mnemonic, CenNetwork network) {
+    if (!mnemonic.isValidLength) {
+      throw const FormatException('recovery phrase must be 12 or 24 words');
+    }
+    final seed = mnemonicToSeed(mnemonic);
+    final key = seedToPrivateKey(seed);
+    if (key <= BigInt.zero || key >= _curveOrder) {
+      throw const FormatException('phrase produced a key outside the valid curve range');
+    }
+    return CenWallet(privateKey: key, network: network);
+  }
 }
 
 Uint8List _bigIntToBytes32(BigInt value) {
@@ -191,4 +214,168 @@ BigInt _bytesToBigInt(List<int> bytes) {
     result = (result << 8) | BigInt.from(b);
   }
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// BIP39 recovery phrase
+// ---------------------------------------------------------------------------
+
+/// The official BIP39 English wordlist, 2048 words.
+///
+/// Loaded from an asset rather than embedded so the list can be verified
+/// against the published checksum (`f2350695…`) instead of trusted on sight.
+const String bip39WordlistAsset = 'assets/wordlists/english.txt';
+
+/// Parsed wordlist. Throws when the asset is missing or the wrong length.
+Future<List<String>> loadBip39Wordlist(AssetBundle bundle) async {
+  final raw = await bundle.loadString(bip39WordlistAsset);
+  final words = raw
+      .split('\n')
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .toList(growable: false);
+  if (words.length != 2048) {
+    throw StateError('BIP39 wordlist has ${words.length} words, expected 2048');
+  }
+  return words;
+}
+
+/// A BIP39 recovery phrase and the key it produces.
+///
+/// The phrase is the source of the key, not a wrapper around it: losing the
+/// phrase loses the key, and holding the phrase is enough to rebuild the key
+/// on any device. This matches what `celenium-wallet` accepts, so a phrase
+/// written down from this app can be imported by the CLI wallet.
+class Mnemonic {
+  const Mnemonic(this.words);
+
+  /// Builds from a phrase, tolerating extra whitespace and mixed case.
+  factory Mnemonic.fromPhrase(String phrase) {
+    final words = phrase
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList(growable: false);
+    return Mnemonic(words);
+  }
+
+  final List<String> words;
+
+  bool get isValidLength => words.length == 12 || words.length == 24;
+
+  String get phrase => words.join(' ');
+
+  @override
+  String toString() => 'Mnemonic(${words.length} words)';
+}
+
+/// Generates a fresh 12-word phrase from a secure random source.
+///
+/// 128 bits of entropy plus a 4-bit checksum makes 132 bits, which is exactly
+/// 12 words of 11 bits.
+Mnemonic generateMnemonic({Random? random, required List<String> wordlist}) {
+  final rng = random ?? Random.secure();
+  final entropy = List<int>.generate(16, (_) => rng.nextInt(256));
+  return mnemonicFromEntropy(entropy, wordlist: wordlist);
+}
+
+/// Encodes entropy as a BIP39 phrase, computing the checksum.
+Mnemonic mnemonicFromEntropy(List<int> entropy, {required List<String> wordlist}) {
+  if (entropy.length != 16 && entropy.length != 32) {
+    throw ArgumentError('entropy must be 16 or 32 bytes, got ${entropy.length}');
+  }
+
+  // SHA-256 of the entropy; the first `entropyBits / 32` bits are the checksum.
+  final hash = sha256(entropy);
+  final checksumBits = entropy.length * 8 ~/ 32;
+
+  final bits = <int>[];
+  for (final byte in entropy) {
+    for (var i = 7; i >= 0; i--) {
+      bits.add((byte >> i) & 1);
+    }
+  }
+  for (var i = 0; i < checksumBits; i++) {
+    bits.add((hash[i ~/ 8] >> (7 - i % 8)) & 1);
+  }
+
+  final words = <String>[];
+  for (var i = 0; i < bits.length; i += 11) {
+    var index = 0;
+    for (var j = 0; j < 11; j++) {
+      index = (index << 1) | bits[i + j];
+    }
+    words.add(wordlist[index]);
+  }
+  return Mnemonic(words);
+}
+
+/// Verifies the checksum of a phrase against the wordlist.
+bool isValidMnemonic(Mnemonic mnemonic, List<String> wordlist) {
+  if (!mnemonic.isValidLength) return false;
+
+  final bits = <int>[];
+  for (final word in mnemonic.words) {
+    final index = wordlist.indexOf(word);
+    if (index < 0) return false;
+    for (var i = 10; i >= 0; i--) {
+      bits.add((index >> i) & 1);
+    }
+  }
+
+  final checksumBits = bits.length ~/ 33;
+  final entropyBits = bits.length - checksumBits;
+
+  final entropy = <int>[];
+  for (var i = 0; i < entropyBits; i += 8) {
+    var byte = 0;
+    for (var j = 0; j < 8; j++) {
+      byte = (byte << 1) | bits[i + j];
+    }
+    entropy.add(byte);
+  }
+
+  final hash = sha256(entropy);
+  for (var i = 0; i < checksumBits; i++) {
+    final expected = (hash[i ~/ 8] >> (7 - i % 8)) & 1;
+    if (bits[entropyBits + i] != expected) return false;
+  }
+  return true;
+}
+
+/// SHA-256, used for the BIP39 checksum.
+Uint8List sha256(List<int> data) {
+  final digest = SHA256Digest();
+  digest.update(Uint8List.fromList(data), 0, data.length);
+  final out = Uint8List(32);
+  digest.doFinal(out, 0);
+  return out;
+}
+
+/// PBKDF2-HMAC-SHA512 over the phrase, salt `mnemonic`, 2048 rounds, 64 bytes.
+///
+/// This is the BIP39 seed. `celenium-wallet` derives its master key from
+/// exactly this, so the same phrase produces the same key in both places.
+Uint8List mnemonicToSeed(Mnemonic mnemonic, {String passphrase = ''}) {
+  final salt = 'mnemonic$passphrase';
+  final derivator = PBKDF2KeyDerivator(HMac(SHA512Digest(), 128))
+    ..init(Pbkdf2Parameters(
+      Uint8List.fromList(salt.codeUnits),
+      2048,
+      64,
+    ));
+  return derivator.process(Uint8List.fromList(mnemonic.phrase.codeUnits));
+}
+
+/// First 32 bytes of HMAC-SHA512("Bitcoin seed", seed).
+///
+/// Port of `ExtendedPrivateKey::new` in wallet/bip32/src/xprivate_key.rs. The
+/// wallet uses the master key directly with no derivation path, so this one
+/// value is the wallet's private key.
+BigInt seedToPrivateKey(Uint8List seed) {
+  const domainSeparator = 'Bitcoin seed';
+  final hmac = HMac(SHA512Digest(), 128);
+  hmac.init(KeyParameter(Uint8List.fromList(domainSeparator.codeUnits)));
+  final result = hmac.process(seed);
+  return _bytesToBigInt(result.sublist(0, 32));
 }

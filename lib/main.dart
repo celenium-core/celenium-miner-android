@@ -1,18 +1,26 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'models/bridge.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/backup_screen.dart';
+import 'screens/bridge_screen.dart';
 import 'screens/log_screen.dart';
-import 'screens/node_screen.dart';
+import 'screens/mining_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/splash_screen.dart';
+import 'screens/wallet_screen.dart';
 import 'screens/workers_screen.dart';
 import 'services/bridge_api.dart';
+import 'services/cen_wallet.dart';
 import 'services/settings_store.dart';
-import 'theme/tokens.dart';
+import 'theme/app_theme.dart';
+import 'theme/palette.dart';
+import 'theme/typography.dart';
 import 'widgets/ad_banner.dart';
-import 'widgets/glass_panel.dart';
+import 'widgets/brand_mark.dart';
+import 'widgets/cen_ui.dart';
 
 void main() {
   runApp(const CeniumMinerApp());
@@ -26,34 +34,62 @@ class CeniumMinerApp extends StatelessWidget {
     return MaterialApp(
       title: 'Cenium Miner',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
-      home: const MinerHome(),
+      theme: buildCenTheme(),
+      home: const _Boot(),
     );
   }
 }
 
-enum _Destination { dashboard, workers, node, activity }
+/// Holds the splash until the first poll has had a chance to answer, so the
+/// boot readout can show real values instead of an empty block.
+class _Boot extends StatefulWidget {
+  const _Boot();
 
-const _labels = {
-  _Destination.dashboard: 'Mining',
-  _Destination.workers: 'Workers',
-  _Destination.node: 'Node',
-  _Destination.activity: 'Activity',
+  @override
+  State<_Boot> createState() => _BootState();
+}
+
+class _BootState extends State<_Boot> {
+  MinerSnapshot? _snapshot;
+
+  @override
+  void initState() {
+    super.initState();
+    _probe();
+  }
+
+  Future<void> _probe() async {
+    final settings = SettingsStore();
+    final url = await settings.baseUrl();
+    final snapshot = await BridgeApi(baseUrl: url).fetchSnapshot();
+    if (!mounted) return;
+    setState(() => _snapshot = snapshot);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SplashScreen(
+      network: 'simnet',
+      nodeVersion: _snapshot?.status?.celeniumdVersion,
+      blockCount: _snapshot?.stats?.totalBlocks,
+      onDone: () => Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const MinerHome()),
+      ),
+    );
+  }
+}
+
+/// The three primary destinations.
+enum _Tab { mine, wallet, profile }
+
+const _tabLabels = {
+  _Tab.mine: 'Mine',
+  _Tab.wallet: 'Wallet',
+  _Tab.profile: 'Profile',
 };
 
-const _icons = {
-  _Destination.dashboard: Icons.bolt_outlined,
-  _Destination.workers: Icons.dns_outlined,
-  _Destination.node: Icons.settings_ethernet_outlined,
-  _Destination.activity: Icons.receipt_long_outlined,
-};
-
-const _selectedIcons = {
-  _Destination.dashboard: Icons.bolt,
-  _Destination.workers: Icons.dns,
-  _Destination.node: Icons.settings_ethernet,
-  _Destination.activity: Icons.receipt_long,
-};
+/// Secondary screens, reached from the profile settings list.
+enum _Route { bridge, workers, activity, backup, about }
 
 class MinerHome extends StatefulWidget {
   const MinerHome({super.key});
@@ -68,21 +104,25 @@ class _MinerHomeState extends State<MinerHome> {
 
   Timer? _pollTimer;
   BridgeApi? _api;
-  String _baseUrl = SettingsStore.defaultBaseUrl;
   int _intervalMs = SettingsStore.defaultIntervalMs;
 
   MinerSnapshot? _snapshot;
   bool _connected = false;
-  bool _firstLoad = true;
   bool _polling = false;
-  _Destination _destination = _Destination.dashboard;
+  _Tab _tab = _Tab.mine;
+  _Route? _route;
 
   String? _adUnitId;
   bool _adDismissed = false;
 
+  /// The BIP39 wordlist, loaded once at startup and handed to the recovery
+  /// screen. Loading it in the screen itself made every open re-read the
+  /// asset and left the widget untestable without a bundle.
+  List<String>? _wordlist;
+
   /// The ad itself, supplied by an ad network once it actually returns one.
-  /// Null until then - which is exactly why the banner stays invisible
-  /// instead of reserving space for an ad that never arrived.
+  /// Null until then, which is exactly why the banner stays invisible instead
+  /// of reserving space for an ad that never arrived.
   Widget? _adWidget;
 
   @override
@@ -102,13 +142,21 @@ class _MinerHomeState extends State<MinerHome> {
     final interval = await _settings.intervalMs();
     final adUnitId = await _settings.adUnitId();
     final adDismissed = await _settings.adDismissed();
+    List<String>? wordlist;
+    try {
+      wordlist = await loadBip39Wordlist(rootBundle);
+    } on Object {
+      // A missing wordlist only costs the recovery screen; mining must still
+      // work. The screen falls back to loading it itself.
+      wordlist = null;
+    }
     if (!mounted) return;
     setState(() {
-      _baseUrl = url;
       _intervalMs = interval;
       _api = BridgeApi(baseUrl: url);
       _adUnitId = adUnitId;
       _adDismissed = adDismissed;
+      _wordlist = wordlist;
     });
     await _poll();
     // Without this guard, disposing the screen while the first poll is still
@@ -121,32 +169,12 @@ class _MinerHomeState extends State<MinerHome> {
     );
   }
 
-  Future<void> _saveBaseUrl(String url) async {
-    await _settings.setBaseUrl(url);
-    if (!mounted) return;
-    setState(() {
-      _baseUrl = url;
-      _api = BridgeApi(baseUrl: url);
-      _firstLoad = true;
-      _snapshot = null;
-      _connected = false;
-      _log.clear();
-    });
-    await _poll();
-  }
-
   /// Closes the banner for good. The write is awaited before the state flips
   /// so a kill right after the tap cannot bring the banner back.
   Future<void> _dismissAd() async {
     await _settings.setAdDismissed(true);
     if (!mounted) return;
     setState(() => _adDismissed = true);
-  }
-
-  Future<void> _saveAdUnitId(String? value) async {
-    await _settings.setAdUnitId(value);
-    if (!mounted) return;
-    setState(() => _adUnitId = value?.trim());
   }
 
   AdSlotState get _adSlotState {
@@ -178,7 +206,6 @@ class _MinerHomeState extends State<MinerHome> {
       setState(() {
         _snapshot = snapshot;
         _connected = connected;
-        _firstLoad = false;
         _pushLog(diffSnapshots(
           previous: previous,
           current: snapshot,
@@ -191,7 +218,6 @@ class _MinerHomeState extends State<MinerHome> {
       if (!mounted) return;
       setState(() {
         _connected = false;
-        _firstLoad = false;
         _pushLog([LogEntry(time: _clock, message: 'Poll failed', isError: true)]);
       });
     } finally {
@@ -205,41 +231,29 @@ class _MinerHomeState extends State<MinerHome> {
     if (_log.length > 60) _log.removeRange(60, _log.length);
   }
 
+  void _open(_Route route) => setState(() => _route = route);
+  void _closeRoute() => setState(() => _route = null);
+
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 760;
+    final route = _route;
+    if (route != null) {
+      return _buildSubScreen(route);
+    }
 
     // Space is reserved only when a real ad is on screen. A configured but
     // empty slot is invisible and reserves nothing, so the banner appears
     // when an ad actually arrives.
     final showBanner = AdBanner.willShow(_adSlotState, _adWidget);
+    final snapshot = _snapshot ?? const MinerSnapshot();
 
     return Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
             Padding(
-              padding: EdgeInsets.only(
-                bottom: showBanner ? AdBanner.footprint : 0,
-              ),
-              child: Row(
-                children: [
-                  if (wide) _buildRail(),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _TopBar(
-                          connected: _connected,
-                          mining: _snapshot?.isMining ?? false,
-                          onRefresh: _poll,
-                          showTitle: !wide,
-                        ),
-                        Expanded(child: _buildBody()),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              padding: EdgeInsets.only(bottom: showBanner ? AdBanner.footprint : 0),
+              child: _buildTab(snapshot),
             ),
             // Floating overlay, not an inline row: it never pushes the
             // content, so the layout does not move when the ad loads or fails.
@@ -256,194 +270,251 @@ class _MinerHomeState extends State<MinerHome> {
           ],
         ),
       ),
-      bottomNavigationBar: wide ? null : _buildBottomBar(),
+      bottomNavigationBar: _BottomTabs(
+        current: _tab,
+        onSelect: (tab) => setState(() => _tab = tab),
+      ),
     );
   }
 
-  Widget _buildRail() {
+  Widget _buildTab(MinerSnapshot snapshot) {
+    switch (_tab) {
+      case _Tab.mine:
+        return MiningScreen(
+          snapshot: snapshot,
+          nodeAddress: snapshot.status?.celeniumdAddress,
+          onOpenWorkers: () => _open(_Route.workers),
+          onOpenActivity: () => _open(_Route.activity),
+          onConnectNode: () => _open(_Route.bridge),
+        );
+      case _Tab.wallet:
+        return WalletScreen(
+          snapshot: snapshot,
+          networkLabel: 'simnet',
+          onBackup: () => _open(_Route.backup),
+          onOpenActivity: () => _open(_Route.activity),
+        );
+      case _Tab.profile:
+        return ProfileScreen(
+          snapshot: snapshot,
+          networkLabel: 'simnet',
+          onOpenBridge: () => _open(_Route.bridge),
+          onOpenWorkers: () => _open(_Route.workers),
+          onOpenActivity: () => _open(_Route.activity),
+          onOpenBackup: () => _open(_Route.backup),
+          onOpenAbout: () => _open(_Route.about),
+        );
+    }
+  }
+
+  Widget _buildSubScreen(_Route route) {
+    final snapshot = _snapshot ?? const MinerSnapshot();
+    switch (route) {
+      case _Route.bridge:
+        return BridgeScreen(settings: _settings, snapshot: snapshot);
+      case _Route.workers:
+        return WorkersScreen(snapshot: snapshot);
+      case _Route.activity:
+        return LogScreen(entries: _log);
+      case _Route.backup:
+        return BackupScreen(
+          onDone: _closeRoute,
+          wordlist: _wordlist,
+        );
+      case _Route.about:
+        return const _AboutScreen();
+    }
+  }
+}
+
+/// Bottom navigation: three pill tabs, the active one carrying a gold disc
+/// with the brand mark.
+class _BottomTabs extends StatelessWidget {
+  const _BottomTabs({required this.current, required this.onSelect});
+
+  final _Tab current;
+  final ValueChanged<_Tab> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: 88,
       decoration: const BoxDecoration(
         color: Palette.surface,
-        border: Border(right: BorderSide(color: Palette.surfaceHigh)),
+        border: Border(top: BorderSide(color: Palette.surfaceHigh)),
       ),
       child: SafeArea(
-        child: NavigationRail(
-          backgroundColor: Palette.surface,
-          selectedIndex: _Destination.values.indexOf(_destination),
-          onDestinationSelected: (index) =>
-              setState(() => _destination = _Destination.values[index]),
-          indicatorColor: Palette.accent.withValues(alpha: 0.14),
-          selectedIconTheme: const IconThemeData(color: Palette.accent),
-          unselectedIconTheme: const IconThemeData(color: Palette.textSecondary),
-          labelType: NavigationRailLabelType.all,
-          destinations: [
-            for (final d in _Destination.values)
-              NavigationRailDestination(
-                icon: Icon(_icons[d]),
-                selectedIcon: Icon(_selectedIcons[d]),
-                label: Text(
-                  _labels[d]!,
-                  style: const TextStyle(fontSize: 11),
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: Palette.sm),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              for (final tab in _Tab.values)
+                _TabButton(
+                  tab: tab,
+                  label: _tabLabels[tab]!,
+                  selected: tab == current,
+                  onTap: () => onSelect(tab),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.tab,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _Tab tab;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? Palette.gold : Palette.slate;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Palette.pill),
+        child: Container(
+          // 44px minimum touch target (R-03).
+          constraints: const BoxConstraints(minWidth: 64, minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: selected ? Palette.gold : Colors.transparent,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: selected
+                      ? BrandMark(size: 18, petal: Palette.ink, core: Palette.gold)
+                      : Icon(_iconFor(tab), size: 19, color: color),
                 ),
               ),
-          ],
+              const SizedBox(height: 3),
+              Text(
+                label.toUpperCase(),
+                style: TypeScale.monoMuted(context, size: 8).copyWith(
+                  color: color,
+                  letterSpacing: 1.3,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBottomBar() {
-    return NavigationBar(
-      backgroundColor: Palette.surface,
-      indicatorColor: Palette.accent.withValues(alpha: 0.14),
-      selectedIndex: _Destination.values.indexOf(_destination),
-      onDestinationSelected: (index) =>
-          setState(() => _destination = _Destination.values[index]),
-      destinations: [
-        for (final d in _Destination.values)
-          NavigationDestination(
-            icon: Icon(_icons[d]),
-            selectedIcon: Icon(_selectedIcons[d]),
-            label: _labels[d]!,
-          ),
-      ],
-    );
-  }
-
-  Widget _buildBody() {
-    if (_firstLoad) {
-      return const _LoadingView();
-    }
-    switch (_destination) {
-      case _Destination.dashboard:
-        return DashboardScreen(
-          snapshot: _snapshot ?? const MinerSnapshot(),
-          connected: _connected,
-        );
-      case _Destination.workers:
-        return WorkersScreen(workers: _snapshot?.stats?.workers ?? const []);
-      case _Destination.node:
-        return NodeScreen(
-          baseUrl: _baseUrl,
-          onSave: _saveBaseUrl,
-          adUnitId: _adUnitId,
-          onSaveAdUnitId: _saveAdUnitId,
-        );
-      case _Destination.activity:
-        return LogScreen(entries: _log);
+  IconData _iconFor(_Tab tab) {
+    switch (tab) {
+      case _Tab.mine:
+        return Icons.bolt_outlined;
+      case _Tab.wallet:
+        return Icons.account_balance_wallet_outlined;
+      case _Tab.profile:
+        return Icons.person_outline;
     }
   }
 }
 
-/// The app bar. One of only two glass surfaces in the app: it floats above
-/// the field as chrome, not content.
-class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.connected,
-    required this.mining,
-    required this.onRefresh,
-    required this.showTitle,
-  });
-
-  final bool connected;
-  final bool mining;
-  final Future<void> Function() onRefresh;
-  final bool showTitle;
+class _AboutScreen extends StatelessWidget {
+  const _AboutScreen();
 
   @override
   Widget build(BuildContext context) {
-    return GlassPanel(
-      radius: 0,
-      padding: const EdgeInsets.symmetric(
-        horizontal: Space.lg,
-        vertical: Space.md,
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text('ABOUT'),
       ),
-      child: Row(
+      body: ListView(
+        padding: const EdgeInsets.all(Palette.lg),
         children: [
-          if (showTitle) ...[
-            Text('Cenium Miner', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(width: Space.md),
-          ],
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: mining
-                  ? Palette.accent
-                  : (connected ? Palette.textSecondary : Palette.danger),
-              shape: BoxShape.circle,
-              boxShadow: mining
-                  ? [
-                      BoxShadow(
-                        color: Palette.accent.withValues(alpha: 0.5),
-                        blurRadius: 8,
-                      )
-                    ]
-                  : null,
+          Center(
+            child: Column(
+              children: [
+                const SizedBox(height: Palette.lg),
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: const BoxDecoration(color: Palette.cream, shape: BoxShape.circle),
+                  child: Center(child: BrandMark(size: 50)),
+                ),
+                const SizedBox(height: Palette.lg),
+                Text('CELENIUM', style: TypeScale.wordmark(context)),
+                const SizedBox(height: Palette.xs),
+                Text(
+                  'C E N   C O R E',
+                  style: TypeScale.monoMuted(context, size: 9).copyWith(letterSpacing: 3),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: Space.sm),
-          Text(
-            mining ? 'Mining' : (connected ? 'Idle' : 'Offline'),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const Spacer(),
-          IconButton(
-            tooltip: 'Refresh now',
-            icon: const Icon(Icons.refresh, size: 20),
-            color: Palette.textSecondary,
-            onPressed: onRefresh,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LoadingView extends StatelessWidget {
-  const _LoadingView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Palette.accent,
+          const SizedBox(height: Palette.xxl),
+          const CenCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Eyebrow('What this app does'),
+                SizedBox(height: Palette.sm),
+                Text(
+                  'It reads mining results from a Celenium bridge and shows them on '
+                  'your phone. It holds no account, no database, and no coins: the '
+                  'results live on the blockchain and the bridge, and this app is a '
+                  'window onto them.',
+                  style: TextStyle(
+                    fontFamily: TypeScale.bodyFamily,
+                    fontSize: 13,
+                    color: Palette.slateLight,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: Space.lg),
-          Text('Contacting the bridge', style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: Space.xs),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Space.xxl),
-            child: Text(
-              'Reading /api/status and /api/stats from the address in Node '
-              'settings.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall,
+          const SizedBox(height: Palette.md),
+          const CenCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Eyebrow('Version'),
+                SizedBox(height: Palette.sm),
+                Text(
+                  '1.0.0',
+                  style: TextStyle(
+                    fontFamily: TypeScale.monoFamily,
+                    fontSize: 12,
+                    color: Palette.creamDim,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-}
-
-/// Formats a hash rate in H/s on a binary scale.
-String formatHashrateHps(int hps) {
-  const units = ['H/s', 'kH/s', 'MH/s', 'GH/s', 'TH/s', 'PH/s'];
-  var value = math.max(hps, 0).toDouble();
-  var unit = 0;
-  while (value >= 1000 && unit < units.length - 1) {
-    value /= 1000;
-    unit++;
-  }
-  return '${value.toStringAsFixed(2)} ${units[unit]}';
 }

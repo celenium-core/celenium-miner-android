@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../theme/tokens.dart';
+import '../theme/palette.dart';
+import '../theme/typography.dart';
 
 /// What an ad slot is currently doing.
 ///
@@ -39,10 +40,6 @@ enum AdSlotState {
 /// a slot that resizes mid-session pushes the navigation and the content
 /// under the user's thumb. The height is reserved up front so nothing moves
 /// (R-40).
-///
-/// Why a solid surface and not glass: the top bar already holds the app's one
-/// glass element. A second frosted surface would blow the R-10 dose cap and
-/// compete with it for the foreground.
 class AdBanner extends StatelessWidget {
   const AdBanner({
     required this.state,
@@ -67,7 +64,7 @@ class AdBanner extends StatelessWidget {
   /// Vertical space the banner occupies, margins included. The screen pads its
   /// content by exactly this much so the floating banner never covers the last
   /// row of a list (R-03).
-  static const double footprint = height + Space.sm;
+  static const double footprint = height + Palette.sm;
 
   /// True only when a real ad will actually be drawn.
   ///
@@ -85,62 +82,60 @@ class AdBanner extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final textTheme = Theme.of(context).textTheme;
-
     // Floating card, not an inline bar: it overlays the content instead of
     // pushing it, so the layout never moves when the ad loads or fails.
     return Padding(
       padding: const EdgeInsets.only(
-        left: Space.md,
-        right: Space.md,
-        bottom: Space.sm,
+        left: Palette.md,
+        right: Palette.md,
+        bottom: Palette.sm,
       ),
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: Palette.surface,
-          borderRadius: BorderRadius.circular(Radii.md),
-          border: Border.all(color: Palette.surfaceHigh),
+          color: Palette.surfaceHigh,
+          borderRadius: BorderRadius.circular(Palette.rowRadius),
+          border: Border.all(color: Palette.goldDim.withValues(alpha: 0.45)),
           // The only shadow in the app: it is what reads as "floating above
           // the content" rather than "a row that shifted in" (R-12).
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 2),
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 14,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
-        padding: const EdgeInsets.only(left: Space.lg, right: Space.xs),
+        padding: const EdgeInsets.only(left: Palette.lg, right: Palette.xs),
         child: Row(
-        children: [
-          // The "Ad" label is required by ad-network policy and keeps the slot
-          // honest about what it is (R-38).
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: Space.sm),
-            decoration: BoxDecoration(
-              border: Border.all(color: Palette.surfaceHigh),
-              borderRadius: BorderRadius.circular(Radii.sm),
+          children: [
+            // The "Ad" label keeps the slot honest about what it is, and ad
+            // networks require it (R-38).
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: Palette.sm, vertical: 3),
+              decoration: BoxDecoration(
+                border: Border.all(color: Palette.goldDim.withValues(alpha: 0.6)),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Ad',
+                style: TypeScale.monoMuted(context, size: 9).copyWith(letterSpacing: 1.0),
+              ),
             ),
-            child: Text(
-              'Ad',
-              style: textTheme.labelSmall?.copyWith(color: Palette.textSecondary),
+            const SizedBox(width: Palette.md),
+            // Reaching here means an ad is really loaded, so child is non-null.
+            Expanded(child: child!),
+            SizedBox(
+              // 44px minimum touch target with the icon centred inside it.
+              width: 44,
+              height: 44,
+              child: IconButton(
+                tooltip: 'Close ad',
+                icon: const Icon(Icons.close, size: 18),
+                color: Palette.slate,
+                onPressed: onDismiss,
+              ),
             ),
-          ),
-          const SizedBox(width: Space.md),
-          // Reaching here means an ad is really loaded, so child is non-null.
-          Expanded(child: child!),
-          SizedBox(
-            // 44px minimum touch target with the icon centred inside it.
-            width: 44,
-            height: 44,
-            child: IconButton(
-              tooltip: 'Close ad',
-              icon: const Icon(Icons.close, size: 18),
-              color: Palette.textSecondary,
-              onPressed: onDismiss,
-            ),
-          ),
           ],
         ),
       ),

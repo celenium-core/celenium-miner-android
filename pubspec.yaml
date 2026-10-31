@@ -34,3 +34,12 @@ flutter:
     - family: Manrope
       fonts:
         - asset: assets/fonts/Manrope.ttf
+    - family: Cinzel
+      fonts:
+        - asset: assets/fonts/Cinzel[wght].ttf
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono[wght].ttf
+
+  assets:
+    - assets/wordlists/english.txt

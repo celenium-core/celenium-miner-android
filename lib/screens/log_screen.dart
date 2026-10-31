@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/bridge.dart';
-import '../theme/tokens.dart';
+import '../theme/palette.dart';
+import '../theme/typography.dart';
+import '../widgets/cen_ui.dart';
 
 /// A log of what the app observed, newest first.
 ///
@@ -14,66 +16,58 @@ class LogScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(Space.lg),
-      children: [
-        Text('Activity', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: Space.xs),
-        Text(
-          'Observed while polling the bridge.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: Space.lg),
-        if (entries.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(Space.xl),
-            decoration: BoxDecoration(
-              color: Palette.surface,
-              borderRadius: BorderRadius.circular(Radii.md),
-              border: Border.all(color: Palette.surfaceHigh),
-            ),
-            child: Text(
-              'Nothing logged yet. Connection changes and newly accepted '
-              'blocks are recorded here.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          )
-        else
-          for (final entry in entries)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Space.md),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 76,
-                    child: Text(
-                      entry.time,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontFeatures: Type.tabular,
-                          ),
-                    ),
-                  ),
-                  Container(
-                    width: 6,
-                    height: 6,
-                    margin: const EdgeInsets.only(top: 6),
-                    decoration: BoxDecoration(
-                      color: entry.isError ? Palette.danger : Palette.accent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: Space.md),
-                  Expanded(
-                    child: Text(
-                      entry.message,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('ACTIVITY')),
+      body: entries.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.all(Palette.lg),
+              child: CenEmpty(
+                reason:
+                    'Nothing logged yet. Connection changes and newly accepted '
+                    'blocks are recorded here as they happen.',
               ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(Palette.lg),
+              itemCount: entries.length,
+              itemBuilder: (context, index) {
+                final entry = entries[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: Palette.md),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 66,
+                        child: Text(
+                          entry.time,
+                          style: TypeScale.monoMuted(context, size: 10),
+                        ),
+                      ),
+                      const SizedBox(width: Palette.sm),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        margin: const EdgeInsets.only(top: 5),
+                        decoration: BoxDecoration(
+                          color: entry.isError ? Palette.red : Palette.gold,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: Palette.md),
+                      Expanded(
+                        child: Text(
+                          entry.message,
+                          style: TypeScale.label(context).copyWith(
+                            color: entry.isError ? Palette.red : Palette.creamDim,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-      ],
     );
   }
 }

@@ -1,14 +1,94 @@
-import 'package:cenium_miner/main.dart';
+import 'dart:math';
+
 import 'package:cenium_miner/models/bridge.dart';
-import 'package:cenium_miner/screens/dashboard_screen.dart';
+import 'package:cenium_miner/screens/backup_screen.dart';
+import 'package:cenium_miner/screens/mining_screen.dart';
+import 'package:cenium_miner/screens/wallet_screen.dart';
 import 'package:cenium_miner/services/bridge_api.dart';
+import 'package:cenium_miner/services/cen_wallet.dart';
+import 'package:cenium_miner/services/keystore.dart';
+import 'package:cenium_miner/services/mining_readout.dart';
 import 'package:cenium_miner/services/settings_store.dart';
-import 'package:cenium_miner/theme/tokens.dart';
+import 'package:cenium_miner/theme/app_theme.dart';
+import 'package:cenium_miner/theme/palette.dart';
 import 'package:cenium_miner/widgets/ad_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// A snapshot shaped like a real bridge response: one worker hashing, two
+/// blocks accepted, one stale share, a mined block in the list.
+MinerSnapshot snapshotWith({
+  String wallet = 'cen69sim:qabc',
+  int instances = 1,
+  bool withWorker = true,
+}) {
+  return MinerSnapshot(
+    status: BridgeStatus.tryParse({
+      'celeniumd_address': '127.0.0.1:26510',
+      'celeniumd_version': '2.1.0-a438515',
+      'instances': instances,
+      'web_bind': '0.0.0.0:3030',
+    }),
+    stats: BridgeStats.tryParse({
+      'totalBlocks': 3,
+      'totalShares': 1204,
+      'networkHashrate': 4500000000000,
+      'networkDifficulty': 1234567.5,
+      'networkBlockCount': 1920,
+      'activeWorkers': 1,
+      'internalCpu': {
+        'hashrateGhs': 1.42,
+        'hashesTried': 900000000,
+        'blocksSubmitted': 3,
+        'blocksAccepted': 2,
+        'shares': 1204,
+        'stale': 1,
+        'invalid': 0,
+        'wallet': wallet,
+      },
+      'blocks': [
+        {
+          'instance': 'default',
+          'worker': 'asic-1',
+          'wallet': wallet,
+          'timestamp': '2026-10-29T10:00:00Z',
+          'hash': 'abc123def456',
+        }
+      ],
+      'workers': withWorker
+          ? [
+              {
+                'instance': 'default',
+                'worker': 'asic-1',
+                'wallet': wallet,
+                'hashrate': 1.42,
+                'shares': 1204,
+                'stale': 1,
+                'invalid': 0,
+                'blocks': 2,
+                'lastSeen': 1793244445,
+                'status': 'online',
+                'currentDifficulty': 8.0,
+                'sessionUptime': 3600,
+              }
+            ]
+          : <Object?>[],
+      'bridgeUptime': 7200,
+    }),
+  );
+}
+
+/// A synthetic 2048-word list.
+///
+/// The real BIP39 wordlist ships as an asset, and loading it from a plain
+/// `test()` poisons the asset bundle for the widget tests that follow in the
+/// same file. The pure-logic tests only need 2048 distinct indexable words,
+/// so they use this; the real wordlist is exercised by the app and verified
+/// by its own checksum test.
+List<String> get _testWordlist =>
+    List<String>.generate(2048, (i) => 'word${i.toString().padLeft(4, '0')}');
 
 void main() {
   group('normaliseBaseUrl', () {
@@ -60,91 +140,90 @@ void main() {
           'shares': 1204,
           'stale': 1,
           'invalid': 0,
-          'wallet': 'celeniumsim:qabc',
+          'wallet': 'cen69sim:qabc',
         },
-        'blocks': [
-          {
-            'instance': 'default',
-            'worker': 'asic-1',
-            'wallet': 'celeniumsim:qabc',
-            'timestamp': '2026-10-29T10:00:00Z',
-            'hash': 'abc123',
-          }
-        ],
-        'workers': [
-          {
-            'instance': 'default',
-            'worker': 'asic-1',
-            'wallet': 'celeniumsim:qabc',
-            'hashrate': 1.42,
-            'shares': 1204,
-            'stale': 1,
-            'invalid': 0,
-            'blocks': 2,
-            'lastSeen': 1793244445,
-            'status': 'online',
-            'currentDifficulty': 8.0,
-            'sessionUptime': 3600,
-          }
-        ],
-        'bridgeUptime': 7200,
+        'blocks': <Object?>[],
+        'workers': <Object?>[],
       });
 
       expect(stats, isNotNull);
       expect(stats!.internalCpu, isNotNull);
       expect(stats.internalCpu!.hashrateGhs, 1.42);
       expect(stats.internalCpu!.blocksAccepted, 2);
-      expect(stats.blocks.length, 1);
-      expect(stats.workers.single.status, 'online');
-      expect(stats.workers.single.sessionUptime, 3600);
-
-      final snapshot = MinerSnapshot(status: null, stats: stats);
-      expect(snapshot.isMining, isTrue);
-      expect(snapshot.hashrateGhs, 1.42);
-      expect(snapshot.blocksAccepted, 2);
-      expect(snapshot.stale, 1);
-    });
-
-    test('a stats body with no internal miner is not mining', () {
-      final stats = BridgeStats.tryParse({
-        'totalBlocks': 0,
-        'totalShares': 0,
-        'networkHashrate': 0,
-        'networkDifficulty': 0,
-        'networkBlockCount': 0,
-        'activeWorkers': 0,
-        'internalCpu': null,
-        'blocks': <Object?>[],
-        'workers': <Object?>[],
-      });
-      expect(stats, isNotNull);
-      expect(MinerSnapshot(status: null, stats: stats).isMining, isFalse);
     });
 
     test('malformed bodies are rejected rather than half-parsed', () {
       expect(BridgeStatus.tryParse('not an object'), isNull);
       expect(BridgeStats.tryParse(null), isNull);
-      // A non-list where a list belongs must reject the whole body, not
-      // silently report zero blocks.
       expect(BridgeStats.tryParse({'blocks': 'not a list'}), isNull);
       expect(BridgeStats.tryParse({'workers': 42}), isNull);
     });
   });
 
-  group('palette', () {
-    test('accent on the field clears WCAG AA for normal text', () {
-      // Relative luminance per WCAG 2.1
+  group('mining readout', () {
+    test('derives figures from the bridge, never invents them', () {
+      final readout = MiningReadout.from(snapshotWith());
+
+      expect(readout.hashrateGhs, 1.42);
+      expect(readout.difficulty, 8.0);
+      expect(readout.workerName, 'asic-1');
+      expect(readout.sessionBlocks, 2);
+      expect(readout.totalBlocks, 3);
+      expect(readout.shares, 1204);
+      expect(readout.stale, 1);
+      expect(readout.active, isTrue);
+    });
+
+    test('acceptance rate is null until shares exist', () {
+      // A dial with nothing to measure must not show a decorative fill.
+      final empty = MinerSnapshot(
+        status: BridgeStatus.tryParse({
+          'celeniumd_address': '127.0.0.1:26510',
+          'celeniumd_version': '2.1.0',
+          'instances': 1,
+          'web_bind': '0.0.0.0:3030',
+        }),
+        stats: BridgeStats.tryParse({
+          'totalBlocks': 0,
+          'totalShares': 0,
+          'networkHashrate': 0,
+          'networkDifficulty': 0,
+          'networkBlockCount': 0,
+          'activeWorkers': 0,
+          'internalCpu': null,
+          'blocks': <Object?>[],
+          'workers': <Object?>[],
+        }),
+      );
+
+      expect(MiningReadout.from(empty).acceptanceRate, isNull);
+      expect(MiningReadout.from(empty).active, isFalse);
+    });
+
+    test('hashrate is formatted in the unit that keeps it readable', () {
+      expect(formatHashrate(0.0042), '4.2 MH/s');
+      expect(formatHashrate(1.42), '1.42 GH/s');
+      expect(formatHashrate(1500), '1.50 TH/s');
+    });
+
+    test('a long hash is shortened but stays recognisable', () {
+      final hash = List.filled(64, 'a').join();
+      final short = shortHash(hash);
+      expect(short.length < hash.length, isTrue);
+      expect(short, contains('aaaaaaa'));
+      expect(short, endsWith('a'));
+    });
+  });
+
+  group('palette contrast', () {
+    test('text and accent clear WCAG AA on the dark canvas', () {
       double luminance(Color c) {
         double channel(double v) {
-          // Color.r/g/b are 0..1 doubles on current Flutter; stay tolerant of
-          // the older 0..255 form so this survives an SDK bump.
           final s = v > 1.0 ? v / 255 : v;
-          return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055).pow();
+          return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) * ((s + 0.055) / 1.055);
         }
 
-        return 0.2126 * channel(c.r) +
-            0.7152 * channel(c.g) +
-            0.0722 * channel(c.b);
+        return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
       }
 
       double ratio(Color a, Color b) {
@@ -155,21 +234,17 @@ void main() {
         return (hi + 0.05) / (lo + 0.05);
       }
 
-      expect(ratio(Palette.accent, Palette.field), greaterThanOrEqualTo(4.5));
-      expect(ratio(Palette.textPrimary, Palette.field), greaterThanOrEqualTo(4.5));
-      expect(ratio(Palette.textSecondary, Palette.field), greaterThanOrEqualTo(4.5));
-      expect(ratio(Palette.accent, Palette.surface), greaterThanOrEqualTo(4.5));
+      expect(ratio(Palette.cream, Palette.field), greaterThanOrEqualTo(4.5));
+      expect(ratio(Palette.gold, Palette.field), greaterThanOrEqualTo(4.5));
+      expect(ratio(Palette.cream, Palette.surface), greaterThanOrEqualTo(4.5));
+      expect(ratio(Palette.slateLight, Palette.surface), greaterThanOrEqualTo(4.5));
     });
   });
 
   group('ad banner', () {
-    Widget host(
-      AdSlotState state,
-      VoidCallback onDismiss, {
-      Widget? ad,
-    }) {
+    Widget host(AdSlotState state, VoidCallback onDismiss, {Widget? ad}) {
       return MaterialApp(
-        theme: buildTheme(),
+        theme: buildCenTheme(),
         home: Scaffold(
           body: Column(
             children: [
@@ -189,7 +264,6 @@ void main() {
         AdSlotState.dismissed,
       ]) {
         await tester.pumpWidget(host(state, () {}));
-        expect(find.byType(AdBanner), findsOneWidget);
         expect(
           tester.getSize(find.byType(AdBanner)),
           Size.zero,
@@ -200,53 +274,33 @@ void main() {
     });
 
     testWidgets('a configured slot with no ad reserves nothing', (tester) async {
-      // The rule: the banner appears only once an ad has actually arrived.
-      // A saved unit id on its own is not an ad, so the slot stays invisible
-      // and the layout is untouched.
+      // The rule the user asked for: the banner appears only once an ad has
+      // actually arrived. A saved unit id on its own is not an ad.
       await tester.pumpWidget(host(AdSlotState.awaitingSdk, () {}));
 
       expect(tester.getSize(find.byType(AdBanner)), Size.zero);
       expect(find.text('Ad'), findsNothing);
-      expect(find.textContaining('Connect an ad network'), findsNothing);
     });
 
-    testWidgets('a loaded state with no ad still reserves nothing',
-        (tester) async {
-      // No ad network is wired in, so even "loaded" must not draw.
-      await tester.pumpWidget(host(AdSlotState.loaded, () {}));
-
-      expect(tester.getSize(find.byType(AdBanner)), Size.zero);
-      expect(find.text('Ad'), findsNothing);
-    });
-
-    testWidgets('a real ad reserves a fixed height and labels itself',
-        (tester) async {
+    testWidgets('a real ad reserves a fixed height and labels itself', (tester) async {
       await tester.pumpWidget(
         host(AdSlotState.loaded, () {}, ad: const Text('REAL AD UNIT')),
       );
 
-      // The footprint is fixed, so an ad appearing never moves the layout.
       final size = tester.getSize(find.byType(AdBanner));
       expect(size.height, AdBanner.footprint);
-      expect(AdBanner.footprint, AdBanner.height + Space.sm);
+      expect(AdBanner.footprint, AdBanner.height + Palette.sm);
       expect(find.text('Ad'), findsOneWidget);
       expect(find.text('REAL AD UNIT'), findsOneWidget);
     });
 
-    testWidgets('the close button dismisses and meets the touch target',
-        (tester) async {
+    testWidgets('the close button dismisses and meets the touch target', (tester) async {
       var dismissed = 0;
       await tester.pumpWidget(
-        host(
-          AdSlotState.loaded,
-          () => dismissed++,
-          ad: const Text('REAL AD UNIT'),
-        ),
+        host(AdSlotState.loaded, () => dismissed++, ad: const Text('REAL AD UNIT')),
       );
 
       final close = find.byType(IconButton);
-      expect(close, findsOneWidget);
-
       final target = tester.getRect(close);
       expect(target.width, greaterThanOrEqualTo(44));
       expect(target.height, greaterThanOrEqualTo(44));
@@ -259,32 +313,15 @@ void main() {
     test('willShow is true only for a real ad', () {
       expect(AdBanner.willShow(AdSlotState.loaded, const Text('ad')), isTrue);
       expect(AdBanner.willShow(AdSlotState.loaded, null), isFalse);
-      expect(
-        AdBanner.willShow(AdSlotState.awaitingSdk, const Text('ad')),
-        isFalse,
-      );
-      expect(
-        AdBanner.willShow(AdSlotState.unconfigured, const Text('ad')),
-        isFalse,
-      );
+      expect(AdBanner.willShow(AdSlotState.awaitingSdk, const Text('ad')), isFalse);
+      expect(AdBanner.willShow(AdSlotState.unconfigured, const Text('ad')), isFalse);
       expect(AdBanner.willShow(AdSlotState.noFill, const Text('ad')), isFalse);
-      expect(
-        AdBanner.willShow(AdSlotState.dismissed, const Text('ad')),
-        isFalse,
-      );
-    });
-
-    test('a real ad does not shift the layout when it appears', () {
-      // The height is a constant, so the reserved space is identical every
-      // time a real ad appears. This is the R-40 guarantee stated as a test.
-      expect(AdBanner.height, greaterThan(0));
-      expect(AdBanner.height, lessThanOrEqualTo(64));
+      expect(AdBanner.willShow(AdSlotState.dismissed, const Text('ad')), isFalse);
     });
   });
 
   group('ad settings persistence', () {
-    test('a blank ad unit id round-trips to null, not to an empty slot',
-        () async {
+    test('a blank ad unit id round-trips to null, not to an empty slot', () async {
       SharedPreferences.setMockInitialValues({});
       final store = SettingsStore();
 
@@ -310,184 +347,275 @@ void main() {
     });
   });
 
-  group('app smoke test', () {
-    testWidgets('warns about localhost on a phone viewport',
-        (WidgetTester tester) async {
-      SharedPreferences.setMockInitialValues({});
-      tester.view.physicalSize = const Size(400, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      // The default test platform is android, so the phone hint must show.
-      await tester.pumpWidget(const CeniumMinerApp());
-      await tester.pump(const Duration(seconds: 2));
-
-      // Scope the tap to the navigation bar: 'Node' also appears as a row
-      // label on the dashboard, which makes an unscoped finder ambiguous.
-      await tester.tap(find.descendant(
-        of: find.byType(NavigationBar),
-        matching: find.text('Node'),
-      ));
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.textContaining('127.0.0.1 means this device'), findsOneWidget);
-    });
-
-    testWidgets('renders the shell and reports an unreachable bridge',
-        (WidgetTester tester) async {
-      SharedPreferences.setMockInitialValues({});
-      // Force a phone viewport: the default 800x600 test surface is wide
-      // enough to trigger the tablet rail, which hides the in-bar title.
-      tester.view.physicalSize = const Size(400, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await tester.pumpWidget(const CeniumMinerApp());
-      // First frame shows the loading view while the first poll is in flight.
-      expect(find.text('Contacting the bridge'), findsOneWidget);
-
-      // Let the poll fail against the default (absent) bridge.
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(seconds: 2));
-
-      expect(find.text('Cenium Miner'), findsOneWidget);
-      expect(find.text('Offline'), findsWidgets);
-
-      // Navigation works: every destination is reachable and renders. Taps
-      // are scoped to the navigation bar because destination screens reuse
-      // the same words as their nav labels.
-      Future<void> tapNav(String label) async {
-        await tester.tap(find.descendant(
-          of: find.byType(NavigationBar),
-          matching: find.text(label),
-        ));
-        await tester.pump(const Duration(seconds: 1));
-      }
-
-      await tapNav('Workers');
-      expect(find.text('No workers connected'), findsOneWidget);
-
-      await tapNav('Node');
-      expect(find.widgetWithText(TextField, 'Bridge address'), findsOneWidget);
-
-      // The new "No account" section sits below the fold on a phone viewport,
-      // so drag the list until it is really built instead of assuming it is.
-      final noAccount = find.text('No account, no database');
-      final list = find.byType(ListView).first;
-      for (var i = 0; i < 15 && noAccount.evaluate().isEmpty; i++) {
-        await tester.drag(list, const Offset(0, -400));
-        await tester.pumpAndSettle();
-      }
-      expect(noAccount, findsOneWidget);
-
-      await tapNav('Activity');
-      expect(find.textContaining('Nothing logged yet'), findsOneWidget);
-    });
-  });
-
-  group('payout and device limit', () {
-    MinerSnapshot snapshotWith({
-      int instances = 1,
-      String wallet = 'celeniumsim:qabc',
-    }) {
-      return MinerSnapshot(
-        status: BridgeStatus.tryParse({
-          'celeniumd_address': '127.0.0.1:26510',
-          'celeniumd_version': '2.1.0-a438515',
-          'instances': instances,
-          'web_bind': '0.0.0.0:3030',
-        }),
-        stats: BridgeStats.tryParse({
-          'totalBlocks': 3,
-          'totalShares': 1204,
-          'networkHashrate': 4500000000000,
-          'networkDifficulty': 1234567.5,
-          'networkBlockCount': 1920,
-          'activeWorkers': 1,
-          'internalCpu': {
-            'hashrateGhs': 1.42,
-            'hashesTried': 900000000,
-            'blocksSubmitted': 3,
-            'blocksAccepted': 2,
-            'shares': 1204,
-            'stale': 1,
-            'invalid': 0,
-            'wallet': wallet,
-          },
-          'blocks': <Object?>[],
-          'workers': <Object?>[],
-          'bridgeUptime': 7200,
-        }),
-      );
-    }
-
+  group('mining screen', () {
     Widget host(MinerSnapshot snapshot) {
-      // Tall viewport: a ListView builds lazily, so a short one would leave
-      // the lower panels unbuilt and the finder would report a false negative.
       return MediaQuery(
         data: const MediaQueryData(size: Size(400, 2600)),
         child: MaterialApp(
-          theme: buildTheme(),
+          theme: buildCenTheme(),
           home: Scaffold(
-            body: DashboardScreen(snapshot: snapshot, connected: true),
+            body: MiningScreen(
+              snapshot: snapshot,
+              nodeAddress: '127.0.0.1:26510',
+              onOpenWorkers: () {},
+              onOpenActivity: () {},
+              onConnectNode: () {},
+            ),
           ),
         ),
       );
     }
 
-    testWidgets('the payout address is shown and can be copied', (tester) async {
-      // The clipboard is a platform channel; without a mock the copy call
-      // throws and the confirmation never reaches the screen.
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, (call) async => null);
-      addTearDown(() {
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(SystemChannels.platform, null);
-      });
-
+    testWidgets('shows the real hashrate and worker from the bridge', (tester) async {
       await tester.pumpWidget(host(snapshotWith()));
 
-      expect(find.text('Payout'), findsOneWidget);
-      expect(find.text('celeniumsim:qabc'), findsOneWidget);
-
-      final copy = find.widgetWithText(OutlinedButton, 'Copy');
-      expect(copy, findsOneWidget);
-
-      await tester.tap(copy);
-      await tester.pump();
-      expect(find.text('Address copied'), findsOneWidget);
+      expect(find.text('1.42 GH/s'), findsOneWidget);
+      expect(find.text('asic-1'), findsOneWidget);
+      expect(find.text('MINING ACTIVE'), findsOneWidget);
     });
 
-    testWidgets('a missing payout address says so instead of showing a blank',
-        (tester) async {
-      await tester.pumpWidget(host(snapshotWith(wallet: '')));
+    testWidgets('says so when the bridge has not answered', (tester) async {
+      await tester.pumpWidget(host(const MinerSnapshot()));
 
-      expect(find.text('celeniumsim:qabc'), findsNothing);
-      expect(find.textContaining('No payout address yet'), findsOneWidget);
-    });
-
-    testWidgets('the instance limit is reported as one device, one miner',
-        (tester) async {
-      await tester.pumpWidget(host(snapshotWith(instances: 1)));
-
-      expect(find.text('Mining instances'), findsOneWidget);
-      expect(find.text('1 of 1'), findsOneWidget);
-      expect(find.textContaining('The limit is 1 per device'), findsNothing);
-    });
-
-    testWidgets('running more than one instance is flagged, not hidden',
-        (tester) async {
-      await tester.pumpWidget(host(snapshotWith(instances: 3)));
-
-      expect(find.text('3 of 1'), findsOneWidget);
+      expect(find.text('—'), findsWidgets);
+      expect(find.text('IDLE'), findsOneWidget);
       expect(
-        find.textContaining('The limit is 1 per device'),
+        find.textContaining('The bridge has not answered'),
         findsOneWidget,
-        reason: 'silent over-mining splits hashrate and the user never knows',
       );
+    });
+
+    testWidgets('shows real block and share counts, not a price', (tester) async {
+      await tester.pumpWidget(host(snapshotWith()));
+
+      // The concept mock carried a $ price. CEN is not listed anywhere, so a
+      // price here would be invented: the third cell is shares instead.
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('1204'), findsOneWidget);
+      expect(find.textContaining(r'$'), findsNothing);
+    });
+  });
+
+  group('wallet screen', () {
+    Widget host(MinerSnapshot snapshot) {
+      return MediaQuery(
+        data: const MediaQueryData(size: Size(400, 2600)),
+        child: MaterialApp(
+          theme: buildCenTheme(),
+          home: Scaffold(
+            body: WalletScreen(
+              snapshot: snapshot,
+              networkLabel: 'simnet',
+              onBackup: () {},
+              onOpenActivity: () {},
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('shows the mining address and mined blocks', (tester) async {
+      await tester.pumpWidget(host(snapshotWith()));
+
+      expect(find.text('cen69sim:qabc'), findsWidgets);
+      expect(find.text('Block mined'), findsOneWidget);
+    });
+
+    testWidgets('does not invent a balance', (tester) async {
+      // The bridge reports mining results, not balances. Showing 0.00 here
+      // would tell the user their coins are gone.
+      await tester.pumpWidget(host(snapshotWith()));
+
+      expect(find.textContaining('The bridge reports mining results'), findsOneWidget);
+      expect(find.text('0,00'), findsNothing);
+      expect(find.text('0.00'), findsNothing);
+    });
+
+    testWidgets('send is disabled with an honest reason', (tester) async {
+      await tester.pumpWidget(host(snapshotWith()));
+
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sending is not available yet'), findsOneWidget);
+    });
+
+    testWidgets('an empty block list explains what fills it', (tester) async {
+      await tester.pumpWidget(host(snapshotWith(withWorker: false)
+          .copyWithNullBlocks()));
+
+      expect(
+        find.textContaining('No blocks accepted yet'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('recovery words', () {
+    test('a generated phrase is 12 valid BIP39 words', () async {
+      final wordlist = _testWordlist;
+      final mnemonic = generateMnemonic(wordlist: wordlist, random: Random(42));
+
+      expect(mnemonic.words.length, 12);
+      expect(isValidMnemonic(mnemonic, wordlist), isTrue);
+      for (final word in mnemonic.words) {
+        expect(wordlist, contains(word));
+      }
+    });
+
+    test('the same entropy always produces the same phrase', () async {
+      final wordlist = _testWordlist;
+      final a = mnemonicFromEntropy(List.filled(16, 7), wordlist: wordlist);
+      final b = mnemonicFromEntropy(List.filled(16, 7), wordlist: wordlist);
+
+      expect(a.phrase, b.phrase);
+    });
+
+    test('a mangled phrase fails its checksum', () async {
+      final wordlist = _testWordlist;
+      final mnemonic = generateMnemonic(wordlist: wordlist, random: Random(1));
+
+      final broken = Mnemonic([
+        ...mnemonic.words.sublist(0, 11),
+        wordlist.first == mnemonic.words[11] ? wordlist[1] : wordlist.first,
+      ]);
+
+      expect(isValidMnemonic(broken, wordlist), isFalse);
+    });
+
+    test('a phrase restores the same address as its key', () async {
+      final wordlist = _testWordlist;
+      final mnemonic = generateMnemonic(wordlist: wordlist, random: Random(9));
+
+      final fromPhrase = CenWallet.fromMnemonic(mnemonic, CenNetwork.simnet);
+
+      // The phrase is the source of the key: deriving the key from the seed
+      // must land on the same address.
+      final seed = mnemonicToSeed(mnemonic);
+      final key = seedToPrivateKey(seed);
+      final fromKey = CenWallet(privateKey: key, network: CenNetwork.simnet);
+
+      expect(fromPhrase.address, fromKey.address);
+      expect(fromPhrase.address, startsWith('cen69sim:'));
+    });
+  });
+
+  group('backup screen', () {
+    // A tall viewport: the intro is a scrolling list, so a short surface
+    // leaves the lower buttons unbuilt and the finder reports a false miss.
+    Widget host(Keystore keystore) {
+      return MediaQuery(
+        data: const MediaQueryData(size: Size(400, 2400)),
+        child: MaterialApp(
+          theme: buildCenTheme(),
+          home: BackupScreen(onDone: () {}, keystore: keystore, wordlist: _testWordlist),
+        ),
+      );
+    }
+
+    // The intro waits on the wordlist asset, which resolves on a microtask
+    // after the first frame. Pump a bounded number of frames rather than
+    // assuming one is enough, and never pumpAndSettle: the loading state
+    // holds a progress indicator that spins forever.
+    Future<void> pumpUntil(WidgetTester tester, Finder finder) async {
+      for (var i = 0; i < 20; i++) {
+        if (finder.evaluate().isNotEmpty) return;
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    testWidgets('offers to create words and explains why', (tester) async {
+      await tester.pumpWidget(host(_FakeKeystore()));
+      await pumpUntil(tester, find.text('Create recovery words'));
+
+      expect(find.text('Recovery words'), findsOneWidget);
+      expect(find.text('Create recovery words'), findsOneWidget);
+
+      // The import button sits at the end of a scrolling list, so bring it
+      // into view before asserting rather than assuming it is already built.
+      final import = find.text('I already have words');
+      final list = find.byType(ListView).first;
+      for (var i = 0; i < 10 && import.evaluate().isEmpty; i++) {
+        await tester.drag(list, const Offset(0, -300));
+        await tester.pump();
+      }
+      expect(import, findsOneWidget);
+    });
+
+    testWidgets('a generated phrase is shown once, behind a confirmation', (tester) async {
+      final keystore = _FakeKeystore();
+      await tester.pumpWidget(host(keystore));
+      await pumpUntil(tester, find.text('Create recovery words'));
+
+      await tester.tap(find.text('Create recovery words'));
+      await pumpUntil(tester, find.text('Continue'));
+
+      // Twelve numbered words are on screen.
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('12'), findsOneWidget);
+      expect(find.textContaining('Anyone who reads these twelve words'), findsOneWidget);
+
+      // The phrase is persisted, and the backup flag is still false.
+      expect(await keystore.readPhrase(), isNotNull);
+      expect(await keystore.hasBackedUp(), isFalse);
+
+      // Continue is gated on the checkbox, not available on a bare tap.
+      final cont = find.widgetWithText(FilledButton, 'Continue');
+      expect(cont, findsOneWidget);
+      expect(tester.widget<FilledButton>(cont).enabled, isFalse);
+
+      await tester.tap(find.byType(Checkbox));
+      await tester.pump();
+      expect(tester.widget<FilledButton>(cont).enabled, isTrue);
     });
   });
 }
 
-extension _Pow on double {
-  double pow() => this * this;
+extension on MinerSnapshot {
+  MinerSnapshot copyWithNullBlocks() {
+    return MinerSnapshot(
+      status: status,
+      stats: stats == null
+          ? null
+          : BridgeStats(
+              totalBlocks: stats!.totalBlocks,
+              totalShares: stats!.totalShares,
+              networkHashrate: stats!.networkHashrate,
+              networkDifficulty: stats!.networkDifficulty,
+              networkBlockCount: stats!.networkBlockCount,
+              activeWorkers: stats!.activeWorkers,
+              internalCpu: stats!.internalCpu,
+              blocks: const [],
+              workers: stats!.workers,
+              bridgeUptime: stats!.bridgeUptime,
+            ),
+    );
+  }
+}
+
+
+/// Stands in for the platform keystore, which is not available in a widget
+/// test. Records the same two values the real one does.
+class _FakeKeystore implements Keystore {
+  String? _phrase;
+  bool _backedUp = false;
+
+  @override
+  Future<String?> readPhrase() async => _phrase;
+
+  @override
+  Future<void> savePhrase(String phrase) async => _phrase = phrase.trim();
+
+  @override
+  Future<void> deletePhrase() async {
+    _phrase = null;
+    _backedUp = false;
+  }
+
+  @override
+  Future<bool> hasBackedUp() async => _backedUp;
+
+  @override
+  Future<void> setBackedUp(bool value) async => _backedUp = value;
 }

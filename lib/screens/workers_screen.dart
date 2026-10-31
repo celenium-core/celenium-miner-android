@@ -1,54 +1,43 @@
 import 'package:flutter/material.dart';
 
 import '../models/bridge.dart';
-import '../theme/tokens.dart';
+import '../services/mining_readout.dart';
+import '../theme/palette.dart';
+import '../theme/typography.dart';
+import '../widgets/cen_ui.dart';
 
-/// Connected workers, straight from the bridge.
+/// Worker list.
 ///
-/// Every row is real data. When nothing is connected the screen says why it
-/// is empty and what fills it, rather than showing filler rows.
+/// One card per worker. The fields shown are the ones that decide whether a
+/// worker is healthy: hashrate, shares, and the two rejection counters. A
+/// worker with rising stale or invalid counts is the one to look at, so those
+/// are never hidden.
 class WorkersScreen extends StatelessWidget {
-  const WorkersScreen({required this.workers, super.key});
+  const WorkersScreen({super.key, required this.snapshot});
 
-  final List<WorkerInfo> workers;
+  final MinerSnapshot snapshot;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(Space.lg),
-      children: [
-        Text('Workers', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: Space.xs),
-        Text(
-          'Stratum workers currently connected to the bridge.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: Space.lg),
-        if (workers.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(Space.xl),
-            decoration: BoxDecoration(
-              color: Palette.surface,
-              borderRadius: BorderRadius.circular(Radii.md),
-              border: Border.all(color: Palette.surfaceHigh),
+    final workers = snapshot.stats?.workers ?? const [];
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('WORKERS')),
+      body: workers.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.all(Palette.lg),
+              child: CenEmpty(
+                reason:
+                    'No workers reported. Point a miner at the bridge stratum port '
+                    'with your CEN address as the worker name and they appear here.',
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(Palette.lg),
+              itemCount: workers.length,
+              separatorBuilder: (_, _) => const SizedBox(height: Palette.md),
+              itemBuilder: (context, index) => _WorkerCard(worker: workers[index]),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('No workers connected', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: Space.sm),
-                Text(
-                  'Point a miner at the bridge stratum port with your Celenium '
-                  'address as the worker name. Connected workers show up here '
-                  'with their hashrate and share counts.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          )
-        else
-          for (final worker in workers) _WorkerCard(worker: worker),
-      ],
     );
   }
 }
@@ -60,122 +49,93 @@ class _WorkerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final online = worker.status == 'online';
-    return Container(
-      margin: const EdgeInsets.only(bottom: Space.md),
-      padding: const EdgeInsets.all(Space.lg),
-      decoration: BoxDecoration(
-        color: Palette.surface,
-        borderRadius: BorderRadius.circular(Radii.md),
-        border: Border.all(
-          color: online ? Palette.accentDim : Palette.surfaceHigh,
-        ),
-      ),
+    final active = worker.status?.toLowerCase().contains('active') ?? worker.hashrate > 0;
+
+    return CenCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 8,
-                height: 8,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
-                  color: online ? Palette.accent : Palette.textSecondary,
-                  shape: BoxShape.circle,
+                  color: Palette.surfaceHigh,
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const Icon(Icons.memory_outlined, size: 17, color: Palette.goldLight),
               ),
-              const SizedBox(width: Space.sm),
+              const SizedBox(width: Palette.md),
               Expanded(
-                child: Text(
-                  worker.worker.isEmpty ? worker.instance : worker.worker,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              Text(
-                _hashrate(worker.hashrate),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontFeatures: Type.tabular,
-                      color: online ? Palette.accent : Palette.textPrimary,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      worker.worker.isEmpty ? worker.instance : worker.worker,
+                      style: TypeScale.title(context),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      worker.instance,
+                      style: TypeScale.monoMuted(context, size: 10),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              LiveStatus(label: active ? 'ACTIVE' : 'IDLE', active: active, tint: Palette.greenDim),
             ],
           ),
-          const SizedBox(height: Space.sm),
-          Wrap(
-            spacing: Space.xl,
-            runSpacing: Space.sm,
+          const SizedBox(height: Palette.lg),
+          Row(
             children: [
-              _Figure(label: 'shares', value: _compact(worker.shares)),
-              _Figure(label: 'blocks', value: worker.blocks.toString()),
-              if (worker.stale > 0)
-                _Figure(
-                  label: 'stale',
-                  value: worker.stale.toString(),
-                  color: Palette.warn,
+              Expanded(
+                child: StatCell(
+                  value: formatHashrate(worker.hashrate),
+                  color: Palette.goldLight,
+                  label: 'hash rate',
                 ),
-              if (worker.invalid > 0)
-                _Figure(
-                  label: 'invalid',
-                  value: worker.invalid.toString(),
-                  color: Palette.danger,
-                ),
-              if (worker.sessionUptime != null)
-                _Figure(
-                  label: 'session',
-                  value: _duration(worker.sessionUptime!),
-                ),
+              ),
+              const StatDivider(),
+              Expanded(child: StatCell(value: '${worker.shares}', label: 'shares')),
+              const StatDivider(),
+              Expanded(child: StatCell(value: '${worker.blocks}', label: 'blocks')),
             ],
           ),
-          if (worker.wallet.isNotEmpty) ...[
-            const SizedBox(height: Space.md),
-            SelectableText(
-              worker.wallet,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFeatures: Type.tabular,
+          if (worker.stale > 0 || worker.invalid > 0) ...[
+            const SizedBox(height: Palette.lg),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: Palette.sm),
+              decoration: BoxDecoration(
+                color: Palette.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(Palette.rowRadius),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_outlined, size: 15, color: Palette.red),
+                  const SizedBox(width: Palette.sm),
+                  Expanded(
+                    child: Text(
+                      '${worker.stale} stale · ${worker.invalid} invalid',
+                      style: TypeScale.caption(context).copyWith(color: Palette.red),
+                    ),
                   ),
+                ],
+              ),
+            ),
+          ],
+          if (worker.sessionUptime != null) ...[
+            const SizedBox(height: Palette.md),
+            Text(
+              'session ${_duration(worker.sessionUptime!)}',
+              style: TypeScale.monoMuted(context, size: 10),
             ),
           ],
         ],
       ),
     );
   }
-}
-
-class _Figure extends StatelessWidget {
-  const _Figure({required this.label, required this.value, this.color});
-
-  final String label;
-  final String value;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontFeatures: Type.tabular,
-                color: color ?? Palette.textPrimary,
-              ),
-        ),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    );
-  }
-}
-
-String _hashrate(double ghs) {
-  if (ghs <= 0) return '-';
-  if (ghs >= 1000) return '${(ghs / 1000).toStringAsFixed(2)} TH/s';
-  return '${ghs.toStringAsFixed(2)} GH/s';
-}
-
-String _compact(int value) {
-  if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
-  if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}k';
-  return value.toString();
 }
 
 String _duration(int seconds) {
