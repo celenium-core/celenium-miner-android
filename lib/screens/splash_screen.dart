@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../services/mining_readout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/brand_mark.dart';
@@ -20,12 +21,16 @@ class SplashScreen extends StatefulWidget {
     this.network,
     this.nodeVersion,
     this.blockCount,
+    this.hashrateGhs,
+    this.workerCount,
   });
 
   final VoidCallback onDone;
   final String? network;
   final String? nodeVersion;
   final int? blockCount;
+  final double? hashrateGhs;
+  final int? workerCount;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -36,10 +41,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     vsync: this,
     duration: const Duration(milliseconds: 1400),
   );
-
-  /// Set once the boot readout begins typing, which stops the binary rain so
-  /// the screen settles into something readable.
-  bool _readoutStarted = false;
 
   /// How far the swipe has travelled, in logical pixels. Reset when the
   /// gesture ends without reaching the threshold.
@@ -83,8 +84,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           },
           child: Stack(
             children: [
-              // Faint CRT scanlines over the whole splash.
-              Positioned.fill(child: ScanlineOverlay(opacity: 0.06, spacing: 3)),
+              // CRT scanlines over the whole splash. Stronger here than in
+              // the tabs: the boot screen is where the console identity is
+              // established, so the texture is allowed to be assertive. The
+              // spacing is tightened to two pixels and the opacity raised
+              // until the raster actually reads on a dark field, where a
+              // faint line would disappear entirely.
+              Positioned.fill(child: ScanlineOverlay(opacity: 0.32, spacing: 2)),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Palette.xl),
                 child: LayoutBuilder(
@@ -105,22 +111,32 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             Text('C E L E N I U M   C O R E',
                                 style: TypeScale.monoMuted(context, size: 9)),
                             const SizedBox(height: Palette.xl),
-                            _BinaryRain(running: !_readoutStarted),
+                            // The rain runs for as long as the splash is up.
+                            // It used to stop once the readout began typing,
+                            // which left the screen plain for the whole time
+                            // the user spent deciding to swipe; the boot
+                            // texture is the point of this screen, and the
+                            // band sits clear of the readout so nothing is
+                            // obscured.
+                            const _BinaryRain(running: true),
                             const SizedBox(height: Palette.xl),
                             _Readout(
                               network: widget.network,
                               nodeVersion: widget.nodeVersion,
                               blockCount: widget.blockCount,
-                              onStarted: _markReadoutStarted,
+                              hashrateGhs: widget.hashrateGhs,
+                              workerCount: widget.workerCount,
                             ),
                             const SizedBox(height: Palette.xxl),
                             _Emblem(progress: _controller),
                             const SizedBox(height: Palette.md),
-                            Text('C . E . N',
-                                style: TypeScale.eyebrow(context)
-                                    .copyWith(color: Palette.creamDim, letterSpacing: 5)),
+                            // The ticker glitches on a slow loop rather than
+                            // once: the splash is up for as long as the user
+                            // takes to swipe, so a single glitch would be over
+                            // before most people looked.
+                            const _TickerGlitch(text: 'C . E . N'),
                             const SizedBox(height: Palette.xl),
-                            _SwipeHint(progress: _dragX / _swipeThreshold),
+                            _SwipeDeck(progress: _dragX / _swipeThreshold),
                             const SizedBox(height: Palette.lg),
                           ],
                         ),
@@ -136,84 +152,282 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
   }
 
-  void _markReadoutStarted() {
-    if (mounted) setState(() => _readoutStarted = true);
-  }
 }
 
-/// The swipe affordance at the foot of the splash.
+/// The swipe deck at the foot of the splash.
 ///
-/// The chevrons slide and brighten as the drag approaches the threshold, so
-/// the gesture is discoverable and its progress is visible rather than a
-/// label that only says what to do.
-class _SwipeHint extends StatefulWidget {
-  const _SwipeHint({required this.progress});
+/// A capsule track holding a row of hex that decodes left to right as the drag
+/// advances, a gold fill behind it, and a handle that carries the drag. The
+/// label beneath splits into chromatic offsets once the threshold is reached,
+/// so the armed state is felt rather than only read.
+class _SwipeDeck extends StatefulWidget {
+  const _SwipeDeck({required this.progress});
 
   /// Drag distance divided by the threshold: 0 at rest, 1 at the point the
   /// app opens. Negative when swiping the other way.
   final double progress;
 
   @override
-  State<_SwipeHint> createState() => _SwipeHintState();
+  State<_SwipeDeck> createState() => _SwipeDeckState();
 }
 
-class _SwipeHintState extends State<_SwipeHint> with SingleTickerProviderStateMixin {
+class _SwipeDeckState extends State<_SwipeDeck> with SingleTickerProviderStateMixin {
+  /// Fast tick that re-rolls the undecoded characters, so the right half of the
+  /// track never holds still.
+  late final AnimationController _scramble = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 70),
+  )..repeat();
+
+  /// Slow breathing of the handle glow at rest.
   late final AnimationController _pulse = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1400),
+    duration: const Duration(milliseconds: 1500),
   )..repeat(reverse: true);
+
+  static const _hex = '0123456789ABCDEF';
+
+  /// The string the track decodes into. Reads as a key fragment, which is what
+  /// a swipe on a console would plausibly be checking.
+  static const _target = '0x4F2A9B1EC7D3';
+
+  final _rng = math.Random();
 
   @override
   void dispose() {
+    _scramble.dispose();
     _pulse.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final armed = widget.progress.abs() >= 1;
+    final magnitude = widget.progress.abs().clamp(0.0, 1.0);
+    final armed = magnitude >= 1;
 
-    return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, _) {
-        // At rest the chevrons breathe; once armed they hold at full
-        // brightness so the state change is unmistakable.
-        final glow = armed ? 1.0 : 0.35 + _pulse.value * 0.4;
+    return Semantics(
+      button: true,
+      label: 'Swipe to enter the mining console',
+      child: Column(
+        children: [
+          SizedBox(
+            height: 62,
+            child: AnimatedBuilder(
+              animation: Listenable.merge([_scramble, _pulse]),
+              builder: (context, _) {
+                // How many characters have decoded. Never all of them: a
+                // fully decoded track would stop moving and read as finished
+                // rather than as in progress.
+                final decoded = (magnitude * (_target.length - 2)).round();
 
-        return Semantics(
-          button: true,
-          label: 'Swipe to enter the mining console',
-          child: Column(
-            children: [
-              Transform.translate(
-                offset: Offset(widget.progress * 18, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                return Stack(
+                  alignment: Alignment.centerLeft,
                   children: [
-                    for (var i = 0; i < 3; i++) ...[
-                      if (i > 0) const SizedBox(width: 6),
-                      Opacity(
-                        opacity: (glow - i * 0.18).clamp(0.15, 1.0),
-                        child: Icon(
-                          Icons.chevron_right,
-                          size: 26 - i * 3,
-                          color: armed ? Palette.gold : Palette.creamDim,
+                    // The track itself: glass, with a hairline edge.
+                    Container(
+                      height: 62,
+                      decoration: BoxDecoration(
+                        color: Palette.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(Palette.pill),
+                        border: Border.all(
+                          color: armed
+                              ? Palette.gold.withValues(alpha: 0.55)
+                              : Palette.white.withValues(alpha: 0.16),
                         ),
                       ),
-                    ],
+                    ),
+                    // Gold fill, clipped to the capsule so it never squares
+                    // off at the ends.
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(Palette.pill),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: magnitude.clamp(0.0, 1.0),
+                          child: Container(
+                            height: 62,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Palette.gold.withValues(alpha: 0.30),
+                                  Palette.gold.withValues(alpha: 0.10),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // The hex row. Decoded characters are bright and stable;
+                    // the rest re-roll every tick.
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Palette.lg),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          for (var i = 0; i < _target.length; i++)
+                            Text(
+                              i < decoded
+                                  ? _target[i]
+                                  : _hex[_rng.nextInt(_hex.length)],
+                              style: TypeScale.mono(context, size: 13).copyWith(
+                                color: i < decoded ? Palette.gold : Palette.creamDim.withValues(alpha: 0.35),
+                                fontWeight: i < decoded ? FontWeight.w700 : FontWeight.w400,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    // The handle, positioned by the drag.
+                    Transform.translate(
+                      offset: Offset(magnitude * 250, 0),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: armed ? Palette.gold : Palette.surfaceHigh,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: armed ? Palette.goldPale : Palette.white.withValues(alpha: 0.22),
+                            ),
+                            boxShadow: armed
+                                ? [BoxShadow(color: Palette.gold.withValues(alpha: 0.5), blurRadius: 18)]
+                                : [
+                                    BoxShadow(
+                                      color: Palette.white.withValues(alpha: 0.05 + _pulse.value * 0.06),
+                                      blurRadius: 12,
+                                    ),
+                                  ],
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.chevron_right,
+                              size: 24,
+                              color: armed ? Palette.ink : Palette.cream,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
-                ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: Palette.md),
+          _DeckLabel(armed: armed, pulse: _pulse),
+        ],
+      ),
+    );
+  }
+}
+
+/// The prompt under the deck. Once armed it splits into chromatic offsets, the
+/// same glitch the wordmark uses, so the state change is visible at a glance.
+class _DeckLabel extends StatelessWidget {
+  const _DeckLabel({required this.armed, required this.pulse});
+
+  final bool armed;
+  final Animation<double> pulse;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = armed ? 'LEPAS UNTUK MASUK' : 'GESER UNTUK MASUK';
+    final base = TypeScale.eyebrow(context).copyWith(
+      color: armed ? Palette.gold : Palette.creamDim,
+      letterSpacing: 2.6,
+      fontWeight: FontWeight.w700,
+    );
+
+    if (!armed) {
+      return AnimatedBuilder(
+        animation: pulse,
+        builder: (context, _) => Opacity(
+          opacity: 0.55 + pulse.value * 0.45,
+          child: Text(text, style: base),
+        ),
+      );
+    }
+
+    // Armed: two offset copies either side of the real text, in the CRT's
+    // red and cyan. The offsets are small enough to read as a glitch rather
+    // than as a blur.
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Transform.translate(
+          offset: const Offset(-1.6, 0),
+          child: Text(text, style: base.copyWith(color: Palette.redDeep)),
+        ),
+        Transform.translate(
+          offset: const Offset(1.6, 0),
+          child: Text(text, style: base.copyWith(color: Palette.greenDim)),
+        ),
+        Text(text, style: base),
+      ],
+    );
+  }
+}
+
+/// The ticker under the emblem, glitching on a slow loop.
+///
+/// Chromatic offsets plus a horizontal shear, applied in short bursts with long
+/// quiet stretches between. A continuous glitch would be unreadable; the
+/// spacing is what makes each burst read as a fault rather than as a style.
+class _TickerGlitch extends StatefulWidget {
+  const _TickerGlitch({required this.text});
+
+  final String text;
+
+  @override
+  State<_TickerGlitch> createState() => _TickerGlitchState();
+}
+
+class _TickerGlitchState extends State<_TickerGlitch> with SingleTickerProviderStateMixin {
+  late final AnimationController _clock = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 4),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = TypeScale.eyebrow(context).copyWith(
+      color: Palette.creamDim,
+      letterSpacing: 5,
+      fontWeight: FontWeight.w700,
+    );
+
+    return AnimatedBuilder(
+      animation: _clock,
+      builder: (context, _) {
+        final t = _clock.value;
+        // Two short bursts per cycle, each about a twentieth of the loop.
+        final inBurst = (t % 0.5) < 0.05;
+        final offset = inBurst ? 2.2 : 0.0;
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            if (inBurst) ...[
+              Transform.translate(
+                offset: Offset(-offset, 0),
+                child: Text(widget.text, style: base.copyWith(color: Palette.redDeep)),
               ),
-              const SizedBox(height: Palette.sm),
-              Text(
-                armed ? 'LEPAS UNTUK MASUK' : 'GESER UNTUK MASUK',
-                style: TypeScale.eyebrow(context).copyWith(
-                  color: armed ? Palette.gold : Palette.creamDim,
-                  letterSpacing: 2.4,
-                ),
+              Transform.translate(
+                offset: Offset(offset, 0),
+                child: Text(widget.text, style: base.copyWith(color: Palette.greenDim)),
               ),
             ],
-          ),
+            Text(widget.text, style: base),
+          ],
         );
       },
     );
@@ -221,10 +435,10 @@ class _SwipeHintState extends State<_SwipeHint> with SingleTickerProviderStateMi
 }
 
 /// Columns of binary. Decorative only: it marks the boot moment and carries no
-/// Falling binary, played while the splash is up.
+/// Falling binary, played for as long as the splash is up.
 ///
-/// The effect stops as soon as the boot readout starts typing, so the screen
-/// settles into something readable instead of raining for the whole session.
+/// The band sits clear of the readout below it, so the rain can run for the
+/// whole time the user spends on this screen without obscuring anything.
 class _BinaryRain extends StatelessWidget {
   const _BinaryRain({required this.running});
 
@@ -232,7 +446,9 @@ class _BinaryRain extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BinaryRain(running: running, height: 110, columns: 7);
+    // Denser and taller than the ambient rain in the tabs: the splash is the
+    // one screen whose whole job is to look like a terminal booting.
+    return BinaryRain(running: running, height: 150, columns: 11);
   }
 }
 
@@ -245,15 +461,15 @@ class _Readout extends StatelessWidget {
     this.network,
     this.nodeVersion,
     this.blockCount,
-    this.onStarted,
+    this.hashrateGhs,
+    this.workerCount,
   });
 
   final String? network;
   final String? nodeVersion;
   final int? blockCount;
-
-  /// Called once typing begins, which stops the binary rain.
-  final VoidCallback? onStarted;
+  final double? hashrateGhs;
+  final int? workerCount;
 
   @override
   Widget build(BuildContext context) {
@@ -262,6 +478,8 @@ class _Readout extends StatelessWidget {
     if (network != null) entries.add(('NETWORK', network!));
     if (nodeVersion != null) entries.add(('NODE', nodeVersion!));
     if (blockCount != null) entries.add(('BLOCK', '#$blockCount'));
+    if (hashrateGhs != null) entries.add(('HASHRATE', formatHashrate(hashrateGhs!)));
+    if (workerCount != null && workerCount! > 0) entries.add(('WORKERS', '$workerCount'));
 
     if (entries.isEmpty) {
       return const SizedBox.shrink();
@@ -273,6 +491,7 @@ class _Readout extends StatelessWidget {
       decoration: BoxDecoration(
         color: Palette.surface,
         borderRadius: BorderRadius.circular(Palette.rowRadius),
+        border: Border.all(color: Palette.greenDim.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,7 +506,6 @@ class _Readout extends StatelessWidget {
               // and stops it. Later lines stagger behind so they arrive one
               // after another.
               delay: Duration(milliseconds: 1500 + 260 * i),
-              onStarted: onStarted,
             ),
           ],
         ],
@@ -297,7 +515,7 @@ class _Readout extends StatelessWidget {
 }
 
 class _ReadoutRow extends StatefulWidget {
-  const _ReadoutRow(this.label, this.value, {this.delay = Duration.zero, this.onStarted});
+  const _ReadoutRow(this.label, this.value, {this.delay = Duration.zero});
 
   final String label;
   final String value;
@@ -305,7 +523,6 @@ class _ReadoutRow extends StatefulWidget {
   /// How long to wait before this line starts typing. The first line waits
   /// long enough for the binary rain to be seen before the screen settles.
   final Duration delay;
-  final VoidCallback? onStarted;
 
   @override
   State<_ReadoutRow> createState() => _ReadoutRowState();
@@ -346,7 +563,6 @@ class _ReadoutRowState extends State<_ReadoutRow> {
                   text: widget.value,
                   style: valueStyle,
                   duration: const Duration(milliseconds: 420),
-                  onDone: widget.onStarted,
                 )
               : const SizedBox(height: 15),
         ),

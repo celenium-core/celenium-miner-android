@@ -80,6 +80,8 @@ class _BootState extends State<_Boot> {
       network: 'simnet',
       nodeVersion: _snapshot?.status?.celeniumdVersion,
       blockCount: _snapshot?.stats?.totalBlocks,
+      hashrateGhs: _snapshot?.stats?.internalCpu?.hashrateGhs,
+      workerCount: _snapshot?.stats?.workers.length,
       onDone: () => Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => MinerHome(initialTab: _initialTab),
