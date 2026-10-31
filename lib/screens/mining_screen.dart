@@ -83,7 +83,7 @@ class _SummaryCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: const BoxDecoration(color: Palette.ink, shape: BoxShape.circle),
-                child: Center(child: BrandMark(size: 24, petal: Palette.gold, core: Palette.ink)),
+                child: Center(child: BrandMark(size: 24, onDark: true)),
               ),
               const SizedBox(width: Palette.md),
               Expanded(

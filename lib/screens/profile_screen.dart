@@ -168,7 +168,7 @@ class _IdentityCard extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: Palette.goldDim.withValues(alpha: 0.5)),
             ),
-            child: Center(child: BrandMark(size: 28, petal: Palette.gold, core: Palette.field)),
+            child: Center(child: BrandMark(size: 28, onDark: true)),
           ),
           const SizedBox(width: Palette.lg),
           Expanded(

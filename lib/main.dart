@@ -490,7 +490,7 @@ class _TabButton extends StatelessWidget {
                 ),
                 child: Center(
                   child: selected
-                      ? BrandMark(size: 18, petal: Palette.ink, core: Palette.gold)
+                      ? BrandMark(size: 18)
                       : Icon(_iconFor(tab), size: 19, color: color),
                 ),
               ),

@@ -2,7 +2,7 @@ import 'package:celenium_miner/services/cen_wallet.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pointycastle/ecc/curves/secp256k1.dart';
 
-/// Vectors copied from crypto/addresses/src/lib.rs in cenium-build. If Dart
+/// Vectors copied from crypto/addresses/src/lib.rs in celenium-build. If Dart
 /// and Rust ever disagree on an address, funds go to the wrong place, so these
 /// are the contract.
 void main() {

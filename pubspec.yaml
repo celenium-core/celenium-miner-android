@@ -1,5 +1,5 @@
 name: celenium_miner
-description: "Cenium (CEN) mining control for desktop and Android."
+description: "Celenium (CEN) mining control for desktop and Android."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -43,3 +43,7 @@ flutter:
 
   assets:
     - assets/wordlists/english.txt
+    - assets/logo/cen_mark_on_navy.jpg
+    - assets/logo/cen_mark_on_cream.jpg
+    - assets/logo/cen_mark_for_dark.png
+    - assets/logo/cen_mark_for_light.png
