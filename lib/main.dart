@@ -3,7 +3,6 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'models/bridge.dart';
 import 'screens/backup_screen.dart';
 import 'screens/bridge_screen.dart';
@@ -25,16 +24,16 @@ import 'widgets/brand_mark.dart';
 import 'widgets/cen_ui.dart';
 
 void main() {
-  runApp(const CeniumMinerApp());
+  runApp(const CeleniumMinerApp());
 }
 
-class CeniumMinerApp extends StatelessWidget {
-  const CeniumMinerApp({super.key});
+class CeleniumMinerApp extends StatelessWidget {
+  const CeleniumMinerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Cenium Miner',
+      title: 'Celenium Miner',
       debugShowCheckedModeBanner: false,
       theme: buildCenTheme(),
       home: const _Boot(),
@@ -248,11 +247,33 @@ class _MinerHomeState extends State<MinerHome> {
   void _open(_Route route) => setState(() => _route = route);
   void _closeRoute() => setState(() => _route = null);
 
+  /// What the hardware back button does.
+  ///
+  /// The shell holds two levels: the three tabs, and the settings screens
+  /// opened from Profile. Back unwinds one level at a time instead of closing
+  /// the app, which is what a phone user expects from a back gesture.
+  void _handleBack() {
+    if (_route != null) {
+      _closeRoute();
+      return;
+    }
+    if (_tab != _Tab.mine) {
+      setState(() => _tab = _Tab.mine);
+      return;
+    }
+    // Already at the root: let the system handle it, which closes the app.
+    SystemNavigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final route = _route;
     if (route != null) {
-      return _buildSubScreen(route);
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (_, _) => _handleBack(),
+        child: _buildSubScreen(route),
+      );
     }
 
     // Space is reserved only when a real ad is on screen. A configured but
@@ -261,39 +282,43 @@ class _MinerHomeState extends State<MinerHome> {
     final showBanner = AdBanner.willShow(_adSlotState, _adWidget);
     final snapshot = _snapshot ?? const MinerSnapshot();
 
-    return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(bottom: showBanner ? AdBanner.footprint : 0),
-              child: _buildTab(snapshot),
-            ),
-            // Faint CRT scanlines over the whole app: the console look with
-            // no motion, so it never competes with the readings.
-            Positioned.fill(
-              child: IgnorePointer(
-                child: ScanlineOverlay(opacity: 0.035, spacing: 3),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (_, _) => _handleBack(),
+      child: Scaffold(
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(bottom: showBanner ? AdBanner.footprint : 0),
+                child: _buildTab(snapshot),
               ),
-            ),
-            // Floating overlay, not an inline row: it never pushes the
-            // content, so the layout does not move when the ad loads or fails.
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: AdBanner(
-                state: _adSlotState,
-                onDismiss: _dismissAd,
-                child: _adWidget,
+              // Faint CRT scanlines over the whole app: the console look with
+              // no motion, so it never competes with the readings.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ScanlineOverlay(opacity: 0.035, spacing: 3),
+                ),
               ),
-            ),
-          ],
+              // Floating overlay, not an inline row: it never pushes the
+              // content, so the layout does not move when the ad loads or fails.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: AdBanner(
+                  state: _adSlotState,
+                  onDismiss: _dismissAd,
+                  child: _adWidget,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: _BottomTabs(
-        current: _tab,
-        onSelect: (tab) => setState(() => _tab = tab),
+        bottomNavigationBar: _BottomTabs(
+          current: _tab,
+          onSelect: (tab) => setState(() => _tab = tab),
+        ),
       ),
     );
   }
@@ -348,8 +373,8 @@ class _MinerHomeState extends State<MinerHome> {
   }
 }
 
-/// Bottom navigation: three pill tabs, the active one carrying a gold disc
-/// with the brand mark.
+/// Bottom navigation: a cream pill floating above the content, as in the
+/// concept. The active tab carries a gold disc with the brand mark.
 class _BottomTabs extends StatelessWidget {
   const _BottomTabs({required this.current, required this.onSelect});
 
@@ -358,15 +383,26 @@ class _BottomTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Palette.surface,
-        border: Border(top: BorderSide(color: Palette.surfaceHigh)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: Palette.sm),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        // Floating, not docked: the pill hovers over the content with a gap
+        // on every side, which is what reads as "floating" rather than "a bar
+        // that shifted in".
+        padding: const EdgeInsets.fromLTRB(Palette.lg, 0, Palette.lg, Palette.md),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: Palette.sm, vertical: Palette.sm),
+          decoration: BoxDecoration(
+            color: Palette.surfaceLight,
+            borderRadius: BorderRadius.circular(Palette.pill),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.45),
+                blurRadius: 18,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -400,7 +436,10 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? Palette.gold : Palette.slate;
+    // On the cream pill, plain gold text would fail contrast. The active tab
+    // is carried by the gold disc; its label uses the deep gold so it stays
+    // readable while still reading as the gold family.
+    final color = selected ? Palette.goldDim : Palette.slate;
 
     return Semantics(
       button: true,

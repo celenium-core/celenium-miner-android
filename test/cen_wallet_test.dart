@@ -1,4 +1,4 @@
-import 'package:cenium_miner/services/cen_wallet.dart';
+import 'package:celenium_miner/services/cen_wallet.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pointycastle/ecc/curves/secp256k1.dart';
 

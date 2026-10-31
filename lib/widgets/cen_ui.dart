@@ -273,12 +273,24 @@ class SettingRow extends StatelessWidget {
   }
 }
 
-/// One column of the stats strip: value over label.
+/// One column of the stats strip: value over unit over label.
 class StatCell extends StatelessWidget {
-  const StatCell({super.key, required this.value, required this.label, this.mono = true, this.color});
+  const StatCell({
+    super.key,
+    required this.value,
+    required this.label,
+    this.unit,
+    this.mono = true,
+    this.color,
+  });
 
   final String value;
   final String label;
+
+  /// The unit line between the value and the label, as in the concept
+  /// (`12.4` / `CEL` / `SESSION`). Omitted when there is nothing to say.
+  final String? unit;
+
   final bool mono;
   final Color? color;
 
@@ -296,7 +308,7 @@ class StatCell extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Text(value, style: style),
         ),
-        const SizedBox(height: 2),
+        if (unit != null) Eyebrow(unit!, color: Palette.goldLight),
         Eyebrow(label, color: Palette.slate),
       ],
     );

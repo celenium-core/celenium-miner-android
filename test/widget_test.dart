@@ -1,17 +1,17 @@
 import 'dart:math';
 
-import 'package:cenium_miner/models/bridge.dart';
-import 'package:cenium_miner/screens/backup_screen.dart';
-import 'package:cenium_miner/screens/mining_screen.dart';
-import 'package:cenium_miner/screens/wallet_screen.dart';
-import 'package:cenium_miner/services/bridge_api.dart';
-import 'package:cenium_miner/services/cen_wallet.dart';
-import 'package:cenium_miner/services/keystore.dart';
-import 'package:cenium_miner/services/mining_readout.dart';
-import 'package:cenium_miner/services/settings_store.dart';
-import 'package:cenium_miner/theme/app_theme.dart';
-import 'package:cenium_miner/theme/palette.dart';
-import 'package:cenium_miner/widgets/ad_banner.dart';
+import 'package:celenium_miner/models/bridge.dart';
+import 'package:celenium_miner/screens/backup_screen.dart';
+import 'package:celenium_miner/screens/mining_screen.dart';
+import 'package:celenium_miner/screens/wallet_screen.dart';
+import 'package:celenium_miner/services/bridge_api.dart';
+import 'package:celenium_miner/services/cen_wallet.dart';
+import 'package:celenium_miner/services/keystore.dart';
+import 'package:celenium_miner/services/mining_readout.dart';
+import 'package:celenium_miner/services/settings_store.dart';
+import 'package:celenium_miner/theme/app_theme.dart';
+import 'package:celenium_miner/theme/palette.dart';
+import 'package:celenium_miner/widgets/ad_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -412,6 +412,47 @@ void main() {
     });
   });
 
+  group('brand naming', () {
+    testWidgets('the ticker reads CEN everywhere it appears', (tester) async {
+      // The coin is CEN. An earlier pass shipped "CEL" in a few spots, which
+      // reads as a different asset, so the ticker is asserted directly.
+      await tester.pumpWidget(MaterialApp(
+        theme: buildCenTheme(),
+        home: Scaffold(
+          body: WalletScreen(
+            snapshot: snapshotWith(),
+            networkLabel: 'simnet',
+            onBackup: () {},
+            onOpenActivity: () {},
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.text('CEN'), findsWidgets);
+      expect(find.text('CEL'), findsNothing);
+    });
+
+    testWidgets('the mining screen states CEN as the unit', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: buildCenTheme(),
+        home: Scaffold(
+          body: MiningScreen(
+            snapshot: snapshotWith(),
+            nodeAddress: '127.0.0.1:26510',
+            onOpenWorkers: () {},
+            onOpenActivity: () {},
+            onConnectNode: () {},
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      expect(find.text('CEN'), findsWidgets);
+      expect(find.text('CEL'), findsNothing);
+    });
+  });
+
   group('wallet screen', () {
     Widget host(MinerSnapshot snapshot) {
       return MediaQuery(
@@ -437,7 +478,7 @@ void main() {
       // The row reads as a transaction, as in the concept.
       expect(find.text('Mining reward'), findsOneWidget);
       expect(find.text('+50.00'), findsOneWidget);
-      expect(find.text('CEL'), findsWidgets);
+      expect(find.text('CEN'), findsWidgets);
     });
 
     testWidgets('does not invent a balance', (tester) async {

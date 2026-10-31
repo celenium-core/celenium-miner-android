@@ -74,7 +74,10 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Top row: identity on the left, hashrate on the right, exactly as
+          // the concept lays it out.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 42,
@@ -99,52 +102,67 @@ class _SummaryCard extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: Palette.sm),
+              // Hash rate block sits on the right, with the level badge
+              // beside the value.
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Eyebrow('Hash rate', color: Palette.slate),
+                  const SizedBox(height: 2),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        readout.hashrateGhs == null ? '—' : formatHashrate(readout.hashrateGhs!),
+                        style: TypeScale.hero(context).copyWith(color: Palette.ink, fontSize: 30),
+                      ),
+                      // Gold level badge, as in the concept. The level is
+                      // derived from the hashrate so the number means
+                      // something rather than being decoration.
+                      if (readout.hashrateGhs != null) ...[
+                        const SizedBox(width: Palette.sm),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Palette.gold,
+                            borderRadius: BorderRadius.circular(Palette.pill),
+                          ),
+                          child: Text(
+                            'LV.${readout.hashrateGhs!.floor().clamp(1, 99)}',
+                            style: TypeScale.caption(context).copyWith(
+                              color: Palette.ink,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: Palette.lg),
+          // Lower row: worker and difficulty on the left, live status on the
+          // right, as in the concept.
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${readout.workerName ?? 'WORKER-00'} · DIFF ${readout.difficulty == null ? '—' : readout.difficulty!.toStringAsFixed(2)}',
+                  style: TypeScale.monoInk(context, size: 10).copyWith(color: Palette.slate),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: Palette.sm),
               LiveStatus(
                 label: readout.active ? 'MINING ACTIVE' : 'IDLE',
                 active: readout.active,
                 tint: readout.active ? Palette.greenDim : Palette.slate,
               ),
             ],
-          ),
-          const SizedBox(height: Palette.lg),
-          Eyebrow('Hash rate', color: Palette.slate),
-          const SizedBox(height: 2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                readout.hashrateGhs == null ? '—' : formatHashrate(readout.hashrateGhs!),
-                style: TypeScale.hero(context).copyWith(color: Palette.ink, fontSize: 34),
-              ),
-              const Spacer(),
-              // Gold level badge, as in the concept. The level is derived from
-              // the hashrate so the number means something rather than being
-              // decoration: every 1 GH/s is one level.
-              if (readout.hashrateGhs != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Palette.gold,
-                    borderRadius: BorderRadius.circular(Palette.pill),
-                  ),
-                  child: Text(
-                    'LV.${readout.hashrateGhs!.floor().clamp(1, 99)}',
-                    style: TypeScale.caption(context).copyWith(
-                      color: Palette.ink,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: Palette.md),
-          // Only the fields that add something the identity row does not
-          // already say. The worker name is the identity, so repeating it
-          // here would be a second label for the same fact.
-          _MetaChip(
-            'DIFFICULTY',
-            readout.difficulty == null ? '—' : readout.difficulty!.toStringAsFixed(2),
           ),
           if (!connected) ...[
             const SizedBox(height: Palette.lg),
@@ -169,33 +187,53 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _MetaChip extends StatelessWidget {
-  const _MetaChip(this.label, this.value);
+/// A centred readout line under the dial: the session uptime and the last
+/// accepted share, in the concept's shell-prompt style.
+class _DialCaption extends StatelessWidget {
+  const _DialCaption({required this.readout, required this.onTap});
 
-  final String label;
-  final String value;
+  final MiningReadout readout;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: 7),
-      decoration: BoxDecoration(
-        color: Palette.ink.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(Palette.pill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TypeScale.monoInk(context, size: 9).copyWith(color: Palette.slate, letterSpacing: 1.2),
-          ),
-          const SizedBox(width: Palette.sm),
-          Text(value, style: TypeScale.monoInk(context, size: 11).copyWith(fontWeight: FontWeight.w700)),
-        ],
-      ),
+    return Column(
+      children: [
+        // The app reads the bridge; it does not start or stop hashing, so the
+        // control here opens the worker list rather than claiming to pause.
+        Text(
+          '[ TAP FOR WORKERS ]',
+          style: TypeScale.monoMuted(context, size: 10).copyWith(letterSpacing: 1.6),
+        ),
+        const SizedBox(height: Palette.sm),
+        Text(
+          'UPTIME ${_uptime(readout.bridgeUptime)}',
+          style: TypeScale.mono(context, size: 11).copyWith(color: Palette.creamDim),
+        ),
+        const SizedBox(height: Palette.sm),
+        Text(
+          readout.latestBlockHash == null
+              ? '> waiting for first share'
+              : '> share accepted ${shortHash(readout.latestBlockHash!, head: 8, tail: 6)}'
+                  '${readout.difficulty == null ? '' : ' diff-${readout.difficulty!.toStringAsFixed(2)}'}',
+          style: TypeScale.mono(context, size: 10).copyWith(color: Palette.greenDim),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
+}
+
+/// Formats seconds as HH:MM:SS, the concept's uptime shape. Returns 00:00:00
+/// when the bridge has not reported an uptime.
+String _uptime(int? seconds) {
+  if (seconds == null) return '00:00:00';
+  final d = Duration(seconds: seconds);
+  final h = d.inHours.toString().padLeft(2, '0');
+  final m = (d.inMinutes % 60).toString().padLeft(2, '0');
+  final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+  return '$h:$m:$s';
 }
 
 /// Dial plus the caption that says what tapping it does.
@@ -221,6 +259,8 @@ class _DialBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Palette.lg),
+        // Acceptance is what the dial shows, so it is stated once here rather
+        // than repeated in the stats strip below.
         Text(
           rate == null
               ? 'ACCEPTANCE\nno shares yet'
@@ -229,19 +269,15 @@ class _DialBlock extends StatelessWidget {
           style: TypeScale.mono(context, size: 12).copyWith(color: Palette.goldLight, letterSpacing: 1.4),
         ),
         const SizedBox(height: Palette.md),
-        // A real destination, not a control the app cannot honour: it does not
-        // start or stop hashing, it shows who is hashing.
-        Text(
-          '[ TAP FOR WORKERS ]',
-          style: TypeScale.monoMuted(context, size: 10).copyWith(letterSpacing: 1.6),
-        ),
+        _DialCaption(readout: readout, onTap: onTap),
       ],
     );
   }
 }
 
-/// Three real counts. No price: CEN is not listed anywhere, so a price here
-/// would be invented.
+/// Three real counts, each with its unit on its own line as in the concept.
+///
+/// No price: CEN is not listed anywhere, so a price here would be invented.
 class _StatsStrip extends StatelessWidget {
   const _StatsStrip({required this.readout});
 
@@ -255,14 +291,27 @@ class _StatsStrip extends StatelessWidget {
           Expanded(
             child: StatCell(
               value: readout.sessionBlocks?.toString() ?? '—',
+              unit: 'CEN',
               label: 'session',
               color: Palette.goldLight,
             ),
           ),
           const StatDivider(),
-          Expanded(child: StatCell(value: readout.totalBlocks?.toString() ?? '—', label: 'total')),
+          Expanded(
+            child: StatCell(
+              value: readout.totalBlocks?.toString() ?? '—',
+              unit: 'CEN',
+              label: 'total',
+            ),
+          ),
           const StatDivider(),
-          Expanded(child: StatCell(value: readout.shares?.toString() ?? '—', label: 'shares')),
+          Expanded(
+            child: StatCell(
+              value: readout.shares?.toString() ?? '—',
+              unit: 'shares',
+              label: 'accepted',
+            ),
+          ),
         ],
       ),
     );

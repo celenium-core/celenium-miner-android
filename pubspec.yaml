@@ -1,4 +1,4 @@
-name: cenium_miner
+name: celenium_miner
 description: "Cenium (CEN) mining control for desktop and Android."
 publish_to: 'none'
 version: 1.0.0+1

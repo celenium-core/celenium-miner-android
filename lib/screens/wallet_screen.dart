@@ -134,7 +134,7 @@ class _BalanceCard extends StatelessWidget {
             children: [
               Eyebrow('Total balance'),
               const Spacer(),
-              const Pill(label: 'CEL', background: Palette.gold, foreground: Palette.ink, dense: true),
+              const Pill(label: 'CEN', background: Palette.gold, foreground: Palette.ink, dense: true),
             ],
           ),
           const SizedBox(height: Palette.sm),
@@ -466,7 +466,7 @@ class _BlockRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text('CEL', style: TypeScale.monoMuted(context, size: 9)),
+                Text('CEN', style: TypeScale.monoMuted(context, size: 9)),
               ],
             ),
           ],

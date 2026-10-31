@@ -17,6 +17,7 @@ class MiningReadout {
     this.totalBlocks,
     this.latestBlockHash,
     this.latestBlockTime,
+    this.bridgeUptime,
     this.active = false,
   });
 
@@ -41,6 +42,9 @@ class MiningReadout {
 
   final String? latestBlockHash;
   final String? latestBlockTime;
+
+  /// How long the bridge itself has been up, in seconds.
+  final int? bridgeUptime;
 
   /// True when the bridge reports a worker actually hashing.
   final bool active;
@@ -89,6 +93,7 @@ class MiningReadout {
       totalBlocks: stats.totalBlocks > 0 ? stats.totalBlocks : null,
       latestBlockHash: latest?.hash,
       latestBlockTime: latest?.timestamp,
+      bridgeUptime: stats.bridgeUptime,
       active: active,
     );
   }

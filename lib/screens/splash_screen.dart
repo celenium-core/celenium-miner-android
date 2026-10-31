@@ -99,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           const SizedBox(height: Palette.xxl),
                           _Emblem(progress: _controller),
                           const SizedBox(height: Palette.md),
-                          Text('C . E . L',
+                          Text('C . E . N',
                               style: TypeScale.eyebrow(context)
                                   .copyWith(color: Palette.creamDim, letterSpacing: 5)),
                           const SizedBox(height: Palette.lg),
