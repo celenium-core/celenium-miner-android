@@ -212,106 +212,133 @@ class _SwipeDeckState extends State<_SwipeDeck> with SingleTickerProviderStateMi
         children: [
           SizedBox(
             height: 62,
-            child: AnimatedBuilder(
-              animation: Listenable.merge([_scramble, _pulse]),
-              builder: (context, _) {
-                // How many characters have decoded. Never all of them: a
-                // fully decoded track would stop moving and read as finished
-                // rather than as in progress.
-                final decoded = (magnitude * (_target.length - 2)).round();
+            // The track width decides how far the handle can travel, so the
+            // deck has to be measured rather than assuming a fixed offset.
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final trackWidth = constraints.maxWidth;
+                const handleSize = 48.0;
+                const inset = 7.0;
+                // Travel is the whole track minus the handle, so the thumb
+                // rests inside the capsule at both ends of the drag.
+                final travel = (trackWidth - handleSize - inset * 2).clamp(0.0, trackWidth);
 
-                return Stack(
-                  alignment: Alignment.centerLeft,
-                  children: [
-                    // The track itself: glass, with a hairline edge.
-                    Container(
-                      height: 62,
-                      decoration: BoxDecoration(
-                        color: Palette.white.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(Palette.pill),
-                        border: Border.all(
-                          color: armed
-                              ? Palette.gold.withValues(alpha: 0.55)
-                              : Palette.white.withValues(alpha: 0.16),
-                        ),
-                      ),
-                    ),
-                    // Gold fill, clipped to the capsule so it never squares
-                    // off at the ends.
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(Palette.pill),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FractionallySizedBox(
-                          widthFactor: magnitude.clamp(0.0, 1.0),
-                          child: Container(
-                            height: 62,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Palette.gold.withValues(alpha: 0.30),
-                                  Palette.gold.withValues(alpha: 0.10),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // The hex row. Decoded characters are bright and stable;
-                    // the rest re-roll every tick.
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: Palette.lg),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          for (var i = 0; i < _target.length; i++)
-                            Text(
-                              i < decoded
-                                  ? _target[i]
-                                  : _hex[_rng.nextInt(_hex.length)],
-                              style: TypeScale.mono(context, size: 13).copyWith(
-                                color: i < decoded ? Palette.gold : Palette.creamDim.withValues(alpha: 0.35),
-                                fontWeight: i < decoded ? FontWeight.w700 : FontWeight.w400,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    // The handle, positioned by the drag.
-                    Transform.translate(
-                      offset: Offset(magnitude * 250, 0),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          width: 48,
-                          height: 48,
+                return AnimatedBuilder(
+                  animation: Listenable.merge([_scramble, _pulse]),
+                  builder: (context, _) {
+                    // How many characters have decoded. Never all of them: a
+                    // fully decoded track would stop moving and read as
+                    // finished rather than as in progress.
+                    final decoded = (magnitude * (_target.length - 2)).round();
+
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // The track itself: glass, with a hairline edge.
+                        Container(
+                          height: 62,
                           decoration: BoxDecoration(
-                            color: armed ? Palette.gold : Palette.surfaceHigh,
-                            shape: BoxShape.circle,
+                            color: Palette.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(Palette.pill),
                             border: Border.all(
-                              color: armed ? Palette.goldPale : Palette.white.withValues(alpha: 0.22),
-                            ),
-                            boxShadow: armed
-                                ? [BoxShadow(color: Palette.gold.withValues(alpha: 0.5), blurRadius: 18)]
-                                : [
-                                    BoxShadow(
-                                      color: Palette.white.withValues(alpha: 0.05 + _pulse.value * 0.06),
-                                      blurRadius: 12,
-                                    ),
-                                  ],
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.chevron_right,
-                              size: 24,
-                              color: armed ? Palette.ink : Palette.cream,
+                              color: armed
+                                  ? Palette.gold.withValues(alpha: 0.55)
+                                  : Palette.white.withValues(alpha: 0.16),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ],
+                        // Gold fill, clipped to the capsule so it never
+                        // squares off at the ends.
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(Palette.pill),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FractionallySizedBox(
+                              widthFactor: magnitude.clamp(0.0, 1.0),
+                              child: Container(
+                                height: 62,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Palette.gold.withValues(alpha: 0.30),
+                                      Palette.gold.withValues(alpha: 0.10),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // The hex row. Decoded characters are bright and
+                        // stable; the rest re-roll every tick. The right
+                        // padding reserves the space the handle occupies, so
+                        // no character is ever hidden behind it.
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: inset + handleSize + Palette.sm,
+                            right: Palette.lg,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              for (var i = 0; i < _target.length; i++)
+                                Text(
+                                  i < decoded
+                                      ? _target[i]
+                                      : _hex[_rng.nextInt(_hex.length)],
+                                  style: TypeScale.mono(context, size: 13).copyWith(
+                                    color: i < decoded
+                                        ? Palette.gold
+                                        : Palette.creamDim.withValues(alpha: 0.35),
+                                    fontWeight: i < decoded ? FontWeight.w700 : FontWeight.w400,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        // The handle, travelling left to right across the
+                        // track as the drag advances.
+                        Positioned(
+                          left: inset + magnitude * travel,
+                          top: (62 - handleSize) / 2,
+                          child: Container(
+                            width: handleSize,
+                            height: handleSize,
+                            decoration: BoxDecoration(
+                              color: armed ? Palette.gold : Palette.surfaceHigh,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: armed
+                                    ? Palette.goldPale
+                                    : Palette.white.withValues(alpha: 0.22),
+                              ),
+                              boxShadow: armed
+                                  ? [
+                                      BoxShadow(
+                                        color: Palette.gold.withValues(alpha: 0.5),
+                                        blurRadius: 18,
+                                      )
+                                    ]
+                                  : [
+                                      BoxShadow(
+                                        color: Palette.white
+                                            .withValues(alpha: 0.05 + _pulse.value * 0.06),
+                                        blurRadius: 12,
+                                      ),
+                                    ],
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.chevron_right,
+                                size: 24,
+                                color: armed ? Palette.ink : Palette.cream,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 );
               },
             ),

@@ -99,7 +99,8 @@ class ProfileScreen extends StatelessWidget {
                   value: readout.hashrateGhs == null
                       ? '—'
                       : formatHashrate(readout.hashrateGhs!).split(' ').first,
-                  label: 'gh/s',
+                  unit: 'GH/s',
+                  label: 'hashrate',
                 ),
               ),
             ],
@@ -108,41 +109,53 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: Palette.xl),
         Eyebrow('Settings'),
         const SizedBox(height: Palette.sm),
-        SettingRow(
-          icon: Icons.hub_outlined,
-          label: 'Bridge',
-          trailing: Text(
-            nodeAddress == null ? 'not set' : _shortNode(nodeAddress),
-            style: TypeScale.monoMuted(context, size: 10),
+        // One card holding the whole group, rows separated by hairlines.
+        // Five floating tiles read as five unrelated things; one card with
+        // internal dividers reads as the settings section it is.
+        CenCard.glass(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              SettingRow(
+                flat: true,
+                icon: Icons.hub_outlined,
+                label: 'Bridge',
+                trailing: Text(
+                  nodeAddress == null ? 'not set' : _shortNode(nodeAddress),
+                  style: TypeScale.monoMuted(context, size: 10),
+                ),
+                onTap: onOpenBridge,
+              ),
+              SettingRow(
+                flat: true,
+                icon: Icons.dns_outlined,
+                label: 'Workers',
+                trailing: workers > 0 ? Pill(label: '$workers', dense: true) : null,
+                onTap: onOpenWorkers,
+              ),
+              SettingRow(
+                flat: true,
+                icon: Icons.receipt_long_outlined,
+                label: 'Activity log',
+                onTap: onOpenActivity,
+              ),
+              SettingRow(
+                flat: true,
+                icon: Icons.shield_outlined,
+                label: 'Recovery words',
+                tint: Palette.goldLight,
+                onTap: onOpenBackup,
+              ),
+              SettingRow(
+                flat: true,
+                last: true,
+                icon: Icons.info_outline,
+                label: 'About',
+                tint: Palette.slate,
+                onTap: onOpenAbout,
+              ),
+            ],
           ),
-          onTap: onOpenBridge,
-        ),
-        const SizedBox(height: Palette.sm),
-        SettingRow(
-          icon: Icons.dns_outlined,
-          label: 'Workers',
-          trailing: workers > 0 ? Pill(label: '$workers', dense: true) : null,
-          onTap: onOpenWorkers,
-        ),
-        const SizedBox(height: Palette.sm),
-        SettingRow(
-          icon: Icons.receipt_long_outlined,
-          label: 'Activity log',
-          onTap: onOpenActivity,
-        ),
-        const SizedBox(height: Palette.sm),
-        SettingRow(
-          icon: Icons.shield_outlined,
-          label: 'Recovery words',
-          tint: Palette.goldLight,
-          onTap: onOpenBackup,
-        ),
-        const SizedBox(height: Palette.sm),
-        SettingRow(
-          icon: Icons.info_outline,
-          label: 'About',
-          tint: Palette.slate,
-          onTap: onOpenAbout,
         ),
       ],
     );

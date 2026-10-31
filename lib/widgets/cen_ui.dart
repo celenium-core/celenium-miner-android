@@ -368,6 +368,8 @@ class SettingRow extends StatelessWidget {
     this.onTap,
     this.tint = Palette.green,
     this.danger = false,
+    this.flat = false,
+    this.last = false,
   });
 
   final IconData icon;
@@ -377,9 +379,60 @@ class SettingRow extends StatelessWidget {
   final Color tint;
   final bool danger;
 
+  /// Drop this row's own panel and border.
+  ///
+  /// A stack of flat rows shares one card and is separated by hairlines,
+  /// which reads as a single settings group rather than five tiles that
+  /// happen to be adjacent.
+  final bool flat;
+
+  /// Suppress the hairline under the final row of a flat stack.
+  final bool last;
+
   @override
   Widget build(BuildContext context) {
     final accent = danger ? Palette.red : tint;
+
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: accent),
+          ),
+          const SizedBox(width: Palette.md),
+          Expanded(
+            child: Text(
+              label,
+              style: TypeScale.title(context).copyWith(
+                // White, as the concept prints its menu labels. Cream is
+                // the body text; the settings list is the accent.
+                color: danger ? Palette.red : Palette.white,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+          ?trailing,
+          if (trailing == null && onTap != null)
+            const Icon(Icons.chevron_right, size: 18, color: Palette.creamDim),
+        ],
+      ),
+    );
+
+    if (flat) {
+      return Container(
+        decoration: BoxDecoration(
+          border: last ? null : const Border(bottom: BorderSide(color: Color(0x0FFFFFFF))),
+        ),
+        child: InkWell(onTap: onTap, child: content),
+      );
+    }
 
     return Material(
       // Translucent fill with a hairline top edge: the row reads as a pane
@@ -393,37 +446,7 @@ class SettingRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(Palette.rowRadius),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 18, color: accent),
-              ),
-              const SizedBox(width: Palette.md),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TypeScale.title(context).copyWith(
-                    // White, as the concept prints its menu labels. Cream is
-                    // the body text; the settings list is the accent.
-                    color: danger ? Palette.red : Palette.white,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
-              ?trailing,
-              if (trailing == null && onTap != null)
-                const Icon(Icons.chevron_right, size: 18, color: Palette.creamDim),
-            ],
-          ),
-        ),
+        child: content,
       ),
     );
   }
