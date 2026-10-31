@@ -4,6 +4,10 @@ import '../theme/palette.dart';
 import '../theme/typography.dart';
 
 /// The standard dark card. Every panel in the app sits on this.
+///
+/// [CenCard.glass] is the translucent layered variant and [CenCard.light] the
+/// cream one; both are the same widget with different fills, so the app keeps
+/// one card shape everywhere.
 class CenCard extends StatelessWidget {
   const CenCard({
     super.key,
@@ -12,7 +16,34 @@ class CenCard extends StatelessWidget {
     this.color = Palette.surface,
     this.border,
     this.radius = Palette.cardRadius,
+    this.glow,
   });
+
+  /// A layered, faintly translucent panel.
+  ///
+  /// The fill is semi-opaque rather than solid and the hairline border is
+  /// brighter at the top edge than the bottom, which reads as a pane of glass
+  /// sitting over the background instead of a flat rectangle.
+  ///
+  /// Not const: the translucent fill is built with `withValues`, which is not
+  /// a constant expression.
+  CenCard.glass({
+    required this.child,
+    this.padding = const EdgeInsets.all(Palette.lg),
+    this.radius = Palette.cardRadius,
+    this.glow,
+  })  : color = Palette.surfaceHigh.withValues(alpha: 0.62),
+        border = const BorderSide(color: Color(0x1FFFFFFF));
+
+  /// The cream panel. Used where the concept puts a light card against the
+  /// dark canvas: the identity card on Profile and the balance on Wallet.
+  const CenCard.light({
+    required this.child,
+    this.padding = const EdgeInsets.all(Palette.lg),
+    this.radius = Palette.cardRadius,
+    this.glow,
+  })  : color = Palette.surfaceLight,
+        border = null;
 
   final Widget child;
   final EdgeInsets padding;
@@ -20,9 +51,14 @@ class CenCard extends StatelessWidget {
   final BorderSide? border;
   final double radius;
 
+  /// Optional accent drawn as a soft pool of light behind the card. Gives the
+  /// panel depth against the flat background without a drop shadow, which
+  /// would read as a material elevation rather than a glow.
+  final Color? glow;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       padding: padding,
       decoration: BoxDecoration(
         color: color,
@@ -30,6 +66,118 @@ class CenCard extends StatelessWidget {
         border: border == null ? null : Border.fromBorderSide(border!),
       ),
       child: child,
+    );
+
+    if (glow == null) return card;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(color: glow!.withValues(alpha: 0.16), blurRadius: 28, spreadRadius: -6),
+        ],
+      ),
+      child: card,
+    );
+  }
+}
+
+/// A soft pool of light, used behind the dial and the balance to lift them off
+/// the canvas. Purely decorative and never interactive.
+class GlowOrb extends StatelessWidget {
+  const GlowOrb({super.key, required this.color, this.size = 260, this.opacity = 0.14});
+
+  final Color color;
+  final double size;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: ExcludeSemantics(
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [color.withValues(alpha: opacity), color.withValues(alpha: 0)],
+              stops: const [0, 1],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A slow band of light travelling down the screen once.
+///
+/// The scanlines imply a CRT; this is the refresh beam that makes the
+/// implication literal. It runs a single pass and holds at the bottom rather
+/// than repeating, so it reads as a one-off sweep instead of a looping
+/// animation that competes with the readings.
+class ScanSweep extends StatefulWidget {
+  const ScanSweep({super.key});
+
+  @override
+  State<ScanSweep> createState() => _ScanSweepState();
+}
+
+class _ScanSweepState extends State<ScanSweep> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 5200),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    // One pass, then hold. Repeating would turn a texture into a distraction.
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = _controller.value;
+        // The band travels from just above the top to just below the bottom,
+        // then parks out of sight.
+        final top = (t * 1.4 - 0.2) * MediaQuery.sizeOf(context).height;
+
+        return Stack(
+          children: [
+            Positioned(
+              top: top,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 140,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Palette.white.withValues(alpha: 0),
+                      Palette.white.withValues(alpha: 0.045),
+                      Palette.white.withValues(alpha: 0),
+                    ],
+                    stops: const [0, 0.5, 1],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -234,8 +382,14 @@ class SettingRow extends StatelessWidget {
     final accent = danger ? Palette.red : tint;
 
     return Material(
-      color: Palette.surface,
-      borderRadius: BorderRadius.circular(Palette.rowRadius),
+      // Translucent fill with a hairline top edge: the row reads as a pane
+      // over the background rather than a solid block, which is what keeps
+      // the stack of settings from looking like a table.
+      color: Palette.surfaceHigh.withValues(alpha: 0.55),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Palette.rowRadius),
+        side: const BorderSide(color: Color(0x14FFFFFF)),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(Palette.rowRadius),
@@ -257,14 +411,16 @@ class SettingRow extends StatelessWidget {
                 child: Text(
                   label,
                   style: TypeScale.title(context).copyWith(
-                    color: danger ? Palette.red : Palette.cream,
+                    // White, as the concept prints its menu labels. Cream is
+                    // the body text; the settings list is the accent.
+                    color: danger ? Palette.red : Palette.white,
                     letterSpacing: 0.3,
                   ),
                 ),
               ),
               ?trailing,
               if (trailing == null && onTap != null)
-                const Icon(Icons.chevron_right, size: 18, color: Palette.slate),
+                const Icon(Icons.chevron_right, size: 18, color: Palette.creamDim),
             ],
           ),
         ),
@@ -296,9 +452,11 @@ class StatCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // White by default, as the concept prints its stat numerals. Gold is
+    // passed explicitly where one figure is the one that matters.
     final style = mono
-        ? TypeScale.mono(context, size: 16).copyWith(color: color ?? Palette.cream, fontWeight: FontWeight.w700)
-        : TypeScale.headline(context).copyWith(color: color ?? Palette.cream);
+        ? TypeScale.mono(context, size: 16).copyWith(color: color ?? Palette.white, fontWeight: FontWeight.w700)
+        : TypeScale.headline(context).copyWith(color: color ?? Palette.white);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

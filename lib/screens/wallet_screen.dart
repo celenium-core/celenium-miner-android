@@ -124,26 +124,29 @@ class _BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CenCard(
+    // The cream balance card from the concept: the light mass carries the
+    // dark figure, which is the opposite of every other panel here and is
+    // what makes the balance the first thing the eye lands on.
+    return CenCard.light(
+      glow: Palette.gold,
       padding: const EdgeInsets.all(Palette.xl),
-      border: BorderSide(color: Palette.goldDim.withValues(alpha: 0.4)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Eyebrow('Total balance'),
+              Eyebrow('Total balance', color: Palette.slate),
               const Spacer(),
               const Pill(label: 'CEN', background: Palette.gold, foreground: Palette.ink, dense: true),
             ],
           ),
           const SizedBox(height: Palette.sm),
-          Text('—', style: TypeScale.hero(context).copyWith(color: Palette.slate)),
+          Text('—', style: TypeScale.hero(context).copyWith(color: Palette.ink)),
           const SizedBox(height: Palette.sm),
           Text(
             'The bridge reports mining results, not account balances. A direct node '
             'connection is needed to read the balance of an address.',
-            style: TypeScale.caption(context),
+            style: TypeScale.caption(context).copyWith(color: Palette.slate),
           ),
         ],
       ),
@@ -276,9 +279,13 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background = primary ? Palette.gold : Palette.surfaceHigh;
-    final foreground = primary ? Palette.ink : Palette.cream;
-    final disabledBg = primary ? Palette.goldDim.withValues(alpha: 0.35) : Palette.surface;
+    // Send is the solid gold capsule. Receive and Swap are the translucent
+    // pills with a white outline the concept uses, so the three read as one
+    // primary action and two secondary ones without a second solid block
+    // competing for attention.
+    final background = primary ? Palette.gold : Palette.white.withValues(alpha: 0.06);
+    final foreground = primary ? Palette.ink : Palette.white;
+    final disabledBg = primary ? Palette.goldDim.withValues(alpha: 0.35) : Palette.white.withValues(alpha: 0.03);
     final disabledFg = Palette.slate;
 
     return Semantics(
@@ -286,9 +293,16 @@ class _ActionButton extends StatelessWidget {
       enabled: onTap != null,
       child: Opacity(
         opacity: onTap == null ? 0.55 : 1,
+        // Material takes either a shape or a borderRadius, never both, so the
+        // pill shape carries the radius and the outline lives inside it.
         child: Material(
           color: onTap == null ? disabledBg : background,
-          borderRadius: BorderRadius.circular(Palette.pill),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Palette.pill),
+            side: primary
+                ? BorderSide.none
+                : BorderSide(color: Palette.white.withValues(alpha: 0.28)),
+          ),
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(Palette.pill),
@@ -423,7 +437,7 @@ class _BlockRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: Palette.sm),
-      child: CenCard(
+      child: CenCard.glass(
         padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 14),
         radius: Palette.rowRadius,
         child: Row(

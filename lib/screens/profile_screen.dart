@@ -78,7 +78,8 @@ class ProfileScreen extends StatelessWidget {
         // Four cells, matching the concept's strip. All four come from the
         // bridge: the concept's referrals, days, and rank have no source here,
         // so they are replaced by counts that do.
-        CenCard(
+        CenCard.glass(
+          glow: Palette.gold,
           child: Row(
             children: [
               Expanded(
@@ -157,18 +158,17 @@ class _IdentityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CenCard(
+    // The cream card, as in the concept: the one large light mass on an
+    // otherwise dark screen, which is what makes the white accent read.
+    return CenCard.light(
+      glow: Palette.gold,
       child: Row(
         children: [
           Container(
             width: 52,
             height: 52,
-            decoration: BoxDecoration(
-              color: Palette.surfaceHigh,
-              shape: BoxShape.circle,
-              border: Border.all(color: Palette.goldDim.withValues(alpha: 0.5)),
-            ),
-            child: Center(child: BrandMark(size: 28, onDark: true)),
+            decoration: const BoxDecoration(color: Palette.ink, shape: BoxShape.circle),
+            child: Center(child: BrandMark(size: 30, onDark: true)),
           ),
           const SizedBox(width: Palette.lg),
           Expanded(
@@ -180,7 +180,7 @@ class _IdentityCard extends StatelessWidget {
                     Flexible(
                       child: Text(
                         workerName ?? 'No worker',
-                        style: TypeScale.headline(context),
+                        style: TypeScale.headline(context).copyWith(color: Palette.ink),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -200,7 +200,7 @@ class _IdentityCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   address == null ? 'no address reported' : 'mining to ${_shortAddress(address!)}',
-                  style: TypeScale.monoMuted(context, size: 10),
+                  style: TypeScale.mono(context, size: 10).copyWith(color: Palette.slate),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

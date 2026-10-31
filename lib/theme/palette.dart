@@ -26,6 +26,10 @@ class Palette {
   // Text
   static const Color cream = Color(0xFFF2EAD8);
   static const Color creamDim = Color(0xFFE8DCC4);
+
+  /// Pure white, for the numerals and labels the concept prints in white.
+  /// Cream is the warm body text; white is the high-contrast punctuation.
+  static const Color white = Color(0xFFFFFFFF);
   static const Color ink = Color(0xFF1A1F2B);
   static const Color slate = Color(0xFF64748B);
   static const Color slateLight = Color(0xFF94A3B8);

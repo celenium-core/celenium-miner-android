@@ -41,16 +41,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   /// the screen settles into something readable.
   bool _readoutStarted = false;
 
+  /// How far the swipe has travelled, in logical pixels. Reset when the
+  /// gesture ends without reaching the threshold.
+  double _dragX = 0;
+
+  /// Distance the swipe must cover before the app opens. Wide enough that a
+  /// stray thumb does not trigger it, short enough to feel deliberate.
+  static const _swipeThreshold = 110;
+
   @override
   void initState() {
     super.initState();
     _controller.forward();
-    // The splash is a transition, not a destination: leave once the emblem
-    // has finished its sweep and the readout has finished typing. Three
-    // seconds is the shortest span that lets both be read.
-    Future<void>.delayed(const Duration(milliseconds: 3200), () {
-      if (mounted) widget.onDone();
-    });
+    // No timer here: the splash waits for the swipe. Leaving on its own would
+    // make the gesture pointless, since the screen would already be gone.
   }
 
   @override
@@ -64,53 +68,69 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     return Scaffold(
       backgroundColor: Palette.field,
       body: SafeArea(
-        child: Stack(
-          children: [
-            // Faint CRT scanlines over the whole splash.
-            Positioned.fill(child: ScanlineOverlay(opacity: 0.06, spacing: 3)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Palette.xl),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: Palette.xxl),
-                          // The wordmark glitches once as it lands, then
-                          // settles so it stays readable.
-                          GlitchText(
-                            text: 'CELENIUM',
-                            style: TypeScale.wordmark(context),
-                          ),
-                          const SizedBox(height: Palette.sm),
-                          Text('C E L E N I U M   C O R E',
-                              style: TypeScale.monoMuted(context, size: 9)),
-                          const SizedBox(height: Palette.xl),
-                          _BinaryRain(running: !_readoutStarted),
-                          const SizedBox(height: Palette.xl),
-                          _Readout(
-                            network: widget.network,
-                            nodeVersion: widget.nodeVersion,
-                            blockCount: widget.blockCount,
-                            onStarted: _markReadoutStarted,
-                          ),
-                          const SizedBox(height: Palette.xxl),
-                          _Emblem(progress: _controller),
-                          const SizedBox(height: Palette.md),
-                          Text('C . E . N',
-                              style: TypeScale.eyebrow(context)
-                                  .copyWith(color: Palette.creamDim, letterSpacing: 5)),
-                          const SizedBox(height: Palette.lg),
-                        ],
+        child: GestureDetector(
+          // Horizontal only, so a vertical scroll inside the readout still
+          // works and the swipe never fights it.
+          onHorizontalDragUpdate: (d) {
+            setState(() => _dragX = (_dragX + d.delta.dx).clamp(-160, 160));
+          },
+          onHorizontalDragEnd: (_) {
+            if (_dragX.abs() >= _swipeThreshold) {
+              widget.onDone();
+            } else {
+              setState(() => _dragX = 0);
+            }
+          },
+          child: Stack(
+            children: [
+              // Faint CRT scanlines over the whole splash.
+              Positioned.fill(child: ScanlineOverlay(opacity: 0.06, spacing: 3)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Palette.xl),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: Palette.xxl),
+                            // The wordmark glitches once as it lands, then
+                            // settles so it stays readable.
+                            GlitchText(
+                              text: 'CELENIUM',
+                              style: TypeScale.wordmark(context),
+                            ),
+                            const SizedBox(height: Palette.sm),
+                            Text('C E L E N I U M   C O R E',
+                                style: TypeScale.monoMuted(context, size: 9)),
+                            const SizedBox(height: Palette.xl),
+                            _BinaryRain(running: !_readoutStarted),
+                            const SizedBox(height: Palette.xl),
+                            _Readout(
+                              network: widget.network,
+                              nodeVersion: widget.nodeVersion,
+                              blockCount: widget.blockCount,
+                              onStarted: _markReadoutStarted,
+                            ),
+                            const SizedBox(height: Palette.xxl),
+                            _Emblem(progress: _controller),
+                            const SizedBox(height: Palette.md),
+                            Text('C . E . N',
+                                style: TypeScale.eyebrow(context)
+                                    .copyWith(color: Palette.creamDim, letterSpacing: 5)),
+                            const SizedBox(height: Palette.xl),
+                            _SwipeHint(progress: _dragX / _swipeThreshold),
+                            const SizedBox(height: Palette.lg),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -118,6 +138,85 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   void _markReadoutStarted() {
     if (mounted) setState(() => _readoutStarted = true);
+  }
+}
+
+/// The swipe affordance at the foot of the splash.
+///
+/// The chevrons slide and brighten as the drag approaches the threshold, so
+/// the gesture is discoverable and its progress is visible rather than a
+/// label that only says what to do.
+class _SwipeHint extends StatefulWidget {
+  const _SwipeHint({required this.progress});
+
+  /// Drag distance divided by the threshold: 0 at rest, 1 at the point the
+  /// app opens. Negative when swiping the other way.
+  final double progress;
+
+  @override
+  State<_SwipeHint> createState() => _SwipeHintState();
+}
+
+class _SwipeHintState extends State<_SwipeHint> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final armed = widget.progress.abs() >= 1;
+
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) {
+        // At rest the chevrons breathe; once armed they hold at full
+        // brightness so the state change is unmistakable.
+        final glow = armed ? 1.0 : 0.35 + _pulse.value * 0.4;
+
+        return Semantics(
+          button: true,
+          label: 'Swipe to enter the mining console',
+          child: Column(
+            children: [
+              Transform.translate(
+                offset: Offset(widget.progress * 18, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var i = 0; i < 3; i++) ...[
+                      if (i > 0) const SizedBox(width: 6),
+                      Opacity(
+                        opacity: (glow - i * 0.18).clamp(0.15, 1.0),
+                        child: Icon(
+                          Icons.chevron_right,
+                          size: 26 - i * 3,
+                          color: armed ? Palette.gold : Palette.creamDim,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: Palette.sm),
+              Text(
+                armed ? 'LEPAS UNTUK MASUK' : 'GESER UNTUK MASUK',
+                style: TypeScale.eyebrow(context).copyWith(
+                  color: armed ? Palette.gold : Palette.creamDim,
+                  letterSpacing: 2.4,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 

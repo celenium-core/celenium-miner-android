@@ -24,12 +24,19 @@ class BinaryRain extends StatefulWidget {
     this.height = 120,
     this.columns = 9,
     this.color = Palette.greenDim,
+    this.expand = false,
   });
 
   final bool running;
   final double height;
   final int columns;
   final Color color;
+
+  /// Fill the space offered instead of taking [height].
+  ///
+  /// Used for the ambient rain behind a whole screen, where the effect has to
+  /// cover the viewport rather than sit in a fixed band.
+  final bool expand;
 
   @override
   State<BinaryRain> createState() => _BinaryRainState();
@@ -71,20 +78,22 @@ class _BinaryRainState extends State<BinaryRain> with SingleTickerProviderStateM
     if (!widget.running) {
       return SizedBox(height: widget.height);
     }
-    return SizedBox(
-      height: widget.height,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) => CustomPaint(
-          painter: _RainPainter(
-            progress: _controller.value,
-            columns: _cols,
-            color: widget.color,
-          ),
-          size: Size.infinite,
+    final rain = AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) => CustomPaint(
+        painter: _RainPainter(
+          progress: _controller.value,
+          columns: _cols,
+          color: widget.color,
         ),
+        size: Size.infinite,
       ),
     );
+
+    // Expanded, the rain takes whatever height the parent offers; otherwise
+    // it holds its own band.
+    if (widget.expand) return SizedBox.expand(child: rain);
+    return SizedBox(height: widget.height, child: rain);
   }
 }
 

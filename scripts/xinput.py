@@ -68,6 +68,30 @@ def key(display, names):
         time.sleep(0.05)
 
 
+def swipe(d, x1, y1, x2, y2, steps=18, hold=0.012):
+    """Drag from (x1,y1) to (x2,y2) with the button held, as a finger would.
+
+    A jump would not register as a drag, so the pointer moves in small steps
+    with the button down the whole way.
+    """
+    xtst.XTestFakeMotionEvent(d, -1, int(x1), int(y1), 0)
+    x11.XSync(d, False)
+    time.sleep(0.05)
+    xtst.XTestFakeButtonEvent(d, 1, True, 0)
+    x11.XSync(d, False)
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+    for i in range(1, steps + 1):
+        t = i / steps
+        xtst.XTestFakeMotionEvent(
+            d, -1, int(x1 + (x2 - x1) * t), int(y1 + (y2 - y1) * t), 0,
+        )
+        x11.XSync(d, False)
+        time.sleep(hold)
+    xtst.XTestFakeButtonEvent(d, 1, False, 0)
+    x11.XSync(d, False)
+    time.sleep(0.05)
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -79,6 +103,8 @@ def main():
         elif cmd == "move" and len(sys.argv) == 4:
             xtst.XTestFakeMotionEvent(d, -1, int(sys.argv[2]), int(sys.argv[3]), 0)
             x11.XSync(d, False)
+        elif cmd == "swipe" and len(sys.argv) == 6:
+            swipe(d, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
         elif cmd == "key" and len(sys.argv) > 2:
             key(d, sys.argv[2:])
         else:

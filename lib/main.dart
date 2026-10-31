@@ -314,16 +314,41 @@ class _MinerHomeState extends State<MinerHome> {
         body: SafeArea(
           child: Stack(
             children: [
+              // Ambient binary rain behind every tab. It sits under the
+              // content at low opacity so the console feel is present on
+              // Mining, Profile and Wallet alike without competing with the
+              // readings, and it is the one effect that never stops.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: Opacity(
+                      opacity: 0.13,
+                      child: BinaryRain(
+                        expand: true,
+                        columns: 5,
+                        color: Palette.greenDim,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               Padding(
                 padding: EdgeInsets.only(bottom: showBanner ? AdBanner.footprint : 0),
                 child: _buildTab(snapshot),
               ),
-              // Faint CRT scanlines over the whole app: the console look with
-              // no motion, so it never competes with the readings.
+              // CRT scanlines over the whole app: the console look with no
+              // motion, so it never competes with the readings. Stronger than
+              // a whisper, because the effect is meant to be felt here.
               Positioned.fill(
                 child: IgnorePointer(
-                  child: ScanlineOverlay(opacity: 0.035, spacing: 3),
+                  child: ScanlineOverlay(opacity: 0.06, spacing: 3),
                 ),
+              ),
+              // A slow sweep of light down the screen, the CRT refresh the
+              // scanlines imply. Bounded to one pass so it never loops into
+              // a distraction.
+              const Positioned.fill(
+                child: IgnorePointer(child: ExcludeSemantics(child: ScanSweep())),
               ),
               // Floating overlay, not an inline row: it never pushes the
               // content, so the layout does not move when the ad loads or fails.
