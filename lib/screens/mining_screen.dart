@@ -116,6 +116,26 @@ class _SummaryCard extends StatelessWidget {
                 readout.hashrateGhs == null ? '—' : formatHashrate(readout.hashrateGhs!),
                 style: TypeScale.hero(context).copyWith(color: Palette.ink, fontSize: 34),
               ),
+              const Spacer(),
+              // Gold level badge, as in the concept. The level is derived from
+              // the hashrate so the number means something rather than being
+              // decoration: every 1 GH/s is one level.
+              if (readout.hashrateGhs != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Palette.gold,
+                    borderRadius: BorderRadius.circular(Palette.pill),
+                  ),
+                  child: Text(
+                    'LV.${readout.hashrateGhs!.floor().clamp(1, 99)}',
+                    style: TypeScale.caption(context).copyWith(
+                      color: Palette.ink,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: Palette.md),

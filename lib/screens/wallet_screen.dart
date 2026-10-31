@@ -55,7 +55,7 @@ class WalletScreen extends StatelessWidget {
         const SizedBox(height: Palette.xl),
         Row(
           children: [
-            Eyebrow('Mined blocks'),
+            Eyebrow('Transactions'),
             const Spacer(),
             if (blocks.isNotEmpty)
               TextButton(
@@ -72,7 +72,7 @@ class WalletScreen extends StatelessWidget {
         const SizedBox(height: Palette.sm),
         if (blocks.isEmpty)
           const CenEmpty(
-            reason: 'No blocks accepted yet. Mined blocks appear here as they land.',
+            reason: 'No transactions yet. Blocks your workers mine appear here as they land.',
           )
         else
           for (final block in blocks.take(6)) _BlockRow(block: block),
@@ -89,10 +89,28 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    // The concept puts the network label left, a live status right, and the
+    // screen title beneath in the serif. Same order here.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: Text('Wallet', style: TypeScale.screenTitle(context))),
-        LiveStatus(label: connected ? 'NODE ONLINE' : 'NODE OFFLINE', active: connected, tint: Palette.greenDim),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                networkLabel.toUpperCase(),
+                style: TypeScale.monoMuted(context, size: 10).copyWith(letterSpacing: 1.4),
+              ),
+            ),
+            LiveStatus(
+              label: connected ? 'ONLINE' : 'OFFLINE',
+              active: connected,
+              tint: Palette.greenDim,
+            ),
+          ],
+        ),
+        const SizedBox(height: Palette.sm),
+        Text('Wallet', style: TypeScale.screenTitle(context)),
       ],
     );
   }
@@ -379,7 +397,23 @@ class _ReceiveSheet extends StatelessWidget {
   }
 }
 
-/// One accepted block: real hash, real timestamp, no invented amount.
+/// The block subsidy in CEN.
+///
+/// Taken from consensus/core/src/config/bps.rs:
+/// `pre_deflationary_phase_base_subsidy() = 50000000000 / BPS` sompi, with
+/// BPS = 10, and 1 CEN = 100000000 sompi. That gives 50 CEN per block.
+///
+/// This is the pre-deflationary value. The subsidy halves every six months,
+/// so once the network passes its first halving this figure is stale. It is
+/// shown because a mined block genuinely pays the subsidy, not because the
+/// app needs a number to fill the row with.
+const double blockRewardCen = 50;
+
+/// One accepted block, laid out like the concept's transaction row: circular
+/// icon on the left, description and timestamp stacked, amount right-aligned.
+///
+/// The amount is the block subsidy, which is the one number the consensus
+/// rules fix rather than something the app chooses. See [blockRewardCen].
 class _BlockRow extends StatelessWidget {
   const _BlockRow({required this.block});
 
@@ -394,34 +428,68 @@ class _BlockRow extends StatelessWidget {
         radius: Palette.rowRadius,
         child: Row(
           children: [
+            // Circular, not square: the concept uses a round badge for the
+            // direction of the transaction.
             Container(
-              width: 32,
-              height: 32,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: Palette.green.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(9),
+                shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_downward, size: 16, color: Palette.greenDim),
+              child: const Icon(Icons.arrow_upward, size: 16, color: Palette.greenDim),
             ),
             const SizedBox(width: Palette.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Block mined', style: TypeScale.title(context)),
+                  Text('Mining reward', style: TypeScale.title(context)),
                   const SizedBox(height: 2),
                   Text(
-                    '${shortHash(block.hash, head: 10, tail: 8)} · ${block.timestamp}',
+                    '${_friendlyTime(block.timestamp)} · ${shortHash(block.hash, head: 8, tail: 6)}',
                     style: TypeScale.monoMuted(context, size: 10),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            Text(block.worker, style: TypeScale.monoMuted(context, size: 10)),
+            const SizedBox(width: Palette.sm),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '+${blockRewardCen.toStringAsFixed(2)}',
+                  style: TypeScale.mono(context, size: 13).copyWith(
+                    color: Palette.greenDim,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text('CEL', style: TypeScale.monoMuted(context, size: 9)),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Turns an ISO timestamp into the concept's short form: TODAY, YESTERDAY, or
+/// a date. Falls back to the raw string when it cannot be parsed.
+String _friendlyTime(String raw) {
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return raw;
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final then = DateTime(parsed.year, parsed.month, parsed.day);
+  final days = today.difference(then).inDays;
+
+  if (days == 0) return 'TODAY';
+  if (days == 1) return 'YESTERDAY';
+
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  return '${months[parsed.month - 1]} ${parsed.day}';
 }

@@ -44,10 +44,28 @@ class ProfileScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(Palette.lg, Palette.sm, Palette.lg, Palette.xxl),
       children: [
-        Row(
+        // Network label left, live status right, serif title beneath: the
+        // same top bar the concept uses on both Profile and Wallet.
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: Text('Profile', style: TypeScale.screenTitle(context))),
-            Pill(label: networkLabel, border: BorderSide(color: Palette.goldDim)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    networkLabel.toUpperCase(),
+                    style: TypeScale.monoMuted(context, size: 10).copyWith(letterSpacing: 1.4),
+                  ),
+                ),
+                LiveStatus(
+                  label: readout.active ? 'ACTIVE' : 'IDLE',
+                  active: readout.active,
+                  tint: Palette.greenDim,
+                ),
+              ],
+            ),
+            const SizedBox(height: Palette.sm),
+            Text('Profile', style: TypeScale.screenTitle(context)),
           ],
         ),
         const SizedBox(height: Palette.lg),
@@ -57,6 +75,9 @@ class ProfileScreen extends StatelessWidget {
           active: readout.active,
         ),
         const SizedBox(height: Palette.md),
+        // Four cells, matching the concept's strip. All four come from the
+        // bridge: the concept's referrals, days, and rank have no source here,
+        // so they are replaced by counts that do.
         CenCard(
           child: Row(
             children: [
@@ -71,6 +92,15 @@ class ProfileScreen extends StatelessWidget {
               Expanded(child: StatCell(value: readout.shares?.toString() ?? '—', label: 'shares')),
               const StatDivider(),
               Expanded(child: StatCell(value: workers > 0 ? workers.toString() : '—', label: 'workers')),
+              const StatDivider(),
+              Expanded(
+                child: StatCell(
+                  value: readout.hashrateGhs == null
+                      ? '—'
+                      : formatHashrate(readout.hashrateGhs!).split(' ').first,
+                  label: 'gh/s',
+                ),
+              ),
             ],
           ),
         ),
@@ -155,7 +185,16 @@ class _IdentityCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: Palette.sm),
-                    LiveStatus(label: active ? 'ACTIVE' : 'IDLE', active: active, tint: Palette.greenDim),
+                    // Green verified pill with a tick, as in the concept. It
+                    // marks a real state: the bridge reports this worker
+                    // hashing, which is the only thing there is to verify.
+                    if (active)
+                      const Pill(
+                        label: 'ACTIVE',
+                        background: Palette.green,
+                        foreground: Palette.ink,
+                        dense: true,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 4),

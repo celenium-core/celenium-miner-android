@@ -395,6 +395,21 @@ void main() {
       expect(find.text('1204'), findsOneWidget);
       expect(find.textContaining(r'$'), findsNothing);
     });
+
+    testWidgets('the level badge is derived from the hashrate, not invented',
+        (tester) async {
+      await tester.pumpWidget(host(snapshotWith()));
+
+      // 1.42 GH/s floors to 1, so the badge reads LV.1. The badge only
+      // appears once there is a hashrate to derive it from.
+      expect(find.text('LV.1'), findsOneWidget);
+    });
+
+    testWidgets('no level badge when the bridge has not answered', (tester) async {
+      await tester.pumpWidget(host(const MinerSnapshot()));
+
+      expect(find.textContaining('LV.'), findsNothing);
+    });
   });
 
   group('wallet screen', () {
@@ -419,7 +434,10 @@ void main() {
       await tester.pumpWidget(host(snapshotWith()));
 
       expect(find.text('cen69sim:qabc'), findsWidgets);
-      expect(find.text('Block mined'), findsOneWidget);
+      // The row reads as a transaction, as in the concept.
+      expect(find.text('Mining reward'), findsOneWidget);
+      expect(find.text('+50.00'), findsOneWidget);
+      expect(find.text('CEL'), findsWidgets);
     });
 
     testWidgets('does not invent a balance', (tester) async {
@@ -446,7 +464,7 @@ void main() {
           .copyWithNullBlocks()));
 
       expect(
-        find.textContaining('No blocks accepted yet'),
+        find.textContaining('No transactions yet'),
         findsOneWidget,
       );
     });
