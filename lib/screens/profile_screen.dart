@@ -78,8 +78,13 @@ class ProfileScreen extends StatelessWidget {
         // Four cells, matching the concept's strip. All four come from the
         // bridge: the concept's referrals, days, and rank have no source here,
         // so they are replaced by counts that do.
+        //
+        // Every column is value over label, with no unit line anywhere. One
+        // column carrying a unit made the row four lines deep on the right and
+        // three everywhere else, which is what read as untidy.
         CenCard.glass(
           glow: Palette.gold,
+          padding: const EdgeInsets.symmetric(horizontal: Palette.sm, vertical: Palette.lg),
           child: Row(
             children: [
               Expanded(
@@ -99,8 +104,7 @@ class ProfileScreen extends StatelessWidget {
                   value: readout.hashrateGhs == null
                       ? '—'
                       : formatHashrate(readout.hashrateGhs!).split(' ').first,
-                  unit: 'GH/s',
-                  label: 'hashrate',
+                  label: 'gh/s',
                 ),
               ),
             ],

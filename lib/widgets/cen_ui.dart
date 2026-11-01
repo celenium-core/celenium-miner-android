@@ -452,7 +452,12 @@ class SettingRow extends StatelessWidget {
   }
 }
 
-/// One column of the stats strip: value over unit over label.
+/// One column of the stats strip: value over label.
+///
+/// The unit line is optional and every column in a strip should agree on
+/// whether it has one, otherwise the row goes ragged. Centred rather than
+/// left-aligned: in a four-column strip the labels differ in length, and
+/// centring is what keeps the columns reading as a grid.
 class StatCell extends StatelessWidget {
   const StatCell({
     super.key,
@@ -466,8 +471,9 @@ class StatCell extends StatelessWidget {
   final String value;
   final String label;
 
-  /// The unit line between the value and the label, as in the concept
-  /// (`12.4` / `CEL` / `SESSION`). Omitted when there is nothing to say.
+  /// Optional line between the value and the label, as in the concept
+  /// (`12.4` / `CEL` / `SESSION`). Use it in every column of a strip or in
+  /// none of them.
   final String? unit;
 
   final bool mono;
@@ -482,11 +488,11 @@ class StatCell extends StatelessWidget {
         : TypeScale.headline(context).copyWith(color: color ?? Palette.white);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         FittedBox(
           fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
+          alignment: Alignment.center,
           child: Text(value, style: style),
         ),
         if (unit != null) Eyebrow(unit!, color: Palette.goldLight),

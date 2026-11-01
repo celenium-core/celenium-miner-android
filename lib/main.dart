@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models/bridge.dart';
@@ -31,11 +33,21 @@ class CeleniumMinerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Desktop only: CEN_TAB opens a specific tab, so a screen can be launched
+    // straight into for review without clicking through the shell. Ignored on
+    // Android, where there is no environment to read.
+    var initialTab = _Tab.mine;
+    if (!kIsWeb) {
+      final tab = Platform.environment['CEN_TAB'] ?? '';
+      if (tab == 'wallet') initialTab = _Tab.wallet;
+      if (tab == 'profile') initialTab = _Tab.profile;
+    }
+
     return MaterialApp(
       title: 'Celenium Miner',
       debugShowCheckedModeBanner: false,
       theme: buildCenTheme(),
-      home: const MinerHome(),
+      home: MinerHome(initialTab: initialTab),
     );
   }
 }
