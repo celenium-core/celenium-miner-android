@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/bridge.dart';
 import '../services/settings_store.dart';
+import '../theme/layout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/cen_ui.dart';
@@ -12,7 +13,11 @@ import '../widgets/cen_ui.dart';
 /// address the app needs, how often it polls, and the ad slot. Everything is
 /// plain text input; nothing here is a secret.
 class BridgeScreen extends StatefulWidget {
-  const BridgeScreen({super.key, required this.settings, required this.snapshot});
+  const BridgeScreen({
+    super.key,
+    required this.settings,
+    required this.snapshot,
+  });
 
   final SettingsStore settings;
   final MinerSnapshot snapshot;
@@ -51,9 +56,8 @@ class _BridgeScreenState extends State<BridgeScreen> {
     await widget.settings.setAdUnitId(_adController.text);
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bridge address saved')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Bridge address saved')));
   }
 
   @override
@@ -71,97 +75,114 @@ class _BridgeScreenState extends State<BridgeScreen> {
       appBar: AppBar(title: const Text('BRIDGE')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(Palette.lg),
-              children: [
-                _NodeCard(
-                  online: status != null,
-                  address: status?.celeniumdAddress,
-                  version: status?.celeniumdVersion,
-                  instances: status?.instances,
-                ),
-                const SizedBox(height: Palette.lg),
-                CenCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Eyebrow('Bridge address'),
-                      const SizedBox(height: Palette.sm),
-                      TextField(
-                        controller: _urlController,
-                        keyboardType: TextInputType.url,
-                        autocorrect: false,
-                        style: TypeScale.mono(context, size: 13).copyWith(color: Palette.cream),
-                        decoration: const InputDecoration(hintText: 'http://127.0.0.1:3030'),
-                      ),
-                      const SizedBox(height: Palette.sm),
-                      Text(
-                        'The bridge serves mining results over HTTP. No account and no '
-                        'credentials are sent with the request.',
-                        style: TypeScale.caption(context),
-                      ),
-                    ],
+          : CenContent(
+              child: ListView(
+                padding: const EdgeInsets.all(Palette.lg),
+                children: [
+                  _NodeCard(
+                    online: status != null,
+                    address: status?.celeniumdAddress,
+                    version: status?.celeniumdVersion,
+                    instances: status?.instances,
                   ),
-                ),
-                const SizedBox(height: Palette.md),
-                CenCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Eyebrow('Poll interval'),
-                      const SizedBox(height: Palette.sm),
-                      _IntervalPicker(
-                        value: _intervalMs,
-                        onChanged: (ms) async {
-                          setState(() => _intervalMs = ms);
-                          await widget.settings.setIntervalMs(ms);
-                        },
-                      ),
-                      const SizedBox(height: Palette.sm),
-                      Text(
-                        'How often the app asks the bridge for fresh figures. A shorter '
-                        'interval updates faster and uses more battery.',
-                        style: TypeScale.caption(context),
-                      ),
-                    ],
+                  const SizedBox(height: Palette.lg),
+                  CenCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Eyebrow('Bridge address'),
+                        const SizedBox(height: Palette.sm),
+                        TextField(
+                          controller: _urlController,
+                          keyboardType: TextInputType.url,
+                          autocorrect: false,
+                          style: TypeScale.mono(
+                            context,
+                            size: 13,
+                          ).copyWith(color: Palette.cream),
+                          decoration: const InputDecoration(
+                            hintText: 'http://127.0.0.1:3030',
+                          ),
+                        ),
+                        const SizedBox(height: Palette.sm),
+                        Text(
+                          'The bridge serves mining results over HTTP. No account and no '
+                          'credentials are sent with the request.',
+                          style: TypeScale.caption(context),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: Palette.md),
-                CenCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Eyebrow('Ad unit id'),
-                      const SizedBox(height: Palette.sm),
-                      TextField(
-                        controller: _adController,
-                        autocorrect: false,
-                        style: TypeScale.mono(context, size: 13).copyWith(color: Palette.cream),
-                        decoration: const InputDecoration(hintText: 'ca-app-pub-…/…'),
-                      ),
-                      const SizedBox(height: Palette.sm),
-                      Text(
-                        'Leave this empty and no banner is requested. The banner only '
-                        'appears once a real ad is served: an empty slot reserves no '
-                        'space and shows nothing.',
-                        style: TypeScale.caption(context),
-                      ),
-                    ],
+                  const SizedBox(height: Palette.md),
+                  CenCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Eyebrow('Poll interval'),
+                        const SizedBox(height: Palette.sm),
+                        _IntervalPicker(
+                          value: _intervalMs,
+                          onChanged: (ms) async {
+                            setState(() => _intervalMs = ms);
+                            await widget.settings.setIntervalMs(ms);
+                          },
+                        ),
+                        const SizedBox(height: Palette.sm),
+                        Text(
+                          'How often the app asks the bridge for fresh figures. A shorter '
+                          'interval updates faster and uses more battery.',
+                          style: TypeScale.caption(context),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: Palette.xl),
-                GoldButton(
-                  label: _saving ? 'Saving…' : 'Save',
-                  onPressed: _saving ? null : _save,
-                ),
-              ],
+                  const SizedBox(height: Palette.md),
+                  CenCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Eyebrow('Ad unit id'),
+                        const SizedBox(height: Palette.sm),
+                        TextField(
+                          controller: _adController,
+                          autocorrect: false,
+                          style: TypeScale.mono(
+                            context,
+                            size: 13,
+                          ).copyWith(color: Palette.cream),
+                          decoration: const InputDecoration(
+                            hintText: 'ca-app-pub-…/…',
+                          ),
+                        ),
+                        const SizedBox(height: Palette.sm),
+                        Text(
+                          'Leave this empty and no banner is requested. The banner only '
+                          'appears once a real ad is served: an empty slot reserves no '
+                          'space and shows nothing.',
+                          style: TypeScale.caption(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: Palette.xl),
+                  GoldButton(
+                    label: _saving ? 'Saving…' : 'Save',
+                    onPressed: _saving ? null : _save,
+                  ),
+                ],
+              ),
             ),
     );
   }
 }
 
 class _NodeCard extends StatelessWidget {
-  const _NodeCard({required this.online, this.address, this.version, this.instances});
+  const _NodeCard({
+    required this.online,
+    this.address,
+    this.version,
+    this.instances,
+  });
 
   final bool online;
   final String? address;
@@ -177,7 +198,11 @@ class _NodeCard extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Eyebrow('Node')),
-              LiveStatus(label: online ? 'ONLINE' : 'OFFLINE', active: online, tint: Palette.greenDim),
+              LiveStatus(
+                label: online ? 'ONLINE' : 'OFFLINE',
+                active: online,
+                tint: Palette.greenDim,
+              ),
             ],
           ),
           const SizedBox(height: Palette.md),
@@ -203,9 +228,18 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 84, child: Text(label, style: TypeScale.caption(context))),
+          SizedBox(
+            width: 84,
+            child: Text(label, style: TypeScale.caption(context)),
+          ),
           Expanded(
-            child: Text(value, style: TypeScale.mono(context, size: 11).copyWith(color: Palette.creamDim)),
+            child: Text(
+              value,
+              style: TypeScale.mono(
+                context,
+                size: 11,
+              ).copyWith(color: Palette.creamDim),
+            ),
           ),
         ],
       ),
@@ -241,7 +275,11 @@ class _IntervalPicker extends StatelessWidget {
 }
 
 class _IntervalChip extends StatelessWidget {
-  const _IntervalChip({required this.ms, required this.selected, required this.onTap});
+  const _IntervalChip({
+    required this.ms,
+    required this.selected,
+    required this.onTap,
+  });
 
   final int ms;
   final bool selected;
@@ -252,7 +290,10 @@ class _IntervalChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 9),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Palette.lg,
+          vertical: 9,
+        ),
         decoration: BoxDecoration(
           color: selected ? Palette.gold : Palette.surfaceHigh,
           borderRadius: BorderRadius.circular(Palette.pill),

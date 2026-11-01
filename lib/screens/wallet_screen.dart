@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/bridge.dart';
 import '../services/mining_readout.dart';
+import '../theme/layout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/cen_ui.dart';
@@ -40,43 +41,51 @@ class WalletScreen extends StatelessWidget {
     final address = _address;
     final blocks = _blocks;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(Palette.lg, Palette.sm, Palette.lg, Palette.xxl),
-      children: [
-        _Header(networkLabel: networkLabel, connected: snapshot.stats != null),
-        const SizedBox(height: Palette.lg),
-        _BalanceCard(hasAddress: address != null),
-        const SizedBox(height: Palette.lg),
-        if (address != null) ...[
-          _AddressCard(address: address),
+    return CenContent(
+      scrollable: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: Palette.sm),
+          _Header(
+            networkLabel: networkLabel,
+            connected: snapshot.stats != null,
+          ),
           const SizedBox(height: Palette.lg),
-        ],
-        _Actions(address: address, onBackup: onBackup),
-        const SizedBox(height: Palette.xl),
-        Row(
-          children: [
-            Eyebrow('Transactions'),
-            const Spacer(),
-            if (blocks.isNotEmpty)
-              TextButton(
-                onPressed: onOpenActivity,
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text('SEE ALL'),
-              ),
+          _BalanceCard(hasAddress: address != null),
+          const SizedBox(height: Palette.lg),
+          if (address != null) ...[
+            _AddressCard(address: address),
+            const SizedBox(height: Palette.lg),
           ],
-        ),
-        const SizedBox(height: Palette.sm),
-        if (blocks.isEmpty)
-          const CenEmpty(
-            reason: 'No transactions yet. Blocks your workers mine appear here as they land.',
-          )
-        else
-          for (final block in blocks.take(6)) _BlockRow(block: block),
-      ],
+          _Actions(address: address, onBackup: onBackup),
+          const SizedBox(height: Palette.xl),
+          Row(
+            children: [
+              Eyebrow('Transactions'),
+              const Spacer(),
+              if (blocks.isNotEmpty)
+                TextButton(
+                  onPressed: onOpenActivity,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('SEE ALL'),
+                ),
+            ],
+          ),
+          const SizedBox(height: Palette.sm),
+          if (blocks.isEmpty)
+            const CenEmpty(
+              reason: 'No transactions yet. Blocks your workers mine appear here as they land.',
+            )
+          else
+            for (final block in blocks.take(6)) _BlockRow(block: block),
+          const SizedBox(height: Palette.xxl),
+        ],
+      ),
     );
   }
 }
@@ -99,7 +108,10 @@ class _Header extends StatelessWidget {
             Expanded(
               child: Text(
                 networkLabel.toUpperCase(),
-                style: TypeScale.monoMuted(context, size: 10).copyWith(letterSpacing: 1.4),
+                style: TypeScale.monoMuted(
+                  context,
+                  size: 10,
+                ).copyWith(letterSpacing: 1.4),
               ),
             ),
             LiveStatus(
@@ -137,11 +149,19 @@ class _BalanceCard extends StatelessWidget {
             children: [
               Eyebrow('Total balance', color: Palette.slate),
               const Spacer(),
-              const Pill(label: 'CEN', background: Palette.gold, foreground: Palette.ink, dense: true),
+              const Pill(
+                label: 'CEN',
+                background: Palette.gold,
+                foreground: Palette.ink,
+                dense: true,
+              ),
             ],
           ),
           const SizedBox(height: Palette.sm),
-          Text('—', style: TypeScale.hero(context).copyWith(color: Palette.ink)),
+          Text(
+            '—',
+            style: TypeScale.hero(context).copyWith(color: Palette.ink),
+          ),
           const SizedBox(height: Palette.sm),
           Text(
             'The bridge reports mining results, not account balances. A direct node '
@@ -171,7 +191,10 @@ class _AddressCard extends StatelessWidget {
           const SizedBox(height: Palette.sm),
           SelectableText(
             address,
-            style: TypeScale.mono(context, size: 11).copyWith(color: Palette.goldLight),
+            style: TypeScale.mono(
+              context,
+              size: 11,
+            ).copyWith(color: Palette.goldLight),
           ),
           const SizedBox(height: Palette.md),
           Align(
@@ -179,9 +202,9 @@ class _AddressCard extends StatelessWidget {
             child: TextButton.icon(
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: address));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Address copied')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Address copied')));
               },
               icon: const Icon(Icons.copy, size: 14),
               label: const Text('Copy'),
@@ -221,7 +244,9 @@ class _Actions extends StatelessWidget {
                 label: 'Receive',
                 icon: Icons.south_west,
                 primary: false,
-                onTap: address == null ? null : () => _showReceiveSheet(context, address!),
+                onTap: address == null
+                    ? null
+                    : () => _showReceiveSheet(context, address!),
               ),
             ),
             const SizedBox(width: Palette.sm),
@@ -258,7 +283,10 @@ void _showSwapUnavailable(BuildContext context) {
         style: TypeScale.label(context),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
       ],
     ),
   );
@@ -283,9 +311,13 @@ class _ActionButton extends StatelessWidget {
     // pills with a white outline the concept uses, so the three read as one
     // primary action and two secondary ones without a second solid block
     // competing for attention.
-    final background = primary ? Palette.gold : Palette.white.withValues(alpha: 0.06);
+    final background = primary
+        ? Palette.gold
+        : Palette.white.withValues(alpha: 0.06);
     final foreground = primary ? Palette.ink : Palette.white;
-    final disabledBg = primary ? Palette.goldDim.withValues(alpha: 0.35) : Palette.white.withValues(alpha: 0.03);
+    final disabledBg = primary
+        ? Palette.goldDim.withValues(alpha: 0.35)
+        : Palette.white.withValues(alpha: 0.03);
     final disabledFg = Palette.slate;
 
     return Semantics(
@@ -312,7 +344,11 @@ class _ActionButton extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 17, color: onTap == null ? disabledFg : foreground),
+                  Icon(
+                    icon,
+                    size: 17,
+                    color: onTap == null ? disabledFg : foreground,
+                  ),
                   const SizedBox(width: Palette.sm),
                   Text(
                     label,
@@ -343,7 +379,10 @@ void _showSendUnavailable(BuildContext context) {
   showDialog<void>(
     context: context,
     builder: (_) => AlertDialog(
-      title: Text('Sending is not available yet', style: TypeScale.headline(context)),
+      title: Text(
+        'Sending is not available yet',
+        style: TypeScale.headline(context),
+      ),
       content: Text(
         'Moving coins needs two things this build does not have: a node that can '
         'broadcast a transaction, and the signing key held on this device. Both are '
@@ -352,7 +391,10 @@ void _showSendUnavailable(BuildContext context) {
         style: TypeScale.label(context),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
       ],
     ),
   );
@@ -384,7 +426,10 @@ class _ReceiveSheet extends StatelessWidget {
               ),
               child: SelectableText(
                 address,
-                style: TypeScale.mono(context, size: 12).copyWith(color: Palette.goldLight),
+                style: TypeScale.mono(
+                  context,
+                  size: 12,
+                ).copyWith(color: Palette.goldLight),
               ),
             ),
             const SizedBox(height: Palette.lg),
@@ -393,9 +438,9 @@ class _ReceiveSheet extends StatelessWidget {
               icon: Icons.copy,
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: address));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Address copied')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Address copied')));
                 Navigator.of(context).pop();
               },
             ),
@@ -438,7 +483,10 @@ class _BlockRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: Palette.sm),
       child: CenCard.glass(
-        padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 14),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Palette.lg,
+          vertical: 14,
+        ),
         radius: Palette.rowRadius,
         child: Row(
           children: [
@@ -451,7 +499,11 @@ class _BlockRow extends StatelessWidget {
                 color: Palette.green.withValues(alpha: 0.14),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_upward, size: 16, color: Palette.greenDim),
+              child: const Icon(
+                Icons.arrow_upward,
+                size: 16,
+                color: Palette.greenDim,
+              ),
             ),
             const SizedBox(width: Palette.md),
             Expanded(
@@ -504,6 +556,19 @@ String _friendlyTime(String raw) {
   if (days == 0) return 'TODAY';
   if (days == 1) return 'YESTERDAY';
 
-  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const months = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC',
+  ];
   return '${months[parsed.month - 1]} ${parsed.day}';
 }

@@ -32,8 +32,8 @@ class CenCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(Palette.lg),
     this.radius = Palette.cardRadius,
     this.glow,
-  })  : color = Palette.surfaceHigh.withValues(alpha: 0.62),
-        border = const BorderSide(color: Color(0x1FFFFFFF));
+  }) : color = Palette.surfaceHigh.withValues(alpha: 0.62),
+       border = const BorderSide(color: Color(0x1FFFFFFF));
 
   /// The cream panel. Used where the concept puts a light card against the
   /// dark canvas: the identity card on Profile and the balance on Wallet.
@@ -42,8 +42,8 @@ class CenCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(Palette.lg),
     this.radius = Palette.cardRadius,
     this.glow,
-  })  : color = Palette.surfaceLight,
-        border = null;
+  }) : color = Palette.surfaceLight,
+       border = null;
 
   final Widget child;
   final EdgeInsets padding;
@@ -74,7 +74,11 @@ class CenCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
-          BoxShadow(color: glow!.withValues(alpha: 0.16), blurRadius: 28, spreadRadius: -6),
+          BoxShadow(
+            color: glow!.withValues(alpha: 0.16),
+            blurRadius: 28,
+            spreadRadius: -6,
+          ),
         ],
       ),
       child: card,
@@ -85,7 +89,12 @@ class CenCard extends StatelessWidget {
 /// A soft pool of light, used behind the dial and the balance to lift them off
 /// the canvas. Purely decorative and never interactive.
 class GlowOrb extends StatelessWidget {
-  const GlowOrb({super.key, required this.color, this.size = 260, this.opacity = 0.14});
+  const GlowOrb({
+    super.key,
+    required this.color,
+    this.size = 260,
+    this.opacity = 0.14,
+  });
 
   final Color color;
   final double size;
@@ -101,7 +110,10 @@ class GlowOrb extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
-              colors: [color.withValues(alpha: opacity), color.withValues(alpha: 0)],
+              colors: [
+                color.withValues(alpha: opacity),
+                color.withValues(alpha: 0),
+              ],
               stops: const [0, 1],
             ),
           ),
@@ -124,7 +136,8 @@ class ScanSweep extends StatefulWidget {
   State<ScanSweep> createState() => _ScanSweepState();
 }
 
-class _ScanSweepState extends State<ScanSweep> with SingleTickerProviderStateMixin {
+class _ScanSweepState extends State<ScanSweep>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 5200),
@@ -191,7 +204,10 @@ class Eyebrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text.toUpperCase(), style: TypeScale.eyebrow(context).copyWith(color: color));
+    return Text(
+      text.toUpperCase(),
+      style: TypeScale.eyebrow(context).copyWith(color: color),
+    );
   }
 }
 
@@ -215,7 +231,10 @@ class Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: dense ? Palette.sm : Palette.md, vertical: dense ? 3 : 5),
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? Palette.sm : Palette.md,
+        vertical: dense ? 3 : 5,
+      ),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(Palette.pill),
@@ -238,7 +257,12 @@ class Pill extends StatelessWidget {
 /// The dot only appears when something is genuinely in that state. No dot is
 /// drawn for decoration.
 class StateDot extends StatelessWidget {
-  const StateDot({super.key, required this.active, this.color = Palette.green, this.size = 7});
+  const StateDot({
+    super.key,
+    required this.active,
+    this.color = Palette.green,
+    this.size = 7,
+  });
 
   final bool active;
   final Color color;
@@ -257,7 +281,12 @@ class StateDot extends StatelessWidget {
 
 /// Green-tinted status pill with a live dot.
 class LiveStatus extends StatelessWidget {
-  const LiveStatus({super.key, required this.label, this.active = true, this.tint = Palette.green});
+  const LiveStatus({
+    super.key,
+    required this.label,
+    this.active = true,
+    this.tint = Palette.green,
+  });
 
   final String label;
   final bool active;
@@ -279,7 +308,11 @@ class LiveStatus extends StatelessWidget {
           const SizedBox(width: Palette.sm),
           Text(
             label,
-            style: TypeScale.caption(context).copyWith(color: color, fontWeight: FontWeight.w700, letterSpacing: 0.8),
+            style: TypeScale.caption(context).copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
           ),
         ],
       ),
@@ -289,7 +322,13 @@ class LiveStatus extends StatelessWidget {
 
 /// Solid gold capsule: the one primary action on a screen.
 class GoldButton extends StatelessWidget {
-  const GoldButton({super.key, required this.label, this.onPressed, this.icon, this.expand = true});
+  const GoldButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.expand = true,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -302,7 +341,10 @@ class GoldButton extends StatelessWidget {
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (icon != null) ...[Icon(icon, size: 17), const SizedBox(width: Palette.sm)],
+        if (icon != null) ...[
+          Icon(icon, size: 17),
+          const SizedBox(width: Palette.sm),
+        ],
         Text(label),
       ],
     );
@@ -326,7 +368,13 @@ class GoldButton extends StatelessWidget {
 
 /// Dark bordered capsule: secondary actions.
 class GhostButton extends StatelessWidget {
-  const GhostButton({super.key, required this.label, this.onPressed, this.icon, this.expand = true});
+  const GhostButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.expand = true,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -339,7 +387,10 @@ class GhostButton extends StatelessWidget {
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (icon != null) ...[Icon(icon, size: 17, color: Palette.creamDim), const SizedBox(width: Palette.sm)],
+        if (icon != null) ...[
+          Icon(icon, size: 17, color: Palette.creamDim),
+          const SizedBox(width: Palette.sm),
+        ],
         Text(label),
       ],
     );
@@ -428,7 +479,9 @@ class SettingRow extends StatelessWidget {
     if (flat) {
       return Container(
         decoration: BoxDecoration(
-          border: last ? null : const Border(bottom: BorderSide(color: Color(0x0FFFFFFF))),
+          border: last
+              ? null
+              : const Border(bottom: BorderSide(color: Color(0x0FFFFFFF))),
         ),
         child: InkWell(onTap: onTap, child: content),
       );
@@ -484,7 +537,10 @@ class StatCell extends StatelessWidget {
     // White by default, as the concept prints its stat numerals. Gold is
     // passed explicitly where one figure is the one that matters.
     final style = mono
-        ? TypeScale.mono(context, size: 16).copyWith(color: color ?? Palette.white, fontWeight: FontWeight.w700)
+        ? TypeScale.mono(
+            context,
+            size: 16,
+          ).copyWith(color: color ?? Palette.white, fontWeight: FontWeight.w700)
         : TypeScale.headline(context).copyWith(color: color ?? Palette.white);
 
     return Column(

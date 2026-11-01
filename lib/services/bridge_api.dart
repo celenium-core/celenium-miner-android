@@ -59,7 +59,9 @@ class BridgeApi {
     final uri = Uri.parse('$baseUrl$path');
     final response = await http.get(uri).timeout(timeout);
     if (response.statusCode != 200) {
-      throw HttpException('Bridge returned HTTP ${response.statusCode} for $path');
+      throw HttpException(
+        'Bridge returned HTTP ${response.statusCode} for $path',
+      );
     }
     return jsonDecode(response.body);
   }

@@ -119,10 +119,7 @@ const int versionPubKey = 0;
 
 /// A generated wallet: the key and the address derived from it.
 class CenWallet {
-  const CenWallet({
-    required this.privateKey,
-    required this.network,
-  });
+  const CenWallet({required this.privateKey, required this.network});
 
   final BigInt privateKey;
   final CenNetwork network;
@@ -181,7 +178,9 @@ class CenWallet {
     final seed = mnemonicToSeed(mnemonic);
     final key = seedToPrivateKey(seed);
     if (key <= BigInt.zero || key >= _curveOrder) {
-      throw const FormatException('phrase produced a key outside the valid curve range');
+      throw const FormatException(
+        'phrase produced a key outside the valid curve range',
+      );
     }
     return CenWallet(privateKey: key, network: network);
   }
@@ -280,9 +279,14 @@ Mnemonic generateMnemonic({Random? random, required List<String> wordlist}) {
 }
 
 /// Encodes entropy as a BIP39 phrase, computing the checksum.
-Mnemonic mnemonicFromEntropy(List<int> entropy, {required List<String> wordlist}) {
+Mnemonic mnemonicFromEntropy(
+  List<int> entropy, {
+  required List<String> wordlist,
+}) {
   if (entropy.length != 16 && entropy.length != 32) {
-    throw ArgumentError('entropy must be 16 or 32 bytes, got ${entropy.length}');
+    throw ArgumentError(
+      'entropy must be 16 or 32 bytes, got ${entropy.length}',
+    );
   }
 
   // SHA-256 of the entropy; the first `entropyBits / 32` bits are the checksum.
@@ -359,11 +363,7 @@ Uint8List sha256(List<int> data) {
 Uint8List mnemonicToSeed(Mnemonic mnemonic, {String passphrase = ''}) {
   final salt = 'mnemonic$passphrase';
   final derivator = PBKDF2KeyDerivator(HMac(SHA512Digest(), 128))
-    ..init(Pbkdf2Parameters(
-      Uint8List.fromList(salt.codeUnits),
-      2048,
-      64,
-    ));
+    ..init(Pbkdf2Parameters(Uint8List.fromList(salt.codeUnits), 2048, 64));
   return derivator.process(Uint8List.fromList(mnemonic.phrase.codeUnits));
 }
 

@@ -22,7 +22,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
@@ -75,50 +76,76 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: Palette.xl),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: Palette.xxl),
-                          // The wordmark glitches once as it lands, then
-                          // settles so it stays readable.
-                          GlitchText(
-                            text: 'CELENIUM',
-                            style: TypeScale.wordmark(context),
+                    // On a desktop window the splash column would otherwise
+                    // stretch to 1280px and read as a banner. Capping it and
+                    // centring keeps the boot screen phone-proportioned, which
+                    // is what the emblem and the ticker were sized for.
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 520),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Palette.xl,
                           ),
-                          const SizedBox(height: Palette.sm),
-                          Text('C E L E N I U M   C O R E',
-                              style: TypeScale.monoMuted(context, size: 9)),
-                          const SizedBox(height: Palette.xl),
-                          // The rain runs for as long as the splash is up.
-                          // It used to stop once the readout began typing,
-                          // which left the screen plain for the whole time
-                          // the user spent on this screen; the boot texture
-                          // is the point of the splash, and the band sits
-                          // clear of everything below it.
-                          const _BinaryRain(running: true),
-                          // The emblem follows the rain directly. The bridge
-                          // readout that used to sit between them is gone:
-                          // it reported a network label and nothing else
-                          // useful before the bridge answers, which is
-                          // exactly when this screen is on screen.
-                          const SizedBox(height: Palette.xxl),
-                          _Emblem(progress: _controller),
-                          const SizedBox(height: Palette.md),
-                          // The ticker glitches on a slow loop rather than
-                          // once: the splash is up for as long as the user
-                          // takes to enter, so a single glitch would be over
-                          // before most people looked.
-                          const _TickerGlitch(text: 'C . E . N'),
-                          const SizedBox(height: Palette.xxl),
-                        ],
+                          child: Column(
+                            children: [
+                              const SizedBox(height: Palette.xxl),
+                              // The wordmark glitches once as it lands, then
+                              // settles so it stays readable.
+                              GlitchText(
+                                text: 'CELENIUM',
+                                style: TypeScale.wordmark(context),
+                              ),
+                              const SizedBox(height: Palette.sm),
+                              Text(
+                                'C E L E N I U M   C O R E',
+                                style: TypeScale.monoMuted(context, size: 9),
+                              ),
+                              const SizedBox(height: Palette.xl),
+                              // The rain runs for as long as the splash is up.
+                              // It used to stop once the readout began typing,
+                              // which left the screen plain for the whole time
+                              // the user spent on this screen; the boot texture
+                              // is the point of the splash, and the band sits
+                              // clear of everything below it.
+                              const _BinaryRain(running: true),
+                              // The emblem follows the rain directly. The bridge
+                              // readout that used to sit between them is gone:
+                              // it reported a network label and nothing else
+                              // useful before the bridge answers, which is
+                              // exactly when this screen is on screen.
+                              const SizedBox(height: Palette.xxl),
+                              _Emblem(progress: _controller),
+                              const SizedBox(height: Palette.md),
+                              // The ticker glitches on a slow loop rather than
+                              // once: the splash is up for as long as the user
+                              // takes to enter, so a single glitch would be over
+                              // before most people looked.
+                              const _TickerGlitch(text: 'C . E . N'),
+                              const SizedBox(height: Palette.xxl),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(Palette.xl, 0, Palette.xl, Palette.lg),
-                  child: _EnterButton(onTap: widget.onDone, fade: _entry),
+                // The button keeps the same cap as the content above it, so
+                // the pill stays centred under the emblem instead of drifting
+                // to the left edge of a wide window.
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        Palette.xl,
+                        0,
+                        Palette.xl,
+                        Palette.lg,
+                      ),
+                      child: _EnterButton(onTap: widget.onDone, fade: _entry),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -171,10 +198,14 @@ class _EnterButton extends StatelessWidget {
                   borderRadius: BorderRadius.circular(Palette.pill),
                   child: Container(
                     height: 50,
-                    padding: const EdgeInsets.symmetric(horizontal: Palette.xxl),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Palette.xxl,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(Palette.pill),
-                      border: Border.all(color: Palette.gold.withValues(alpha: 0.45)),
+                      border: Border.all(
+                        color: Palette.gold.withValues(alpha: 0.45),
+                      ),
                     ),
                     child: Center(child: Text('MASUK', style: label)),
                   ),
@@ -202,7 +233,8 @@ class _TickerGlitch extends StatefulWidget {
   State<_TickerGlitch> createState() => _TickerGlitchState();
 }
 
-class _TickerGlitchState extends State<_TickerGlitch> with SingleTickerProviderStateMixin {
+class _TickerGlitchState extends State<_TickerGlitch>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _clock = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 4),
@@ -236,11 +268,17 @@ class _TickerGlitchState extends State<_TickerGlitch> with SingleTickerProviderS
             if (inBurst) ...[
               Transform.translate(
                 offset: Offset(-offset, 0),
-                child: Text(widget.text, style: base.copyWith(color: Palette.redDeep)),
+                child: Text(
+                  widget.text,
+                  style: base.copyWith(color: Palette.redDeep),
+                ),
               ),
               Transform.translate(
                 offset: Offset(offset, 0),
-                child: Text(widget.text, style: base.copyWith(color: Palette.greenDim)),
+                child: Text(
+                  widget.text,
+                  style: base.copyWith(color: Palette.greenDim),
+                ),
               ),
             ],
             Text(widget.text, style: base),
@@ -292,7 +330,10 @@ class _Emblem extends StatelessWidget {
               child: Container(
                 width: 96,
                 height: 96,
-                decoration: const BoxDecoration(color: Palette.cream, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                  color: Palette.cream,
+                  shape: BoxShape.circle,
+                ),
                 child: Center(child: BrandMark(size: 58)),
               ),
             ),

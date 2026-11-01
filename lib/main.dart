@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'models/bridge.dart';
 import 'screens/backup_screen.dart';
 import 'screens/bridge_screen.dart';
@@ -17,12 +18,14 @@ import 'services/bridge_api.dart';
 import 'services/cen_wallet.dart';
 import 'services/settings_store.dart';
 import 'theme/app_theme.dart';
+import 'theme/layout.dart';
 import 'theme/palette.dart';
 import 'theme/typography.dart';
 import 'widgets/ad_banner.dart';
 import 'widgets/hacker_fx.dart';
 import 'widgets/brand_mark.dart';
 import 'widgets/cen_ui.dart';
+import 'widgets/side_rail.dart';
 
 void main() {
   runApp(const CeleniumMinerApp());
@@ -92,7 +95,10 @@ enum BackAction {
 /// Unwinds one level at a time so a back press never throws away the session:
 /// an open settings screen closes first, then another tab returns to Mine,
 /// and only at the root does the app close.
-BackAction decideBackAction({required bool hasOpenRoute, required bool isOnMineTab}) {
+BackAction decideBackAction({
+  required bool hasOpenRoute,
+  required bool isOnMineTab,
+}) {
   if (hasOpenRoute) return BackAction.closeRoute;
   if (!isOnMineTab) return BackAction.goToMineTab;
   return BackAction.exitApp;
@@ -217,19 +223,23 @@ class _MinerHomeState extends State<MinerHome> {
       setState(() {
         _snapshot = snapshot;
         _connected = connected;
-        _pushLog(diffSnapshots(
-          previous: previous,
-          current: snapshot,
-          wasConnected: wasConnected,
-          isConnected: connected,
-          clock: _clock,
-        ));
+        _pushLog(
+          diffSnapshots(
+            previous: previous,
+            current: snapshot,
+            wasConnected: wasConnected,
+            isConnected: connected,
+            clock: _clock,
+          ),
+        );
       });
     } on Object {
       if (!mounted) return;
       setState(() {
         _connected = false;
-        _pushLog([LogEntry(time: _clock, message: 'Poll failed', isError: true)]);
+        _pushLog([
+          LogEntry(time: _clock, message: 'Poll failed', isError: true),
+        ]);
       });
     } finally {
       _polling = false;
@@ -254,7 +264,10 @@ class _MinerHomeState extends State<MinerHome> {
   /// The decision itself lives in [decideBackAction] so it can be tested
   /// without driving a real back gesture.
   void _handleBack() {
-    switch (decideBackAction(hasOpenRoute: _route != null, isOnMineTab: _tab == _Tab.mine)) {
+    switch (decideBackAction(
+      hasOpenRoute: _route != null,
+      isOnMineTab: _tab == _Tab.mine,
+    )) {
       case BackAction.closeRoute:
         _closeRoute();
       case BackAction.goToMineTab:
@@ -288,68 +301,167 @@ class _MinerHomeState extends State<MinerHome> {
     final showBanner = AdBanner.willShow(_adSlotState, _adWidget);
     final snapshot = _snapshot ?? const MinerSnapshot();
 
+    final layout = CenLayout.of(context);
+
+    // Keyboard shortcuts only earn their keep on a desktop, where a keyboard
+    // is guaranteed. On a phone they would fight the soft keyboard.
+    final shell = layout.isExpanded
+        ? _buildDesktopShell(snapshot, showBanner)
+        : _buildPhoneShell(snapshot, showBanner);
+
+    if (layout.isCompact) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (_, _) => _handleBack(),
+        child: shell,
+      );
+    }
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (_, _) => _handleBack(),
-      child: Scaffold(
-        body: SafeArea(
-          child: Stack(
+      child: CallbackShortcuts(
+        bindings: _shellShortcuts(),
+        child: Focus(autofocus: true, child: shell),
+      ),
+    );
+  }
+
+  /// Ctrl+1/2/3 jump between tabs, Escape unwinds one level. The same
+  /// unwinding the hardware back button does, so the two never disagree.
+  Map<ShortcutActivator, VoidCallback> _shellShortcuts() => {
+    const SingleActivator(LogicalKeyboardKey.digit1, control: true): () =>
+        setState(() => _tab = _Tab.mine),
+    const SingleActivator(LogicalKeyboardKey.digit2, control: true): () =>
+        setState(() => _tab = _Tab.wallet),
+    const SingleActivator(LogicalKeyboardKey.digit3, control: true): () =>
+        setState(() => _tab = _Tab.profile),
+    const SingleActivator(LogicalKeyboardKey.escape): _handleBack,
+  };
+
+  CenDestination get _destination => switch (_tab) {
+    _Tab.mine => CenDestination.mine,
+    _Tab.wallet => CenDestination.wallet,
+    _Tab.profile => CenDestination.profile,
+  };
+
+  /// Phone shell: the cream pill floats above the content, as designed.
+  Widget _buildPhoneShell(MinerSnapshot snapshot, bool showBanner) {
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            _ambientLayers(),
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: showBanner ? AdBanner.footprint : 0,
+              ),
+              child: _buildTab(snapshot),
+            ),
+            _overlayLayers(),
+            _adLayer(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _BottomTabs(
+        current: _tab,
+        onSelect: (tab) => setState(() => _tab = tab),
+      ),
+    );
+  }
+
+  /// Desktop shell: the same cream pill, stood on its side as a rail. The
+  /// ambient effects still run the full window behind it, so the console feel
+  /// is unchanged; only the navigation furniture moves.
+  Widget _buildDesktopShell(MinerSnapshot snapshot, bool showBanner) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          _ambientLayers(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Ambient binary rain behind every tab. It sits under the
-              // content at low opacity so the console feel is present on
-              // Mining, Profile and Wallet alike without competing with the
-              // readings, and it is the one effect that never stops.
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: ExcludeSemantics(
-                    child: Opacity(
-                      opacity: 0.13,
-                      child: BinaryRain(
-                        expand: true,
-                        columns: 5,
-                        color: Palette.greenDim,
-                      ),
+              CenSideRail(
+                current: _destination,
+                onSelect: (destination) => setState(() {
+                  _tab = switch (destination) {
+                    CenDestination.mine => _Tab.mine,
+                    CenDestination.wallet => _Tab.wallet,
+                    CenDestination.profile => _Tab.profile,
+                  };
+                }),
+              ),
+              Expanded(
+                child: SafeArea(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: showBanner ? AdBanner.footprint : 0,
                     ),
+                    child: _buildTab(snapshot),
                   ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.only(bottom: showBanner ? AdBanner.footprint : 0),
-                child: _buildTab(snapshot),
-              ),
-              // CRT scanlines over the whole app: the console look with no
-              // motion, so it never competes with the readings. Stronger than
-              // a whisper, because the effect is meant to be felt here.
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: ScanlineOverlay(opacity: 0.06, spacing: 3),
-                ),
-              ),
-              // A slow sweep of light down the screen, the CRT refresh the
-              // scanlines imply. Bounded to one pass so it never loops into
-              // a distraction.
-              const Positioned.fill(
-                child: IgnorePointer(child: ExcludeSemantics(child: ScanSweep())),
-              ),
-              // Floating overlay, not an inline row: it never pushes the
-              // content, so the layout does not move when the ad loads or fails.
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: AdBanner(
-                  state: _adSlotState,
-                  onDismiss: _dismissAd,
-                  child: _adWidget,
                 ),
               ),
             ],
           ),
+          _overlayLayers(),
+          _adLayer(),
+        ],
+      ),
+    );
+  }
+
+  /// Ambient binary rain behind every tab. It sits under the content at low
+  /// opacity so the console feel is present on Mining, Profile and Wallet
+  /// alike without competing with the readings, and it is the one effect that
+  /// never stops.
+  Widget _ambientLayers() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: ExcludeSemantics(
+          child: Opacity(
+            opacity: 0.13,
+            child: BinaryRain(
+              expand: true,
+              columns: 5,
+              color: Palette.greenDim,
+            ),
+          ),
         ),
-        bottomNavigationBar: _BottomTabs(
-          current: _tab,
-          onSelect: (tab) => setState(() => _tab = tab),
+      ),
+    );
+  }
+
+  /// CRT scanlines plus one slow sweep of light: the console look with no
+  /// motion that competes with the readings.
+  Widget _overlayLayers() {
+    return const Stack(
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ScanlineOverlay(opacity: 0.06, spacing: 3),
+          ),
         ),
+        // A slow sweep of light down the screen, the CRT refresh the
+        // scanlines imply. Bounded to one pass so it never loops into
+        // a distraction.
+        Positioned.fill(
+          child: IgnorePointer(child: ExcludeSemantics(child: ScanSweep())),
+        ),
+      ],
+    );
+  }
+
+  /// Floating overlay, not an inline row: it never pushes the content, so the
+  /// layout does not move when the ad loads or fails.
+  Widget _adLayer() {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: AdBanner(
+        state: _adSlotState,
+        onDismiss: _dismissAd,
+        child: _adWidget,
       ),
     );
   }
@@ -394,10 +506,7 @@ class _MinerHomeState extends State<MinerHome> {
       case _Route.activity:
         return LogScreen(entries: _log);
       case _Route.backup:
-        return BackupScreen(
-          onDone: _closeRoute,
-          wordlist: _wordlist,
-        );
+        return BackupScreen(onDone: _closeRoute, wordlist: _wordlist);
       case _Route.about:
         return const _AboutScreen();
     }
@@ -420,9 +529,17 @@ class _BottomTabs extends StatelessWidget {
         // Floating, not docked: the pill hovers over the content with a gap
         // on every side, which is what reads as "floating" rather than "a bar
         // that shifted in".
-        padding: const EdgeInsets.fromLTRB(Palette.lg, 0, Palette.lg, Palette.md),
+        padding: const EdgeInsets.fromLTRB(
+          Palette.lg,
+          0,
+          Palette.lg,
+          Palette.md,
+        ),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: Palette.sm, vertical: Palette.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Palette.sm,
+            vertical: Palette.sm,
+          ),
           decoration: BoxDecoration(
             color: Palette.surfaceLight,
             borderRadius: BorderRadius.circular(Palette.pill),
@@ -482,7 +599,10 @@ class _TabButton extends StatelessWidget {
         child: Container(
           // 44px minimum touch target (R-03).
           constraints: const BoxConstraints(minWidth: 64, minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: 6),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Palette.md,
+            vertical: 6,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -541,70 +661,78 @@ class _AboutScreen extends StatelessWidget {
         ),
         title: const Text('ABOUT'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(Palette.lg),
-        children: [
-          Center(
-            child: Column(
-              children: [
-                const SizedBox(height: Palette.lg),
-                Container(
-                  width: 84,
-                  height: 84,
-                  decoration: const BoxDecoration(color: Palette.cream, shape: BoxShape.circle),
-                  child: Center(child: BrandMark(size: 50)),
-                ),
-                const SizedBox(height: Palette.lg),
-                Text('CELENIUM', style: TypeScale.wordmark(context)),
-                const SizedBox(height: Palette.xs),
-                Text(
-                  'C E N   C O R E',
-                  style: TypeScale.monoMuted(context, size: 9).copyWith(letterSpacing: 3),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: Palette.xxl),
-          const CenCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Eyebrow('What this app does'),
-                SizedBox(height: Palette.sm),
-                Text(
-                  'It reads mining results from a Celenium bridge and shows them on '
-                  'your phone. It holds no account, no database, and no coins: the '
-                  'results live on the blockchain and the bridge, and this app is a '
-                  'window onto them.',
-                  style: TextStyle(
-                    fontFamily: TypeScale.bodyFamily,
-                    fontSize: 13,
-                    color: Palette.slateLight,
-                    height: 1.5,
+      body: CenContent(
+        child: ListView(
+          padding: const EdgeInsets.all(Palette.lg),
+          children: [
+            Center(
+              child: Column(
+                children: [
+                  const SizedBox(height: Palette.lg),
+                  Container(
+                    width: 84,
+                    height: 84,
+                    decoration: const BoxDecoration(
+                      color: Palette.cream,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(child: BrandMark(size: 50)),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: Palette.md),
-          const CenCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Eyebrow('Version'),
-                SizedBox(height: Palette.sm),
-                Text(
-                  '1.0.0',
-                  style: TextStyle(
-                    fontFamily: TypeScale.monoFamily,
-                    fontSize: 12,
-                    color: Palette.creamDim,
+                  const SizedBox(height: Palette.lg),
+                  Text('CELENIUM', style: TypeScale.wordmark(context)),
+                  const SizedBox(height: Palette.xs),
+                  Text(
+                    'C E N   C O R E',
+                    style: TypeScale.monoMuted(
+                      context,
+                      size: 9,
+                    ).copyWith(letterSpacing: 3),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: Palette.xxl),
+            const CenCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Eyebrow('What this app does'),
+                  SizedBox(height: Palette.sm),
+                  Text(
+                    'It reads mining results from a Celenium bridge and shows them on '
+                    'your phone. It holds no account, no database, and no coins: the '
+                    'results live on the blockchain and the bridge, and this app is a '
+                    'window onto them.',
+                    style: TextStyle(
+                      fontFamily: TypeScale.bodyFamily,
+                      fontSize: 13,
+                      color: Palette.slateLight,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Palette.md),
+            const CenCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Eyebrow('Version'),
+                  SizedBox(height: Palette.sm),
+                  Text(
+                    '1.0.0',
+                    style: TextStyle(
+                      fontFamily: TypeScale.monoFamily,
+                      fontSize: 12,
+                      color: Palette.creamDim,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

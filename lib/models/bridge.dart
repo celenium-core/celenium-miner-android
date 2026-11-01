@@ -177,8 +177,20 @@ class BridgeStats {
     // read as "no blocks found" and hide a broken bridge.
     if (rawBlocks != null && rawBlocks is! List) return null;
     if (rawWorkers != null && rawWorkers is! List) return null;
-    final blocks = (rawBlocks as List?)?.whereType<Object?>().map(BlockInfo.tryParse).whereType<BlockInfo>().toList() ?? const <BlockInfo>[];
-    final workers = (rawWorkers as List?)?.whereType<Object?>().map(WorkerInfo.tryParse).whereType<WorkerInfo>().toList() ?? const <WorkerInfo>[];
+    final blocks =
+        (rawBlocks as List?)
+            ?.whereType<Object?>()
+            .map(BlockInfo.tryParse)
+            .whereType<BlockInfo>()
+            .toList() ??
+        const <BlockInfo>[];
+    final workers =
+        (rawWorkers as List?)
+            ?.whereType<Object?>()
+            .map(WorkerInfo.tryParse)
+            .whereType<WorkerInfo>()
+            .toList() ??
+        const <WorkerInfo>[];
     return BridgeStats(
       totalBlocks: (json['totalBlocks'] as num?)?.toInt() ?? 0,
       totalShares: (json['totalShares'] as num?)?.toInt() ?? 0,

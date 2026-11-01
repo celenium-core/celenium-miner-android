@@ -56,7 +56,10 @@ void main() {
 
     test('the same key always derives the same address', () {
       final wallet = generateWallet(CenNetwork.simnet);
-      final restored = CenWallet.fromHex(wallet.privateKeyHex, CenNetwork.simnet);
+      final restored = CenWallet.fromHex(
+        wallet.privateKeyHex,
+        CenNetwork.simnet,
+      );
       expect(restored.address, wallet.address);
       expect(restored.privateKeyHex, wallet.privateKeyHex);
     });

@@ -71,16 +71,20 @@ class MiningReadout {
 
     // Prefer the bridge's own CPU aggregate; fall back to summing workers so
     // a pool without the internal miner still reports something.
-    final hashrate = cpu?.hashrateGhs ?? _sumWorkers(workers, (w) => w.hashrate);
+    final hashrate =
+        cpu?.hashrateGhs ?? _sumWorkers(workers, (w) => w.hashrate);
     final shares = cpu?.shares ?? _sumIntWorkers(workers, (w) => w.shares);
     final stale = cpu?.stale ?? _sumIntWorkers(workers, (w) => w.stale);
     final invalid = cpu?.invalid ?? _sumIntWorkers(workers, (w) => w.invalid);
-    final sessionBlocks = cpu?.blocksAccepted ?? _sumIntWorkers(workers, (w) => w.blocks);
+    final sessionBlocks =
+        cpu?.blocksAccepted ?? _sumIntWorkers(workers, (w) => w.blocks);
 
     final primary = workers.isNotEmpty ? workers.first : null;
     final latest = stats.blocks.isNotEmpty ? stats.blocks.first : null;
 
-    final active = hashrate > 0 || (primary?.status?.toLowerCase().contains('active') ?? false);
+    final active =
+        hashrate > 0 ||
+        (primary?.status?.toLowerCase().contains('active') ?? false);
 
     return MiningReadout(
       hashrateGhs: hashrate > 0 ? hashrate : null,

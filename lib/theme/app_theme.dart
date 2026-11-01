@@ -104,13 +104,20 @@ ThemeData buildCenTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Palette.surfaceHigh,
-      contentPadding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: Palette.lg,
+        vertical: 14,
+      ),
       hintStyle: const TextStyle(
         fontFamily: TypeScale.monoFamily,
         fontSize: 13,
         color: Palette.slate,
       ),
-      helperStyle: const TextStyle(fontFamily: TypeScale.bodyFamily, fontSize: 12, color: Palette.slate),
+      helperStyle: const TextStyle(
+        fontFamily: TypeScale.bodyFamily,
+        fontSize: 12,
+        color: Palette.slate,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(Palette.rowRadius),
         borderSide: BorderSide.none,
@@ -134,16 +141,23 @@ ThemeData buildCenTheme() {
     ),
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: Palette.surfaceHigh,
-      contentTextStyle: TextStyle(fontFamily: TypeScale.bodyFamily, fontSize: 13, color: Palette.cream),
+      contentTextStyle: TextStyle(
+        fontFamily: TypeScale.bodyFamily,
+        fontSize: 13,
+        color: Palette.cream,
+      ),
       behavior: SnackBarBehavior.floating,
       shape: StadiumBorder(),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected) ? Palette.ink : Palette.slate,
+        (states) =>
+            states.contains(WidgetState.selected) ? Palette.ink : Palette.slate,
       ),
       trackColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected) ? Palette.gold : Palette.surfaceHigh,
+        (states) => states.contains(WidgetState.selected)
+            ? Palette.gold
+            : Palette.surfaceHigh,
       ),
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(

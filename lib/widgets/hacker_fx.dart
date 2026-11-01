@@ -42,7 +42,8 @@ class BinaryRain extends StatefulWidget {
   State<BinaryRain> createState() => _BinaryRainState();
 }
 
-class _BinaryRainState extends State<BinaryRain> with SingleTickerProviderStateMixin {
+class _BinaryRainState extends State<BinaryRain>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
@@ -108,7 +109,11 @@ class _Column {
 }
 
 class _RainPainter extends CustomPainter {
-  const _RainPainter({required this.progress, required this.columns, required this.color});
+  const _RainPainter({
+    required this.progress,
+    required this.columns,
+    required this.color,
+  });
 
   final double progress;
   final List<_Column> columns;
@@ -132,7 +137,9 @@ class _RainPainter extends CustomPainter {
       final x = columnWidth * (i + 0.5);
 
       // The whole column slides down by one full height per cycle.
-      final head = ((progress * col.speed + col.offset) % 1.0) * (size.height + step * 8);
+      final head =
+          ((progress * col.speed + col.offset) % 1.0) *
+          (size.height + step * 8);
       const trail = 8;
 
       for (var t = 0; t < trail; t++) {
@@ -189,7 +196,8 @@ class TypewriterText extends StatefulWidget {
   State<TypewriterText> createState() => _TypewriterTextState();
 }
 
-class _TypewriterTextState extends State<TypewriterText> with SingleTickerProviderStateMixin {
+class _TypewriterTextState extends State<TypewriterText>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: widget.duration,
@@ -215,7 +223,10 @@ class _TypewriterTextState extends State<TypewriterText> with SingleTickerProvid
       animation: _controller,
       builder: (context, _) {
         final count = (widget.text.length * _controller.value).round();
-        final shown = widget.text.substring(0, count.clamp(0, widget.text.length));
+        final shown = widget.text.substring(
+          0,
+          count.clamp(0, widget.text.length),
+        );
 
         // The caret blinks only while characters are still arriving.
         final caret = _controller.isCompleted ? '' : '_';
@@ -289,7 +300,8 @@ class GlitchText extends StatefulWidget {
   State<GlitchText> createState() => _GlitchTextState();
 }
 
-class _GlitchTextState extends State<GlitchText> with SingleTickerProviderStateMixin {
+class _GlitchTextState extends State<GlitchText>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: widget.duration,
@@ -361,7 +373,8 @@ class HexTicker extends StatefulWidget {
   State<HexTicker> createState() => _HexTickerState();
 }
 
-class _HexTickerState extends State<HexTicker> with SingleTickerProviderStateMixin {
+class _HexTickerState extends State<HexTicker>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 8),
@@ -372,7 +385,10 @@ class _HexTickerState extends State<HexTicker> with SingleTickerProviderStateMix
   static String _buildHex(int length) {
     final rng = math.Random(11);
     const chars = '0123456789abcdef';
-    return List.generate(length, (_) => chars[rng.nextInt(chars.length)]).join();
+    return List.generate(
+      length,
+      (_) => chars[rng.nextInt(chars.length)],
+    ).join();
   }
 
   @override
@@ -415,10 +431,16 @@ class _HexTickerState extends State<HexTicker> with SingleTickerProviderStateMix
                   child: Text(
                     _hex,
                     maxLines: 1,
-                    style: TextStyle(fontFamily: TypeScale.monoFamily, fontSize: 10, fontWeight: FontWeight.w500, height: 1.4).copyWith(
-                      color: Palette.greenDim.withValues(alpha: 0.55),
-                      letterSpacing: 1.2,
-                    ),
+                    style:
+                        TextStyle(
+                          fontFamily: TypeScale.monoFamily,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ).copyWith(
+                          color: Palette.greenDim.withValues(alpha: 0.55),
+                          letterSpacing: 1.2,
+                        ),
                   ),
                 ),
                 Positioned(
@@ -426,10 +448,16 @@ class _HexTickerState extends State<HexTicker> with SingleTickerProviderStateMix
                   child: Text(
                     _hex,
                     maxLines: 1,
-                    style: TextStyle(fontFamily: TypeScale.monoFamily, fontSize: 10, fontWeight: FontWeight.w500, height: 1.4).copyWith(
-                      color: Palette.greenDim.withValues(alpha: 0.55),
-                      letterSpacing: 1.2,
-                    ),
+                    style:
+                        TextStyle(
+                          fontFamily: TypeScale.monoFamily,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ).copyWith(
+                          color: Palette.greenDim.withValues(alpha: 0.55),
+                          letterSpacing: 1.2,
+                        ),
                   ),
                 ),
               ],

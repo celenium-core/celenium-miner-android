@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/bridge.dart';
 import '../services/mining_readout.dart';
+import '../theme/layout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/brand_mark.dart';
@@ -33,29 +34,92 @@ class MiningScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final readout = MiningReadout.from(snapshot);
+    final layout = CenLayout.of(context);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(Palette.lg, Palette.sm, Palette.lg, Palette.xxl),
-      children: [
-        _SummaryCard(readout: readout, nodeAddress: nodeAddress, onConnectNode: onConnectNode),
-        const SizedBox(height: Palette.xl),
-        _DialBlock(readout: readout, onTap: onOpenWorkers),
-        const SizedBox(height: Palette.xl),
-        _StatsStrip(readout: readout),
-        const SizedBox(height: Palette.lg),
-        // A hex stream that runs only while the bridge reports hashing: the
-        // motion is the app saying data is arriving right now.
-        HexTicker(active: readout.active),
-        const SizedBox(height: Palette.lg),
-        _LatestLine(readout: readout, onTap: onOpenActivity),
-      ],
+    final summary = _SummaryCard(
+      readout: readout,
+      nodeAddress: nodeAddress,
+      onConnectNode: onConnectNode,
+    );
+    final dial = _DialBlock(readout: readout, onTap: onOpenWorkers);
+    final stats = _StatsStrip(readout: readout);
+    // A hex stream that runs only while the bridge reports hashing: the
+    // motion is the app saying data is arriving right now.
+    final hex = HexTicker(active: readout.active);
+    final latest = _LatestLine(readout: readout, onTap: onOpenActivity);
+
+    // Phone: one column, top to bottom, exactly as designed.
+    if (!layout.isExpanded) {
+      return CenContent(
+        scrollable: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: Palette.sm),
+            summary,
+            const SizedBox(height: Palette.xl),
+            dial,
+            const SizedBox(height: Palette.xl),
+            stats,
+            const SizedBox(height: Palette.lg),
+            hex,
+            const SizedBox(height: Palette.lg),
+            latest,
+            const SizedBox(height: Palette.xxl),
+          ],
+        ),
+      );
+    }
+
+    // Desktop: the reading and the dial share the left column, the supporting
+    // detail stacks on the right. The dial wants less than half the width or
+    // it floats in dead space, so the split leans left.
+    return CenContent(
+      scrollable: true,
+      child: Padding(
+        padding: const EdgeInsets.only(top: Palette.lg, bottom: Palette.xxl),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 56,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  summary,
+                  const SizedBox(height: Palette.xl),
+                  dial,
+                ],
+              ),
+            ),
+            const SizedBox(width: Palette.xl),
+            Expanded(
+              flex: 44,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  stats,
+                  const SizedBox(height: Palette.lg),
+                  hex,
+                  const SizedBox(height: Palette.lg),
+                  latest,
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
 /// Light card: identity, hashrate, difficulty, live status.
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.readout, required this.nodeAddress, required this.onConnectNode});
+  const _SummaryCard({
+    required this.readout,
+    required this.nodeAddress,
+    required this.onConnectNode,
+  });
 
   final MiningReadout readout;
   final String? nodeAddress;
@@ -82,7 +146,10 @@ class _SummaryCard extends StatelessWidget {
               Container(
                 width: 42,
                 height: 42,
-                decoration: const BoxDecoration(color: Palette.ink, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                  color: Palette.ink,
+                  shape: BoxShape.circle,
+                ),
                 child: Center(child: BrandMark(size: 24, onDark: true)),
               ),
               const SizedBox(width: Palette.md),
@@ -92,12 +159,18 @@ class _SummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       readout.workerName ?? 'No worker',
-                      style: TypeScale.title(context).copyWith(color: Palette.ink, fontWeight: FontWeight.w700),
+                      style: TypeScale.title(context).copyWith(
+                        color: Palette.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       nodeAddress ?? 'node not set',
-                      style: TypeScale.monoInk(context, size: 10).copyWith(color: Palette.slate),
+                      style: TypeScale.monoInk(
+                        context,
+                        size: 10,
+                      ).copyWith(color: Palette.slate),
                     ),
                   ],
                 ),
@@ -114,8 +187,11 @@ class _SummaryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        readout.hashrateGhs == null ? '—' : formatHashrate(readout.hashrateGhs!),
-                        style: TypeScale.hero(context).copyWith(color: Palette.ink, fontSize: 30),
+                        readout.hashrateGhs == null
+                            ? '—'
+                            : formatHashrate(readout.hashrateGhs!),
+                        style: TypeScale.hero(context)
+                            .copyWith(color: Palette.ink, fontSize: 30),
                       ),
                       // Gold level badge, as in the concept. The level is
                       // derived from the hashrate so the number means
@@ -123,7 +199,10 @@ class _SummaryCard extends StatelessWidget {
                       if (readout.hashrateGhs != null) ...[
                         const SizedBox(width: Palette.sm),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: Palette.md,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
                             color: Palette.gold,
                             borderRadius: BorderRadius.circular(Palette.pill),
@@ -152,7 +231,10 @@ class _SummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${readout.workerName ?? 'WORKER-00'} · DIFF ${readout.difficulty == null ? '—' : readout.difficulty!.toStringAsFixed(2)}',
-                  style: TypeScale.monoInk(context, size: 10).copyWith(color: Palette.slate),
+                  style: TypeScale.monoInk(
+                    context,
+                    size: 10,
+                  ).copyWith(color: Palette.slate),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -203,20 +285,29 @@ class _DialCaption extends StatelessWidget {
         // control here opens the worker list rather than claiming to pause.
         Text(
           '[ TAP FOR WORKERS ]',
-          style: TypeScale.monoMuted(context, size: 10).copyWith(letterSpacing: 1.6),
+          style: TypeScale.monoMuted(
+            context,
+            size: 10,
+          ).copyWith(letterSpacing: 1.6),
         ),
         const SizedBox(height: Palette.sm),
         Text(
           'UPTIME ${_uptime(readout.bridgeUptime)}',
-          style: TypeScale.mono(context, size: 11).copyWith(color: Palette.creamDim),
+          style: TypeScale.mono(
+            context,
+            size: 11,
+          ).copyWith(color: Palette.creamDim),
         ),
         const SizedBox(height: Palette.sm),
         Text(
           readout.latestBlockHash == null
               ? '> waiting for first share'
               : '> share accepted ${shortHash(readout.latestBlockHash!, head: 8, tail: 6)}'
-                  '${readout.difficulty == null ? '' : ' diff-${readout.difficulty!.toStringAsFixed(2)}'}',
-          style: TypeScale.mono(context, size: 10).copyWith(color: Palette.greenDim),
+                    '${readout.difficulty == null ? '' : ' diff-${readout.difficulty!.toStringAsFixed(2)}'}',
+          style: TypeScale.mono(
+            context,
+            size: 10,
+          ).copyWith(color: Palette.greenDim),
           textAlign: TextAlign.center,
           overflow: TextOverflow.ellipsis,
         ),
@@ -266,7 +357,10 @@ class _DialBlock extends StatelessWidget {
               ? 'ACCEPTANCE\nno shares yet'
               : 'ACCEPTANCE\n${(rate * 100).toStringAsFixed(0)}%',
           textAlign: TextAlign.center,
-          style: TypeScale.mono(context, size: 12).copyWith(color: Palette.goldLight, letterSpacing: 1.4),
+          style: TypeScale.mono(
+            context,
+            size: 12,
+          ).copyWith(color: Palette.goldLight, letterSpacing: 1.4),
         ),
         const SizedBox(height: Palette.md),
         _DialCaption(readout: readout, onTap: onTap),
@@ -336,7 +430,10 @@ class _LatestLine extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(Palette.rowRadius),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Palette.lg,
+            vertical: 14,
+          ),
           child: Row(
             children: [
               Text('>', style: TypeScale.monoGold(context, size: 13)),
@@ -346,7 +443,10 @@ class _LatestLine extends StatelessWidget {
                   hash == null
                       ? 'no block accepted yet'
                       : 'block accepted ${shortHash(hash)}${readout.latestBlockTime == null ? '' : ' · ${readout.latestBlockTime}'}',
-                  style: TypeScale.mono(context, size: 11).copyWith(color: Palette.slateLight),
+                  style: TypeScale.mono(
+                    context,
+                    size: 11,
+                  ).copyWith(color: Palette.slateLight),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

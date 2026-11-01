@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/bridge.dart';
+import '../theme/layout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/cen_ui.dart';
@@ -27,46 +28,50 @@ class LogScreen extends StatelessWidget {
                     'blocks are recorded here as they happen.',
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(Palette.lg),
-              itemCount: entries.length,
-              itemBuilder: (context, index) {
-                final entry = entries[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: Palette.md),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 66,
-                        child: Text(
-                          entry.time,
-                          style: TypeScale.monoMuted(context, size: 10),
-                        ),
-                      ),
-                      const SizedBox(width: Palette.sm),
-                      Container(
-                        width: 6,
-                        height: 6,
-                        margin: const EdgeInsets.only(top: 5),
-                        decoration: BoxDecoration(
-                          color: entry.isError ? Palette.red : Palette.gold,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: Palette.md),
-                      Expanded(
-                        child: Text(
-                          entry.message,
-                          style: TypeScale.label(context).copyWith(
-                            color: entry.isError ? Palette.red : Palette.creamDim,
+          : CenContent(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(Palette.lg),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  final entry = entries[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: Palette.md),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 66,
+                          child: Text(
+                            entry.time,
+                            style: TypeScale.monoMuted(context, size: 10),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                        const SizedBox(width: Palette.sm),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          margin: const EdgeInsets.only(top: 5),
+                          decoration: BoxDecoration(
+                            color: entry.isError ? Palette.red : Palette.gold,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: Palette.md),
+                        Expanded(
+                          child: Text(
+                            entry.message,
+                            style: TypeScale.label(context).copyWith(
+                              color: entry.isError
+                                  ? Palette.red
+                                  : Palette.creamDim,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
     );
   }
@@ -97,43 +102,51 @@ List<LogEntry> diffSnapshots({
   final entries = <LogEntry>[];
 
   if (isConnected != wasConnected) {
-    entries.add(LogEntry(
-      time: clock,
-      message: isConnected
-          ? 'Bridge reachable at ${current.status?.webBind ?? "configured address"}'
-          : 'Bridge unreachable',
-      isError: !isConnected,
-    ));
+    entries.add(
+      LogEntry(
+        time: clock,
+        message: isConnected
+            ? 'Bridge reachable at ${current.status?.webBind ?? "configured address"}'
+            : 'Bridge unreachable',
+        isError: !isConnected,
+      ),
+    );
   }
   if (!isConnected) return entries;
 
   final blocks = current.blocksAccepted;
   final prevBlocks = previous?.blocksAccepted ?? 0;
   if (blocks > prevBlocks) {
-    entries.add(LogEntry(
-      time: clock,
-      message: 'Block accepted (${blocks - prevBlocks} new, $blocks total)',
-    ));
+    entries.add(
+      LogEntry(
+        time: clock,
+        message: 'Block accepted (${blocks - prevBlocks} new, $blocks total)',
+      ),
+    );
   }
 
   final wasMining = previous?.isMining ?? false;
   if (current.isMining != wasMining) {
-    entries.add(LogEntry(
-      time: clock,
-      message: current.isMining
-          ? 'Internal CPU miner started'
-          : 'Internal CPU miner stopped',
-    ));
+    entries.add(
+      LogEntry(
+        time: clock,
+        message: current.isMining
+            ? 'Internal CPU miner started'
+            : 'Internal CPU miner stopped',
+      ),
+    );
   }
 
   final stale = current.stale;
   final prevStale = previous?.stale ?? 0;
   if (stale > prevStale) {
-    entries.add(LogEntry(
-      time: clock,
-      message: '${stale - prevStale} stale share(s) reported',
-      isError: true,
-    ));
+    entries.add(
+      LogEntry(
+        time: clock,
+        message: '${stale - prevStale} stale share(s) reported',
+        isError: true,
+      ),
+    );
   }
 
   return entries;

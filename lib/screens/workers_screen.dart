@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/bridge.dart';
 import '../services/mining_readout.dart';
+import '../theme/layout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/cen_ui.dart';
@@ -32,11 +33,14 @@ class WorkersScreen extends StatelessWidget {
                     'with your CEN address as the worker name and they appear here.',
               ),
             )
-          : ListView.separated(
-              padding: const EdgeInsets.all(Palette.lg),
-              itemCount: workers.length,
-              separatorBuilder: (_, _) => const SizedBox(height: Palette.md),
-              itemBuilder: (context, index) => _WorkerCard(worker: workers[index]),
+          : CenContent(
+              child: ListView.separated(
+                padding: const EdgeInsets.all(Palette.lg),
+                itemCount: workers.length,
+                separatorBuilder: (_, _) => const SizedBox(height: Palette.md),
+                itemBuilder: (context, index) =>
+                    _WorkerCard(worker: workers[index]),
+              ),
             ),
     );
   }
@@ -49,7 +53,8 @@ class _WorkerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final active = worker.status?.toLowerCase().contains('active') ?? worker.hashrate > 0;
+    final active =
+        worker.status?.toLowerCase().contains('active') ?? worker.hashrate > 0;
 
     return CenCard(
       child: Column(
@@ -64,7 +69,11 @@ class _WorkerCard extends StatelessWidget {
                   color: Palette.surfaceHigh,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.memory_outlined, size: 17, color: Palette.goldLight),
+                child: const Icon(
+                  Icons.memory_outlined,
+                  size: 17,
+                  color: Palette.goldLight,
+                ),
               ),
               const SizedBox(width: Palette.md),
               Expanded(
@@ -84,7 +93,11 @@ class _WorkerCard extends StatelessWidget {
                   ],
                 ),
               ),
-              LiveStatus(label: active ? 'ACTIVE' : 'IDLE', active: active, tint: Palette.greenDim),
+              LiveStatus(
+                label: active ? 'ACTIVE' : 'IDLE',
+                active: active,
+                tint: Palette.greenDim,
+              ),
             ],
           ),
           const SizedBox(height: Palette.lg),
@@ -98,27 +111,39 @@ class _WorkerCard extends StatelessWidget {
                 ),
               ),
               const StatDivider(),
-              Expanded(child: StatCell(value: '${worker.shares}', label: 'shares')),
+              Expanded(
+                child: StatCell(value: '${worker.shares}', label: 'shares'),
+              ),
               const StatDivider(),
-              Expanded(child: StatCell(value: '${worker.blocks}', label: 'blocks')),
+              Expanded(
+                child: StatCell(value: '${worker.blocks}', label: 'blocks'),
+              ),
             ],
           ),
           if (worker.stale > 0 || worker.invalid > 0) ...[
             const SizedBox(height: Palette.lg),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: Palette.sm),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Palette.md,
+                vertical: Palette.sm,
+              ),
               decoration: BoxDecoration(
                 color: Palette.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(Palette.rowRadius),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_outlined, size: 15, color: Palette.red),
+                  const Icon(
+                    Icons.warning_amber_outlined,
+                    size: 15,
+                    color: Palette.red,
+                  ),
                   const SizedBox(width: Palette.sm),
                   Expanded(
                     child: Text(
                       '${worker.stale} stale · ${worker.invalid} invalid',
-                      style: TypeScale.caption(context).copyWith(color: Palette.red),
+                      style: TypeScale.caption(context)
+                          .copyWith(color: Palette.red),
                     ),
                   ),
                 ],

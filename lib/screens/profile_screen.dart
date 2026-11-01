@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/bridge.dart';
 import '../services/mining_readout.dart';
+import '../theme/layout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/brand_mark.dart';
@@ -41,133 +42,160 @@ class ProfileScreen extends StatelessWidget {
     final address = stats?.internalCpu?.wallet;
     final nodeAddress = snapshot.status?.celeniumdAddress;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(Palette.lg, Palette.sm, Palette.lg, Palette.xxl),
-      children: [
-        // Network label left, live status right, serif title beneath: the
-        // same top bar the concept uses on both Profile and Wallet.
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return CenContent(
+      scrollable: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: Palette.sm),
+          // Network label left, live status right, serif title beneath: the
+          // same top bar the concept uses on both Profile and Wallet.
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      networkLabel.toUpperCase(),
+                      style: TypeScale.monoMuted(
+                        context,
+                        size: 10,
+                      ).copyWith(letterSpacing: 1.4),
+                    ),
+                  ),
+                  LiveStatus(
+                    label: readout.active ? 'ACTIVE' : 'IDLE',
+                    active: readout.active,
+                    tint: Palette.greenDim,
+                  ),
+                ],
+              ),
+              const SizedBox(height: Palette.sm),
+              Text('Profile', style: TypeScale.screenTitle(context)),
+            ],
+          ),
+          const SizedBox(height: Palette.lg),
+          _IdentityCard(
+            workerName: readout.workerName,
+            address: address,
+            active: readout.active,
+          ),
+          const SizedBox(height: Palette.md),
+          // Four cells, matching the concept's strip. All four come from the
+          // bridge: the concept's referrals, days, and rank have no source here,
+          // so they are replaced by counts that do.
+          //
+          // Every column is value over label, with no unit line anywhere. One
+          // column carrying a unit made the row four lines deep on the right and
+          // three everywhere else, which is what read as untidy.
+          CenCard.glass(
+            glow: Palette.gold,
+            padding: const EdgeInsets.symmetric(
+              horizontal: Palette.sm,
+              vertical: Palette.lg,
+            ),
+            child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    networkLabel.toUpperCase(),
-                    style: TypeScale.monoMuted(context, size: 10).copyWith(letterSpacing: 1.4),
+                  child: StatCell(
+                    value: readout.sessionBlocks?.toString() ?? '—',
+                    label: 'blocks',
+                    color: Palette.goldLight,
                   ),
                 ),
-                LiveStatus(
-                  label: readout.active ? 'ACTIVE' : 'IDLE',
-                  active: readout.active,
-                  tint: Palette.greenDim,
+                const StatDivider(),
+                Expanded(
+                  child: StatCell(
+                    value: readout.shares?.toString() ?? '—',
+                    label: 'shares',
+                  ),
+                ),
+                const StatDivider(),
+                Expanded(
+                  child: StatCell(
+                    value: workers > 0 ? workers.toString() : '—',
+                    label: 'workers',
+                  ),
+                ),
+                const StatDivider(),
+                Expanded(
+                  child: StatCell(
+                    value: readout.hashrateGhs == null
+                        ? '—'
+                        : formatHashrate(readout.hashrateGhs!).split(' ').first,
+                    label: 'gh/s',
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: Palette.sm),
-            Text('Profile', style: TypeScale.screenTitle(context)),
-          ],
-        ),
-        const SizedBox(height: Palette.lg),
-        _IdentityCard(
-          workerName: readout.workerName,
-          address: address,
-          active: readout.active,
-        ),
-        const SizedBox(height: Palette.md),
-        // Four cells, matching the concept's strip. All four come from the
-        // bridge: the concept's referrals, days, and rank have no source here,
-        // so they are replaced by counts that do.
-        //
-        // Every column is value over label, with no unit line anywhere. One
-        // column carrying a unit made the row four lines deep on the right and
-        // three everywhere else, which is what read as untidy.
-        CenCard.glass(
-          glow: Palette.gold,
-          padding: const EdgeInsets.symmetric(horizontal: Palette.sm, vertical: Palette.lg),
-          child: Row(
-            children: [
-              Expanded(
-                child: StatCell(
-                  value: readout.sessionBlocks?.toString() ?? '—',
-                  label: 'blocks',
-                  color: Palette.goldLight,
-                ),
-              ),
-              const StatDivider(),
-              Expanded(child: StatCell(value: readout.shares?.toString() ?? '—', label: 'shares')),
-              const StatDivider(),
-              Expanded(child: StatCell(value: workers > 0 ? workers.toString() : '—', label: 'workers')),
-              const StatDivider(),
-              Expanded(
-                child: StatCell(
-                  value: readout.hashrateGhs == null
-                      ? '—'
-                      : formatHashrate(readout.hashrateGhs!).split(' ').first,
-                  label: 'gh/s',
-                ),
-              ),
-            ],
           ),
-        ),
-        const SizedBox(height: Palette.xl),
-        Eyebrow('Settings'),
-        const SizedBox(height: Palette.sm),
-        // One card holding the whole group, rows separated by hairlines.
-        // Five floating tiles read as five unrelated things; one card with
-        // internal dividers reads as the settings section it is.
-        CenCard.glass(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              SettingRow(
-                flat: true,
-                icon: Icons.hub_outlined,
-                label: 'Bridge',
-                trailing: Text(
-                  nodeAddress == null ? 'not set' : _shortNode(nodeAddress),
-                  style: TypeScale.monoMuted(context, size: 10),
+          const SizedBox(height: Palette.xl),
+          Eyebrow('Settings'),
+          const SizedBox(height: Palette.sm),
+          // One card holding the whole group, rows separated by hairlines.
+          // Five floating tiles read as five unrelated things; one card with
+          // internal dividers reads as the settings section it is.
+          CenCard.glass(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                SettingRow(
+                  flat: true,
+                  icon: Icons.hub_outlined,
+                  label: 'Bridge',
+                  trailing: Text(
+                    nodeAddress == null ? 'not set' : _shortNode(nodeAddress),
+                    style: TypeScale.monoMuted(context, size: 10),
+                  ),
+                  onTap: onOpenBridge,
                 ),
-                onTap: onOpenBridge,
-              ),
-              SettingRow(
-                flat: true,
-                icon: Icons.dns_outlined,
-                label: 'Workers',
-                trailing: workers > 0 ? Pill(label: '$workers', dense: true) : null,
-                onTap: onOpenWorkers,
-              ),
-              SettingRow(
-                flat: true,
-                icon: Icons.receipt_long_outlined,
-                label: 'Activity log',
-                onTap: onOpenActivity,
-              ),
-              SettingRow(
-                flat: true,
-                icon: Icons.shield_outlined,
-                label: 'Recovery words',
-                tint: Palette.goldLight,
-                onTap: onOpenBackup,
-              ),
-              SettingRow(
-                flat: true,
-                last: true,
-                icon: Icons.info_outline,
-                label: 'About',
-                tint: Palette.slate,
-                onTap: onOpenAbout,
-              ),
-            ],
+                SettingRow(
+                  flat: true,
+                  icon: Icons.dns_outlined,
+                  label: 'Workers',
+                  trailing: workers > 0
+                      ? Pill(label: '$workers', dense: true)
+                      : null,
+                  onTap: onOpenWorkers,
+                ),
+                SettingRow(
+                  flat: true,
+                  icon: Icons.receipt_long_outlined,
+                  label: 'Activity log',
+                  onTap: onOpenActivity,
+                ),
+                SettingRow(
+                  flat: true,
+                  icon: Icons.shield_outlined,
+                  label: 'Recovery words',
+                  tint: Palette.goldLight,
+                  onTap: onOpenBackup,
+                ),
+                SettingRow(
+                  flat: true,
+                  last: true,
+                  icon: Icons.info_outline,
+                  label: 'About',
+                  tint: Palette.slate,
+                  onTap: onOpenAbout,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: Palette.xxl),
+        ],
+      ),
     );
   }
 }
 
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({required this.workerName, required this.address, required this.active});
+  const _IdentityCard({
+    required this.workerName,
+    required this.address,
+    required this.active,
+  });
 
   final String? workerName;
   final String? address;
@@ -184,7 +212,10 @@ class _IdentityCard extends StatelessWidget {
           Container(
             width: 52,
             height: 52,
-            decoration: const BoxDecoration(color: Palette.ink, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: Palette.ink,
+              shape: BoxShape.circle,
+            ),
             child: Center(child: BrandMark(size: 30, onDark: true)),
           ),
           const SizedBox(width: Palette.lg),
@@ -197,7 +228,8 @@ class _IdentityCard extends StatelessWidget {
                     Flexible(
                       child: Text(
                         workerName ?? 'No worker',
-                        style: TypeScale.headline(context).copyWith(color: Palette.ink),
+                        style: TypeScale.headline(context)
+                            .copyWith(color: Palette.ink),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -216,8 +248,13 @@ class _IdentityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  address == null ? 'no address reported' : 'mining to ${_shortAddress(address!)}',
-                  style: TypeScale.mono(context, size: 10).copyWith(color: Palette.slate),
+                  address == null
+                      ? 'no address reported'
+                      : 'mining to ${_shortAddress(address!)}',
+                  style: TypeScale.mono(
+                    context,
+                    size: 10,
+                  ).copyWith(color: Palette.slate),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

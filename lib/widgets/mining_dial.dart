@@ -39,7 +39,10 @@ class MiningDial extends StatelessWidget {
           child: Container(
             width: size * 0.46,
             height: size * 0.46,
-            decoration: const BoxDecoration(color: Palette.cream, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: Palette.cream,
+              shape: BoxShape.circle,
+            ),
             child: Center(child: BrandMark(size: size * 0.24)),
           ),
         ),
@@ -49,7 +52,11 @@ class MiningDial extends StatelessWidget {
 }
 
 class _DialPainter extends CustomPainter {
-  const _DialPainter({required this.rate, required this.active, required this.segments});
+  const _DialPainter({
+    required this.rate,
+    required this.active,
+    required this.segments,
+  });
 
   final double? rate;
   final bool active;
@@ -74,15 +81,23 @@ class _DialPainter extends CustomPainter {
       final isMajor = i % 5 == 0;
       final inner = isMajor ? tickInner - unit * 0.05 : tickInner;
       canvas.drawLine(
-        Offset(center.dx + math.cos(angle) * inner, center.dy + math.sin(angle) * inner),
-        Offset(center.dx + math.cos(angle) * tickOuter, center.dy + math.sin(angle) * tickOuter),
+        Offset(
+          center.dx + math.cos(angle) * inner,
+          center.dy + math.sin(angle) * inner,
+        ),
+        Offset(
+          center.dx + math.cos(angle) * tickOuter,
+          center.dy + math.sin(angle) * tickOuter,
+        ),
         tickPaint,
       );
     }
 
     // Segmented ring. Filled segments are gold; the rest stay on the track.
     final ringRadius = unit * 0.66;
-    final filled = rate == null ? 0 : (rate!.clamp(0.0, 1.0) * segments).round();
+    final filled = rate == null
+        ? 0
+        : (rate!.clamp(0.0, 1.0) * segments).round();
 
     final trackPaint = Paint()
       ..color = Palette.surfaceHigh

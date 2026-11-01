@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/cen_wallet.dart';
+import '../theme/layout.dart';
 import '../services/keystore.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
@@ -132,9 +133,9 @@ class _BackupScreenState extends State<BackupScreen> {
       // The address is the proof the phrase was accepted, so it is shown
       // rather than silently replaced.
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Imported ${wallet.address}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Imported ${wallet.address}')));
       }
     } on Object catch (error) {
       if (!mounted) return;
@@ -166,10 +167,8 @@ class _BackupScreenState extends State<BackupScreen> {
           duration: const Duration(milliseconds: 180),
           // A cross-fade keeps the switch calm, and there is no layout
           // animation for pumpAndSettle to wait on forever.
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+          transitionBuilder: (child, animation) =>
+              FadeTransition(opacity: animation, child: child),
           child: _buildStage(),
         ),
       ),
@@ -194,155 +193,169 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Widget _buildIntro() {
-    return ListView(
-      key: const ValueKey('intro'),
-      padding: const EdgeInsets.all(Palette.lg),
-      children: [
-        Center(
-          child: Column(
-            children: [
-              const SizedBox(height: Palette.lg),
-              Container(
-                width: 84,
-                height: 84,
-                decoration: const BoxDecoration(color: Palette.cream, shape: BoxShape.circle),
-                child: Center(child: BrandMark(size: 50)),
-              ),
-              const SizedBox(height: Palette.lg),
-              Text('Recovery words', style: TypeScale.screenTitle(context)),
-              const SizedBox(height: Palette.sm),
-              Text(
-                'Twelve words that rebuild your key on any device.',
-                textAlign: TextAlign.center,
-                style: TypeScale.label(context),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: Palette.xl),
-        const CenCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Eyebrow('Why this matters'),
-              SizedBox(height: Palette.sm),
-              Text(
-                'Your coins sit on the blockchain, tied to an address. They survive '
-                'the app being deleted. The one thing that does not survive is the '
-                'key to that address, and these twelve words are the key.',
-                style: TextStyle(
-                  fontFamily: TypeScale.bodyFamily,
-                  fontSize: 13,
-                  color: Palette.slateLight,
-                  height: 1.55,
+    return CenContent(
+      child: ListView(
+        key: const ValueKey('intro'),
+        padding: const EdgeInsets.all(Palette.lg),
+        children: [
+          Center(
+            child: Column(
+              children: [
+                const SizedBox(height: Palette.lg),
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: const BoxDecoration(
+                    color: Palette.cream,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(child: BrandMark(size: 50)),
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: Palette.md),
-        const CenCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Eyebrow('What to do with them'),
-              SizedBox(height: Palette.sm),
-              Text(
-                'Write them on paper, in order, and keep the paper somewhere that '
-                'is not this phone. Do not store them in a notes app, a '
-                'screenshot, or a message to yourself.',
-                style: TextStyle(
-                  fontFamily: TypeScale.bodyFamily,
-                  fontSize: 13,
-                  color: Palette.slateLight,
-                  height: 1.55,
+                const SizedBox(height: Palette.lg),
+                Text('Recovery words', style: TypeScale.screenTitle(context)),
+                const SizedBox(height: Palette.sm),
+                Text(
+                  'Twelve words that rebuild your key on any device.',
+                  textAlign: TextAlign.center,
+                  style: TypeScale.label(context),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: Palette.xl),
-        GoldButton(
-          label: _busy ? 'Creating…' : 'Create recovery words',
-          icon: Icons.add,
-          onPressed: _busy ? null : _generate,
-        ),
-        const SizedBox(height: Palette.md),
-        GhostButton(
-          label: 'I already have words',
-          icon: Icons.download_outlined,
-          onPressed: () => setState(() => _stage = _Stage.import),
-        ),
-      ],
+          const SizedBox(height: Palette.xl),
+          const CenCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Eyebrow('Why this matters'),
+                SizedBox(height: Palette.sm),
+                Text(
+                  'Your coins sit on the blockchain, tied to an address. They survive '
+                  'the app being deleted. The one thing that does not survive is the '
+                  'key to that address, and these twelve words are the key.',
+                  style: TextStyle(
+                    fontFamily: TypeScale.bodyFamily,
+                    fontSize: 13,
+                    color: Palette.slateLight,
+                    height: 1.55,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Palette.md),
+          const CenCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Eyebrow('What to do with them'),
+                SizedBox(height: Palette.sm),
+                Text(
+                  'Write them on paper, in order, and keep the paper somewhere that '
+                  'is not this phone. Do not store them in a notes app, a '
+                  'screenshot, or a message to yourself.',
+                  style: TextStyle(
+                    fontFamily: TypeScale.bodyFamily,
+                    fontSize: 13,
+                    color: Palette.slateLight,
+                    height: 1.55,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Palette.xl),
+          GoldButton(
+            label: _busy ? 'Creating…' : 'Create recovery words',
+            icon: Icons.add,
+            onPressed: _busy ? null : _generate,
+          ),
+          const SizedBox(height: Palette.md),
+          GhostButton(
+            label: 'I already have words',
+            icon: Icons.download_outlined,
+            onPressed: () => setState(() => _stage = _Stage.import),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildReveal() {
-    return ListView(
-      key: const ValueKey('reveal'),
-      padding: const EdgeInsets.all(Palette.lg),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(Palette.lg),
-          decoration: BoxDecoration(
-            color: Palette.red.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(Palette.rowRadius),
-            border: Border.all(color: Palette.red.withValues(alpha: 0.4)),
+    return CenContent(
+      child: ListView(
+        key: const ValueKey('reveal'),
+        padding: const EdgeInsets.all(Palette.lg),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(Palette.lg),
+            decoration: BoxDecoration(
+              color: Palette.red.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(Palette.rowRadius),
+              border: Border.all(color: Palette.red.withValues(alpha: 0.4)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_outlined,
+                      size: 18,
+                      color: Palette.red,
+                    ),
+                    const SizedBox(width: Palette.sm),
+                    Text(
+                      'Write these down now',
+                      style: TypeScale.title(context)
+                          .copyWith(color: Palette.red),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Palette.sm),
+                Text(
+                  'Anyone who reads these twelve words can move every coin at your '
+                  'address. They are shown once. After you leave this screen they '
+                  'are not shown again.',
+                  style: TypeScale.caption(context)
+                      .copyWith(color: Palette.red),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: Palette.xl),
+          Eyebrow('Your 12 words, in order'),
+          const SizedBox(height: Palette.sm),
+          _WordGrid(words: _words),
+          const SizedBox(height: Palette.xl),
+          Row(
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.warning_amber_outlined, size: 18, color: Palette.red),
-                  const SizedBox(width: Palette.sm),
-                  Text(
-                    'Write these down now',
-                    style: TypeScale.title(context).copyWith(color: Palette.red),
-                  ),
-                ],
+              Checkbox(
+                value: _confirmed,
+                onChanged: (value) =>
+                    setState(() => _confirmed = value ?? false),
+                activeColor: Palette.gold,
+                checkColor: Palette.ink,
               ),
-              const SizedBox(height: Palette.sm),
-              Text(
-                'Anyone who reads these twelve words can move every coin at your '
-                'address. They are shown once. After you leave this screen they '
-                'are not shown again.',
-                style: TypeScale.caption(context).copyWith(color: Palette.red),
+              const Expanded(
+                child: Text(
+                  'I have written all twelve words down in order',
+                  style: TextStyle(
+                    fontFamily: TypeScale.bodyFamily,
+                    fontSize: 13,
+                    color: Palette.cream,
+                  ),
+                ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: Palette.xl),
-        Eyebrow('Your 12 words, in order'),
-        const SizedBox(height: Palette.sm),
-        _WordGrid(words: _words),
-        const SizedBox(height: Palette.xl),
-        Row(
-          children: [
-            Checkbox(
-              value: _confirmed,
-              onChanged: (value) => setState(() => _confirmed = value ?? false),
-              activeColor: Palette.gold,
-              checkColor: Palette.ink,
-            ),
-            const Expanded(
-              child: Text(
-                'I have written all twelve words down in order',
-                style: TextStyle(
-                  fontFamily: TypeScale.bodyFamily,
-                  fontSize: 13,
-                  color: Palette.cream,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: Palette.md),
-        GoldButton(
-          label: 'Continue',
-          onPressed: _confirmed ? _confirmBackedUp : null,
-        ),
-      ],
+          const SizedBox(height: Palette.md),
+          GoldButton(
+            label: 'Continue',
+            onPressed: _confirmed ? _confirmBackedUp : null,
+          ),
+        ],
+      ),
     );
   }
 
@@ -355,7 +368,11 @@ class _BackupScreenState extends State<BackupScreen> {
         Center(
           child: Column(
             children: [
-              const Icon(Icons.shield_outlined, size: 44, color: Palette.goldLight),
+              const Icon(
+                Icons.shield_outlined,
+                size: 44,
+                color: Palette.goldLight,
+              ),
               const SizedBox(height: Palette.lg),
               Text('Not backed up yet', style: TypeScale.screenTitle(context)),
               const SizedBox(height: Palette.sm),
@@ -369,7 +386,11 @@ class _BackupScreenState extends State<BackupScreen> {
           ),
         ),
         const SizedBox(height: Palette.xl),
-        GoldButton(label: 'Show my words', icon: Icons.visibility_outlined, onPressed: _revealAgain),
+        GoldButton(
+          label: 'Show my words',
+          icon: Icons.visibility_outlined,
+          onPressed: _revealAgain,
+        ),
       ],
     );
   }
@@ -390,7 +411,11 @@ class _BackupScreenState extends State<BackupScreen> {
                   color: Palette.green.withValues(alpha: 0.14),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check, size: 34, color: Palette.greenDim),
+                child: const Icon(
+                  Icons.check,
+                  size: 34,
+                  color: Palette.greenDim,
+                ),
               ),
               const SizedBox(height: Palette.lg),
               Text('Backed up', style: TypeScale.screenTitle(context)),
@@ -432,10 +457,7 @@ class _BackupScreenState extends State<BackupScreen> {
           onPressed: _revealAgain,
         ),
         const SizedBox(height: Palette.md),
-        TextButton(
-          onPressed: widget.onDone,
-          child: const Text('Done'),
-        ),
+        TextButton(onPressed: widget.onDone, child: const Text('Done')),
       ],
     );
   }
@@ -458,7 +480,10 @@ class _BackupScreenState extends State<BackupScreen> {
           maxLines: 4,
           autocorrect: false,
           enableSuggestions: false,
-          style: TypeScale.mono(context, size: 13).copyWith(color: Palette.cream),
+          style: TypeScale.mono(
+            context,
+            size: 13,
+          ).copyWith(color: Palette.cream),
           decoration: const InputDecoration(hintText: 'abandon ability able …'),
         ),
         if (_importError != null) ...[
@@ -472,7 +497,10 @@ class _BackupScreenState extends State<BackupScreen> {
           const SizedBox(height: Palette.sm),
           Text(
             _importAddress!,
-            style: TypeScale.mono(context, size: 11).copyWith(color: Palette.greenDim),
+            style: TypeScale.mono(
+              context,
+              size: 11,
+            ).copyWith(color: Palette.greenDim),
           ),
         ],
         const SizedBox(height: Palette.xl),
@@ -508,24 +536,33 @@ class _WordGrid extends StatelessWidget {
       children: [
         for (var i = 0; i < words.length; i++)
           Container(
-            width: (MediaQuery.sizeOf(context).width - Palette.lg * 2 - Palette.sm * 2) / 3,
-            padding: const EdgeInsets.symmetric(horizontal: Palette.sm, vertical: 10),
+            width:
+                (MediaQuery.sizeOf(context).width -
+                    Palette.lg * 2 -
+                    Palette.sm * 2) /
+                3,
+            padding: const EdgeInsets.symmetric(
+              horizontal: Palette.sm,
+              vertical: 10,
+            ),
             decoration: BoxDecoration(
               color: Palette.surfaceHigh,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Palette.goldDim.withValues(alpha: 0.35)),
+              border: Border.all(
+                color: Palette.goldDim.withValues(alpha: 0.35),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '${i + 1}',
-                  style: TypeScale.monoMuted(context, size: 9),
-                ),
+                Text('${i + 1}', style: TypeScale.monoMuted(context, size: 9)),
                 const SizedBox(height: 2),
                 Text(
                   words[i],
-                  style: TypeScale.mono(context, size: 12).copyWith(color: Palette.cream),
+                  style: TypeScale.mono(
+                    context,
+                    size: 12,
+                  ).copyWith(color: Palette.cream),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

@@ -56,7 +56,7 @@ MinerSnapshot snapshotWith({
           'wallet': wallet,
           'timestamp': '2026-10-29T10:00:00Z',
           'hash': 'abc123def456',
-        }
+        },
       ],
       'workers': withWorker
           ? [
@@ -73,7 +73,7 @@ MinerSnapshot snapshotWith({
                 'status': 'online',
                 'currentDifficulty': 8.0,
                 'sessionUptime': 3600,
-              }
+              },
             ]
           : <Object?>[],
       'bridgeUptime': 7200,
@@ -102,7 +102,10 @@ void main() {
     });
 
     test('strips trailing slashes', () {
-      expect(normaliseBaseUrl('http://127.0.0.1:3030///'), 'http://127.0.0.1:3030');
+      expect(
+        normaliseBaseUrl('http://127.0.0.1:3030///'),
+        'http://127.0.0.1:3030',
+      );
     });
 
     test('rejects empty and unusable input', () {
@@ -221,10 +224,14 @@ void main() {
       double luminance(Color c) {
         double channel(double v) {
           final s = v > 1.0 ? v / 255 : v;
-          return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) * ((s + 0.055) / 1.055);
+          return s <= 0.03928
+              ? s / 12.92
+              : ((s + 0.055) / 1.055) * ((s + 0.055) / 1.055);
         }
 
-        return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
+        return 0.2126 * channel(c.r) +
+            0.7152 * channel(c.g) +
+            0.0722 * channel(c.b);
       }
 
       double ratio(Color a, Color b) {
@@ -238,7 +245,10 @@ void main() {
       expect(ratio(Palette.cream, Palette.field), greaterThanOrEqualTo(4.5));
       expect(ratio(Palette.gold, Palette.field), greaterThanOrEqualTo(4.5));
       expect(ratio(Palette.cream, Palette.surface), greaterThanOrEqualTo(4.5));
-      expect(ratio(Palette.slateLight, Palette.surface), greaterThanOrEqualTo(4.5));
+      expect(
+        ratio(Palette.slateLight, Palette.surface),
+        greaterThanOrEqualTo(4.5),
+      );
     });
   });
 
@@ -274,7 +284,9 @@ void main() {
       }
     });
 
-    testWidgets('a configured slot with no ad reserves nothing', (tester) async {
+    testWidgets('a configured slot with no ad reserves nothing', (
+      tester,
+    ) async {
       // The rule the user asked for: the banner appears only once an ad has
       // actually arrived. A saved unit id on its own is not an ad.
       await tester.pumpWidget(host(AdSlotState.awaitingSdk, () {}));
@@ -283,7 +295,9 @@ void main() {
       expect(find.text('Ad'), findsNothing);
     });
 
-    testWidgets('a real ad reserves a fixed height and labels itself', (tester) async {
+    testWidgets('a real ad reserves a fixed height and labels itself', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         host(AdSlotState.loaded, () {}, ad: const Text('REAL AD UNIT')),
       );
@@ -295,10 +309,16 @@ void main() {
       expect(find.text('REAL AD UNIT'), findsOneWidget);
     });
 
-    testWidgets('the close button dismisses and meets the touch target', (tester) async {
+    testWidgets('the close button dismisses and meets the touch target', (
+      tester,
+    ) async {
       var dismissed = 0;
       await tester.pumpWidget(
-        host(AdSlotState.loaded, () => dismissed++, ad: const Text('REAL AD UNIT')),
+        host(
+          AdSlotState.loaded,
+          () => dismissed++,
+          ad: const Text('REAL AD UNIT'),
+        ),
       );
 
       final close = find.byType(IconButton);
@@ -314,26 +334,38 @@ void main() {
     test('willShow is true only for a real ad', () {
       expect(AdBanner.willShow(AdSlotState.loaded, const Text('ad')), isTrue);
       expect(AdBanner.willShow(AdSlotState.loaded, null), isFalse);
-      expect(AdBanner.willShow(AdSlotState.awaitingSdk, const Text('ad')), isFalse);
-      expect(AdBanner.willShow(AdSlotState.unconfigured, const Text('ad')), isFalse);
+      expect(
+        AdBanner.willShow(AdSlotState.awaitingSdk, const Text('ad')),
+        isFalse,
+      );
+      expect(
+        AdBanner.willShow(AdSlotState.unconfigured, const Text('ad')),
+        isFalse,
+      );
       expect(AdBanner.willShow(AdSlotState.noFill, const Text('ad')), isFalse);
-      expect(AdBanner.willShow(AdSlotState.dismissed, const Text('ad')), isFalse);
+      expect(
+        AdBanner.willShow(AdSlotState.dismissed, const Text('ad')),
+        isFalse,
+      );
     });
   });
 
   group('ad settings persistence', () {
-    test('a blank ad unit id round-trips to null, not to an empty slot', () async {
-      SharedPreferences.setMockInitialValues({});
-      final store = SettingsStore();
+    test(
+      'a blank ad unit id round-trips to null, not to an empty slot',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final store = SettingsStore();
 
-      expect(await store.adUnitId(), isNull);
+        expect(await store.adUnitId(), isNull);
 
-      await store.setAdUnitId('   ');
-      expect(await store.adUnitId(), isNull);
+        await store.setAdUnitId('   ');
+        expect(await store.adUnitId(), isNull);
 
-      await store.setAdUnitId('  ca-app-pub-1/2  ');
-      expect(await store.adUnitId(), 'ca-app-pub-1/2');
-    });
+        await store.setAdUnitId('  ca-app-pub-1/2  ');
+        expect(await store.adUnitId(), 'ca-app-pub-1/2');
+      },
+    );
 
     test('a dismissal survives a restart', () async {
       SharedPreferences.setMockInitialValues({});
@@ -367,7 +399,9 @@ void main() {
       );
     }
 
-    testWidgets('shows the real hashrate and worker from the bridge', (tester) async {
+    testWidgets('shows the real hashrate and worker from the bridge', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(snapshotWith()));
 
       expect(find.text('1.42 GH/s'), findsOneWidget);
@@ -386,7 +420,9 @@ void main() {
       );
     });
 
-    testWidgets('shows real block and share counts, not a price', (tester) async {
+    testWidgets('shows real block and share counts, not a price', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(snapshotWith()));
 
       // The concept mock carried a $ price. CEN is not listed anywhere, so a
@@ -397,8 +433,9 @@ void main() {
       expect(find.textContaining(r'$'), findsNothing);
     });
 
-    testWidgets('the level badge is derived from the hashrate, not invented',
-        (tester) async {
+    testWidgets('the level badge is derived from the hashrate, not invented', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(snapshotWith()));
 
       // 1.42 GH/s floors to 1, so the badge reads LV.1. The badge only
@@ -406,7 +443,9 @@ void main() {
       expect(find.text('LV.1'), findsOneWidget);
     });
 
-    testWidgets('no level badge when the bridge has not answered', (tester) async {
+    testWidgets('no level badge when the bridge has not answered', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(const MinerSnapshot()));
 
       expect(find.textContaining('LV.'), findsNothing);
@@ -448,10 +487,16 @@ void main() {
       var onMine = false;
 
       route = false; // press one closed the settings screen
-      expect(decideBackAction(hasOpenRoute: route, isOnMineTab: onMine), BackAction.goToMineTab);
+      expect(
+        decideBackAction(hasOpenRoute: route, isOnMineTab: onMine),
+        BackAction.goToMineTab,
+      );
 
       onMine = true; // press two returned to Mine
-      expect(decideBackAction(hasOpenRoute: route, isOnMineTab: onMine), BackAction.exitApp);
+      expect(
+        decideBackAction(hasOpenRoute: route, isOnMineTab: onMine),
+        BackAction.exitApp,
+      );
     });
   });
 
@@ -459,17 +504,19 @@ void main() {
     testWidgets('the ticker reads CEN everywhere it appears', (tester) async {
       // The coin is CEN. An earlier pass shipped "CEL" in a few spots, which
       // reads as a different asset, so the ticker is asserted directly.
-      await tester.pumpWidget(MaterialApp(
-        theme: buildCenTheme(),
-        home: Scaffold(
-          body: WalletScreen(
-            snapshot: snapshotWith(),
-            networkLabel: 'simnet',
-            onBackup: () {},
-            onOpenActivity: () {},
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildCenTheme(),
+          home: Scaffold(
+            body: WalletScreen(
+              snapshot: snapshotWith(),
+              networkLabel: 'simnet',
+              onBackup: () {},
+              onOpenActivity: () {},
+            ),
           ),
         ),
-      ));
+      );
       await tester.pump();
 
       expect(find.text('CEN'), findsWidgets);
@@ -477,18 +524,20 @@ void main() {
     });
 
     testWidgets('the mining screen states CEN as the unit', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        theme: buildCenTheme(),
-        home: Scaffold(
-          body: MiningScreen(
-            snapshot: snapshotWith(),
-            nodeAddress: '127.0.0.1:26510',
-            onOpenWorkers: () {},
-            onOpenActivity: () {},
-            onConnectNode: () {},
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildCenTheme(),
+          home: Scaffold(
+            body: MiningScreen(
+              snapshot: snapshotWith(),
+              nodeAddress: '127.0.0.1:26510',
+              onOpenWorkers: () {},
+              onOpenActivity: () {},
+              onConnectNode: () {},
+            ),
           ),
         ),
-      ));
+      );
       await tester.pump();
 
       expect(find.text('CEN'), findsWidgets);
@@ -529,7 +578,10 @@ void main() {
       // would tell the user their coins are gone.
       await tester.pumpWidget(host(snapshotWith()));
 
-      expect(find.textContaining('The bridge reports mining results'), findsOneWidget);
+      expect(
+        find.textContaining('The bridge reports mining results'),
+        findsOneWidget,
+      );
       expect(find.text('0,00'), findsNothing);
       expect(find.text('0.00'), findsNothing);
     });
@@ -544,13 +596,11 @@ void main() {
     });
 
     testWidgets('an empty block list explains what fills it', (tester) async {
-      await tester.pumpWidget(host(snapshotWith(withWorker: false)
-          .copyWithNullBlocks()));
-
-      expect(
-        find.textContaining('No transactions yet'),
-        findsOneWidget,
+      await tester.pumpWidget(
+        host(snapshotWith(withWorker: false).copyWithNullBlocks()),
       );
+
+      expect(find.textContaining('No transactions yet'), findsOneWidget);
     });
   });
 
@@ -611,7 +661,11 @@ void main() {
         data: const MediaQueryData(size: Size(400, 2400)),
         child: MaterialApp(
           theme: buildCenTheme(),
-          home: BackupScreen(onDone: () {}, keystore: keystore, wordlist: _testWordlist),
+          home: BackupScreen(
+            onDone: () {},
+            keystore: keystore,
+            wordlist: _testWordlist,
+          ),
         ),
       );
     }
@@ -645,7 +699,9 @@ void main() {
       expect(import, findsOneWidget);
     });
 
-    testWidgets('a generated phrase is shown once, behind a confirmation', (tester) async {
+    testWidgets('a generated phrase is shown once, behind a confirmation', (
+      tester,
+    ) async {
       final keystore = _FakeKeystore();
       await tester.pumpWidget(host(keystore));
       await pumpUntil(tester, find.text('Create recovery words'));
@@ -656,7 +712,10 @@ void main() {
       // Twelve numbered words are on screen.
       expect(find.text('1'), findsOneWidget);
       expect(find.text('12'), findsOneWidget);
-      expect(find.textContaining('Anyone who reads these twelve words'), findsOneWidget);
+      expect(
+        find.textContaining('Anyone who reads these twelve words'),
+        findsOneWidget,
+      );
 
       // The phrase is persisted, and the backup flag is still false.
       expect(await keystore.readPhrase(), isNotNull);
@@ -670,6 +729,54 @@ void main() {
       await tester.tap(find.byType(Checkbox));
       await tester.pump();
       expect(tester.widget<FilledButton>(cont).enabled, isTrue);
+    });
+  });
+
+  // The desktop shell binds Ctrl+1/2/3 and Escape. Driving the real MinerHome
+  // at a desktop window size proves the bindings against the widget that owns
+  // them, rather than against a re-implementation of the map.
+  group('desktop shell shortcuts', () {
+    testWidgets('Ctrl+2 moves the shell to the wallet tab', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      // Wide enough for the expanded layout, which is the only layout that
+      // installs the shortcut bindings.
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      // The ambient binary rain never stops, so pumpAndSettle would spin until
+      // it timed out. Frames are pumped by hand instead.
+      Future<void> frames(int count) async {
+        for (int i = 0; i < count; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      }
+
+      await tester.pumpWidget(
+        MaterialApp(theme: buildCenTheme(), home: const MinerHome()),
+      );
+      // Long enough for the emblem sweep to finish and the entry button to
+      // fade in behind its delay.
+      await frames(30);
+
+      // The splash owns the shell until the entry button is pressed.
+      expect(find.text('MASUK'), findsOneWidget);
+      await tester.tap(find.text('MASUK'));
+      await frames(10);
+
+      // Mine opens first; its dial caption exists nowhere else. The caption
+      // carries its value on a second line, so it is matched by substring.
+      expect(find.textContaining('ACCEPTANCE'), findsOneWidget);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await frames(10);
+
+      // The wallet screen is the only one that names a balance. Eyebrow
+      // uppercases its label, so the rendered text is all caps.
+      expect(find.text('TOTAL BALANCE'), findsOneWidget);
+      expect(find.textContaining('ACCEPTANCE'), findsNothing);
     });
   });
 }
@@ -695,7 +802,6 @@ extension on MinerSnapshot {
     );
   }
 }
-
 
 /// Stands in for the platform keystore, which is not available in a widget
 /// test. Records the same two values the real one does.

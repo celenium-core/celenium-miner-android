@@ -112,14 +112,22 @@ class AdBanner extends StatelessWidget {
             // The "Ad" label keeps the slot honest about what it is, and ad
             // networks require it (R-38).
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: Palette.sm, vertical: 3),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Palette.sm,
+                vertical: 3,
+              ),
               decoration: BoxDecoration(
-                border: Border.all(color: Palette.goldDim.withValues(alpha: 0.6)),
+                border: Border.all(
+                  color: Palette.goldDim.withValues(alpha: 0.6),
+                ),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 'Ad',
-                style: TypeScale.monoMuted(context, size: 9).copyWith(letterSpacing: 1.0),
+                style: TypeScale.monoMuted(
+                  context,
+                  size: 9,
+                ).copyWith(letterSpacing: 1.0),
               ),
             ),
             const SizedBox(width: Palette.md),
