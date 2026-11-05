@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/bridge.dart';
 import '../services/mining_readout.dart';
 import '../theme/layout.dart';
@@ -127,12 +128,13 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     final connected = readout.hashrateGhs != null || readout.workerName != null;
 
     return Container(
       padding: const EdgeInsets.all(Palette.lg),
       decoration: BoxDecoration(
-        color: Palette.surfaceLight,
+        color: Palette.cream,
         borderRadius: BorderRadius.circular(Palette.cardRadius),
       ),
       child: Column(
@@ -147,7 +149,7 @@ class _SummaryCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: const BoxDecoration(
-                  color: Palette.ink,
+                  color: Palette.field,
                   shape: BoxShape.circle,
                 ),
                 child: Center(child: BrandMark(size: 24, onDark: true)),
@@ -158,19 +160,19 @@ class _SummaryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      readout.workerName ?? 'No worker',
+                      readout.workerName ?? l10n.commonNoWorker,
                       style: TypeScale.title(context).copyWith(
-                        color: Palette.ink,
+                        color: Palette.creamInk,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      nodeAddress ?? 'node not set',
+                      nodeAddress ?? l10n.mineNodeNotSet,
                       style: TypeScale.monoInk(
                         context,
                         size: 10,
-                      ).copyWith(color: Palette.slate),
+                      ).copyWith(color: Palette.creamInkDim),
                     ),
                   ],
                 ),
@@ -181,7 +183,7 @@ class _SummaryCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Eyebrow('Hash rate', color: Palette.slate),
+                  Eyebrow(l10n.mineHashRate, color: Palette.creamInkDim),
                   const SizedBox(height: 2),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -191,7 +193,7 @@ class _SummaryCard extends StatelessWidget {
                             ? '—'
                             : formatHashrate(readout.hashrateGhs!),
                         style: TypeScale.hero(context)
-                            .copyWith(color: Palette.ink, fontSize: 30),
+                            .copyWith(color: Palette.creamInk, fontSize: 30),
                       ),
                       // Gold level badge, as in the concept. The level is
                       // derived from the hashrate so the number means
@@ -210,7 +212,7 @@ class _SummaryCard extends StatelessWidget {
                           child: Text(
                             'LV.${readout.hashrateGhs!.floor().clamp(1, 99)}',
                             style: TypeScale.caption(context).copyWith(
-                              color: Palette.ink,
+                              color: Palette.white,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.8,
                             ),
@@ -234,23 +236,24 @@ class _SummaryCard extends StatelessWidget {
                   style: TypeScale.monoInk(
                     context,
                     size: 10,
-                  ).copyWith(color: Palette.slate),
+                  ).copyWith(color: Palette.creamInkDim),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: Palette.sm),
               LiveStatus(
-                label: readout.active ? 'MINING ACTIVE' : 'IDLE',
+                label: readout.active ? l10n.mineMiningActive : l10n.statusIdle,
                 active: readout.active,
-                tint: readout.active ? Palette.greenDim : Palette.slate,
+                tint: Palette.greenDim,
+                idleColor: Palette.creamInkDim,
               ),
             ],
           ),
           if (!connected) ...[
             const SizedBox(height: Palette.lg),
             Text(
-              'The bridge has not answered. Set its address to start reading live figures.',
-              style: TypeScale.caption(context).copyWith(color: Palette.slate),
+              l10n.mineBridgeSilent,
+              style: TypeScale.caption(context).copyWith(color: Palette.creamInkDim),
             ),
             const SizedBox(height: Palette.sm),
             TextButton(
@@ -260,7 +263,7 @@ class _SummaryCard extends StatelessWidget {
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('Set bridge address'),
+              child: Text(l10n.mineSetBridge),
             ),
           ],
         ],
@@ -279,12 +282,14 @@ class _DialCaption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
+    final latest = readout.latestBlockHash;
     return Column(
       children: [
         // The app reads the bridge; it does not start or stop hashing, so the
         // control here opens the worker list rather than claiming to pause.
         Text(
-          '[ TAP FOR WORKERS ]',
+          l10n.mineTapWorkers,
           style: TypeScale.monoMuted(
             context,
             size: 10,
@@ -300,9 +305,9 @@ class _DialCaption extends StatelessWidget {
         ),
         const SizedBox(height: Palette.sm),
         Text(
-          readout.latestBlockHash == null
-              ? '> waiting for first share'
-              : '> share accepted ${shortHash(readout.latestBlockHash!, head: 8, tail: 6)}'
+          latest == null
+              ? l10n.mineWaitingShare
+              : '${l10n.mineShareAccepted(shortHash(latest, head: 8, tail: 6))}'
                     '${readout.difficulty == null ? '' : ' diff-${readout.difficulty!.toStringAsFixed(2)}'}',
           style: TypeScale.mono(
             context,
@@ -336,13 +341,14 @@ class _DialBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     final rate = readout.acceptanceRate;
 
     return Column(
       children: [
         Semantics(
           button: true,
-          label: 'Share acceptance. Open workers.',
+          label: l10n.mineAcceptanceSemantics,
           child: InkWell(
             onTap: onTap,
             customBorder: const CircleBorder(),
@@ -354,8 +360,8 @@ class _DialBlock extends StatelessWidget {
         // than repeated in the stats strip below.
         Text(
           rate == null
-              ? 'ACCEPTANCE\nno shares yet'
-              : 'ACCEPTANCE\n${(rate * 100).toStringAsFixed(0)}%',
+              ? l10n.mineAcceptanceNoShares
+              : l10n.mineAcceptanceRate((rate * 100).toStringAsFixed(0)),
           textAlign: TextAlign.center,
           style: TypeScale.mono(
             context,
@@ -379,6 +385,7 @@ class _StatsStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     return CenCard(
       child: Row(
         children: [
@@ -386,7 +393,7 @@ class _StatsStrip extends StatelessWidget {
             child: StatCell(
               value: readout.sessionBlocks?.toString() ?? '—',
               unit: 'CEN',
-              label: 'session',
+              label: l10n.mineSessionLabel,
               color: Palette.goldLight,
             ),
           ),
@@ -395,15 +402,15 @@ class _StatsStrip extends StatelessWidget {
             child: StatCell(
               value: readout.totalBlocks?.toString() ?? '—',
               unit: 'CEN',
-              label: 'total',
+              label: l10n.mineTotalLabel,
             ),
           ),
           const StatDivider(),
           Expanded(
             child: StatCell(
               value: readout.shares?.toString() ?? '—',
-              unit: 'shares',
-              label: 'accepted',
+              unit: l10n.mineSharesUnit,
+              label: l10n.mineAcceptedLabel,
             ),
           ),
         ],
@@ -421,6 +428,7 @@ class _LatestLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     final hash = readout.latestBlockHash;
 
     return Material(
@@ -441,8 +449,8 @@ class _LatestLine extends StatelessWidget {
               Expanded(
                 child: Text(
                   hash == null
-                      ? 'no block accepted yet'
-                      : 'block accepted ${shortHash(hash)}${readout.latestBlockTime == null ? '' : ' · ${readout.latestBlockTime}'}',
+                      ? l10n.mineNoBlock
+                      : '${l10n.mineBlockAccepted(shortHash(hash))}${readout.latestBlockTime == null ? '' : ' · ${readout.latestBlockTime}'}',
                   style: TypeScale.mono(
                     context,
                     size: 11,

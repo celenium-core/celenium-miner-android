@@ -10,3 +10,24 @@
 /lib/armeabi-v7a/
 /lib/x86_64/
 /lib/*.so
+
+# APK decompile dumps (dex/kotlin/res) that land in the repo root when a
+# release build is inspected for AdMob id and locales.
+/classes.dex
+/resources.arsc
+/AndroidManifest.xml
+/DebugProbesKt.bin
+/hsdp.properties
+/kotlin-tooling-metadata.json
+/play-services-*.properties
+/user-messaging-platform.properties
+/res/
+/kotlin/
+/META-INF/
+/assets/dexopt/
+/assets/flutter_assets/
+
+# UI review screenshots dumped to the repo root during testing.
+/cen_*.png
+/navbar_fix_*.png
+/preview_desktop.png

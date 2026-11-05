@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Capture the splash at several offsets from launch, then the settled screens.
 set -u
-cd "$HOME/cenium-miner" || exit 1
-APP=./build/linux/x64/release/bundle/cenium_miner
+cd "$HOME/celenium-miner" || exit 1
+APP=./build/linux/x64/release/bundle/celenium_miner
 OUT=/tmp/shots2
 mkdir -p "$OUT"
 
-pkill -9 -f 'release/bundle/cenium' 2>/dev/null
+pkill -9 -f 'release/bundle/celenium' 2>/dev/null
 sleep 3
 
 export DISPLAY=:99

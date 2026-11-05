@@ -3,10 +3,13 @@
          user types in Node settings. Without this permission every poll
          fails with a socket error that looks like a dead bridge. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- The ad SDK checks connectivity before requesting a fill. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <application
         android:label="Celenium Miner"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:localeConfig="@xml/locales_config"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
@@ -35,6 +38,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- AdMob app id. Must match the app registered in the AdMob console
+             (ca-app-pub-5168743842779308~5416336913), or every request fails
+             with "Invalid application id". -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-5168743842779308~5416336913"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

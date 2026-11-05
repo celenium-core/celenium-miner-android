@@ -11,11 +11,11 @@ ThemeData buildCenTheme() {
   final scheme = const ColorScheme.dark(
     surface: Palette.field,
     primary: Palette.gold,
-    onPrimary: Palette.ink,
+    onPrimary: Palette.white,
     secondary: Palette.goldLight,
-    onSecondary: Palette.ink,
+    onSecondary: Palette.white,
     error: Palette.redDeep,
-    onError: Palette.ink,
+    onError: Palette.white,
     onSurface: Palette.cream,
   );
 
@@ -61,7 +61,7 @@ ThemeData buildCenTheme() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: Palette.gold,
-        foregroundColor: Palette.ink,
+        foregroundColor: Palette.white,
         disabledBackgroundColor: Palette.surfaceHigh,
         disabledForegroundColor: Palette.slate,
         elevation: 0,
@@ -152,7 +152,7 @@ ThemeData buildCenTheme() {
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
         (states) =>
-            states.contains(WidgetState.selected) ? Palette.ink : Palette.slate,
+            states.contains(WidgetState.selected) ? Palette.white : Palette.slate,
       ),
       trackColor: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.selected)

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/bridge.dart';
 import '../services/settings_store.dart';
 import '../theme/layout.dart';
@@ -56,8 +57,10 @@ class _BridgeScreenState extends State<BridgeScreen> {
     await widget.settings.setAdUnitId(_adController.text);
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Bridge address saved')));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10nOf(context).bridgeSaved)),
+    );
   }
 
   @override
@@ -69,10 +72,11 @@ class _BridgeScreenState extends State<BridgeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     final status = widget.snapshot.status;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('BRIDGE')),
+      appBar: AppBar(title: Text(l10n.bridgeTitle)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : CenContent(
@@ -90,7 +94,7 @@ class _BridgeScreenState extends State<BridgeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Eyebrow('Bridge address'),
+                        Eyebrow(l10n.bridgeAddress),
                         const SizedBox(height: Palette.sm),
                         TextField(
                           controller: _urlController,
@@ -106,8 +110,7 @@ class _BridgeScreenState extends State<BridgeScreen> {
                         ),
                         const SizedBox(height: Palette.sm),
                         Text(
-                          'The bridge serves mining results over HTTP. No account and no '
-                          'credentials are sent with the request.',
+                          l10n.bridgeAddressNote,
                           style: TypeScale.caption(context),
                         ),
                       ],
@@ -118,7 +121,7 @@ class _BridgeScreenState extends State<BridgeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Eyebrow('Poll interval'),
+                        Eyebrow(l10n.bridgePollInterval),
                         const SizedBox(height: Palette.sm),
                         _IntervalPicker(
                           value: _intervalMs,
@@ -129,8 +132,7 @@ class _BridgeScreenState extends State<BridgeScreen> {
                         ),
                         const SizedBox(height: Palette.sm),
                         Text(
-                          'How often the app asks the bridge for fresh figures. A shorter '
-                          'interval updates faster and uses more battery.',
+                          l10n.bridgePollNote,
                           style: TypeScale.caption(context),
                         ),
                       ],
@@ -141,7 +143,7 @@ class _BridgeScreenState extends State<BridgeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Eyebrow('Ad unit id'),
+                        Eyebrow(l10n.bridgeAdUnit),
                         const SizedBox(height: Palette.sm),
                         TextField(
                           controller: _adController,
@@ -156,9 +158,7 @@ class _BridgeScreenState extends State<BridgeScreen> {
                         ),
                         const SizedBox(height: Palette.sm),
                         Text(
-                          'Leave this empty and no banner is requested. The banner only '
-                          'appears once a real ad is served: an empty slot reserves no '
-                          'space and shows nothing.',
+                          l10n.bridgeAdNote,
                           style: TypeScale.caption(context),
                         ),
                       ],
@@ -166,7 +166,7 @@ class _BridgeScreenState extends State<BridgeScreen> {
                   ),
                   const SizedBox(height: Palette.xl),
                   GoldButton(
-                    label: _saving ? 'Saving…' : 'Save',
+                    label: _saving ? l10n.commonSaving : l10n.commonSave,
                     onPressed: _saving ? null : _save,
                   ),
                 ],
@@ -191,24 +191,28 @@ class _NodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     return CenCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(child: Eyebrow('Node')),
+              Expanded(child: Eyebrow(l10n.bridgeNode)),
               LiveStatus(
-                label: online ? 'ONLINE' : 'OFFLINE',
+                label: online ? l10n.statusOnline : l10n.statusOffline,
                 active: online,
                 tint: Palette.greenDim,
               ),
             ],
           ),
           const SizedBox(height: Palette.md),
-          _InfoRow(label: 'Address', value: address ?? '—'),
-          _InfoRow(label: 'Version', value: version ?? '—'),
-          _InfoRow(label: 'Instances', value: instances?.toString() ?? '—'),
+          _InfoRow(label: l10n.bridgeInfoAddress, value: address ?? '—'),
+          _InfoRow(label: l10n.bridgeInfoVersion, value: version ?? '—'),
+          _InfoRow(
+            label: l10n.bridgeInfoInstances,
+            value: instances?.toString() ?? '—',
+          ),
         ],
       ),
     );

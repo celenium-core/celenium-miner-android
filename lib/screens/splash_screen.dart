@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/brand_mark.dart';
@@ -190,7 +191,7 @@ class _EnterButton extends StatelessWidget {
             offset: Offset(0, 8 * (1 - t)),
             child: Semantics(
               button: true,
-              label: 'Enter the mining console',
+              label: l10nOf(context).splashEnterSemantics,
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -207,7 +208,9 @@ class _EnterButton extends StatelessWidget {
                         color: Palette.gold.withValues(alpha: 0.45),
                       ),
                     ),
-                    child: Center(child: Text('MASUK', style: label)),
+                    child: Center(
+                      child: Text(l10nOf(context).splashEnter, style: label),
+                    ),
                   ),
                 ),
               ),
@@ -331,10 +334,10 @@ class _Emblem extends StatelessWidget {
                 width: 96,
                 height: 96,
                 decoration: const BoxDecoration(
-                  color: Palette.cream,
+                  color: Palette.surfaceHigh,
                   shape: BoxShape.circle,
                 ),
-                child: Center(child: BrandMark(size: 58)),
+                child: Center(child: BrandMark(size: 58, onDark: true)),
               ),
             ),
           ),

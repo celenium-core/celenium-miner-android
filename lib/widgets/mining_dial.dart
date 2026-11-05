@@ -43,7 +43,7 @@ class MiningDial extends StatelessWidget {
               color: Palette.cream,
               shape: BoxShape.circle,
             ),
-            child: Center(child: BrandMark(size: size * 0.24)),
+            child: Center(child: BrandMark(size: size * 0.30, onDark: false)),
           ),
         ),
       ),
@@ -71,7 +71,7 @@ class _DialPainter extends CustomPainter {
     final tickInner = unit * 0.80;
     final tickOuter = unit * 0.94;
     final tickPaint = Paint()
-      ..color = Palette.goldDim.withValues(alpha: 0.5)
+      ..color = Palette.cream.withValues(alpha: 0.70)
       ..strokeWidth = 1.2
       ..strokeCap = StrokeCap.round;
 
@@ -93,20 +93,22 @@ class _DialPainter extends CustomPainter {
       );
     }
 
-    // Segmented ring. Filled segments are gold; the rest stay on the track.
+    // Segmented ring in cream. Filled segments read as the accepted shares;
+    // the rest stay on a fainter cream track, so the dial is cream on cream
+    // with only the accepted fraction brightened.
     final ringRadius = unit * 0.66;
     final filled = rate == null
         ? 0
         : (rate!.clamp(0.0, 1.0) * segments).round();
 
     final trackPaint = Paint()
-      ..color = Palette.surfaceHigh
+      ..color = Palette.cream.withValues(alpha: 0.55)
       ..style = PaintingStyle.stroke
       ..strokeWidth = unit * 0.075
       ..strokeCap = StrokeCap.round;
 
     final livePaint = Paint()
-      ..color = active ? Palette.gold : Palette.goldDim
+      ..color = active ? Palette.white : Palette.cream
       ..style = PaintingStyle.stroke
       ..strokeWidth = unit * 0.075
       ..strokeCap = StrokeCap.round;

@@ -58,6 +58,18 @@ static void my_application_activate(GApplication* application) {
   // too narrow for it, so the floor is the phone layout's own minimum.
   gtk_widget_set_size_request(GTK_WIDGET(window), 420, 640);
 
+  // Size the window to the display so the console panels fill the screen even
+  // without a window manager — maximise is a WM hint and does nothing on a
+  // bare X server. Then ask the WM to maximise too, as a belt-and-braces.
+  GdkDisplay* display = gtk_widget_get_display(GTK_WIDGET(window));
+  GdkMonitor* monitor = gdk_display_get_primary_monitor(display);
+  if (monitor != nullptr) {
+    GdkRectangle workarea = {0, 0, 0, 0};
+    gdk_monitor_get_geometry(monitor, &workarea);
+    gtk_window_set_default_size(window, workarea.width, workarea.height);
+  }
+  gtk_window_maximize(window);
+
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);

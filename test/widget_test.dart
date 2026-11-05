@@ -1,9 +1,11 @@
 import 'dart:math';
 
 import 'package:celenium_miner/main.dart';
+import 'package:celenium_miner/l10n/l10n.dart';
 import 'package:celenium_miner/models/bridge.dart';
 import 'package:celenium_miner/screens/backup_screen.dart';
 import 'package:celenium_miner/screens/mining_screen.dart';
+import 'package:celenium_miner/screens/profile_screen.dart';
 import 'package:celenium_miner/screens/wallet_screen.dart';
 import 'package:celenium_miner/services/bridge_api.dart';
 import 'package:celenium_miner/services/cen_wallet.dart';
@@ -90,6 +92,28 @@ MinerSnapshot snapshotWith({
 /// by its own checksum test.
 List<String> get _testWordlist =>
     List<String>.generate(2048, (i) => 'word${i.toString().padLeft(4, '0')}');
+
+/// The shell mounted the way main() mounts it, with the real localisation
+/// delegates. Screen tests pump a bare MaterialApp and so fall back to English;
+/// a test that is meant to catch a missing translation has to name its locale
+/// here, or it would pass in either language.
+Widget shellApp(Widget home, {Locale locale = const Locale('en')}) {
+  return MaterialApp(
+    theme: buildCenTheme(),
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    home: home,
+  );
+}
+
+/// Pumps frames by hand. The ambient binary rain never stops, so
+/// pumpAndSettle would spin until it timed out.
+Future<void> pumpFrames(WidgetTester tester, int count) async {
+  for (int i = 0; i < count; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
 
 void main() {
   group('normaliseBaseUrl', () {
@@ -744,39 +768,202 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
 
-      // The ambient binary rain never stops, so pumpAndSettle would spin until
-      // it timed out. Frames are pumped by hand instead.
-      Future<void> frames(int count) async {
-        for (int i = 0; i < count; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-        }
-      }
-
-      await tester.pumpWidget(
-        MaterialApp(theme: buildCenTheme(), home: const MinerHome()),
-      );
+      await tester.pumpWidget(shellApp(const MinerHome()));
       // Long enough for the emblem sweep to finish and the entry button to
       // fade in behind its delay.
-      await frames(30);
+      await pumpFrames(tester, 30);
 
       // The splash owns the shell until the entry button is pressed.
-      expect(find.text('MASUK'), findsOneWidget);
-      await tester.tap(find.text('MASUK'));
-      await frames(10);
+      expect(find.text('ENTER'), findsOneWidget);
+      await tester.tap(find.text('ENTER'));
+      await pumpFrames(tester, 10);
 
-      // Mine opens first; its dial caption exists nowhere else. The caption
-      // carries its value on a second line, so it is matched by substring.
-      expect(find.textContaining('ACCEPTANCE'), findsOneWidget);
+      // Mine opens first; both its dial caption and the node feed name
+      // ACCEPTANCE, so it appears more than once. It exists nowhere else, so
+      // any match proves the Mine tab is on screen.
+      expect(find.textContaining('ACCEPTANCE'), findsWidgets);
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-      await frames(10);
+      await pumpFrames(tester, 10);
 
       // The wallet screen is the only one that names a balance. Eyebrow
       // uppercases its label, so the rendered text is all caps.
       expect(find.text('TOTAL BALANCE'), findsOneWidget);
       expect(find.textContaining('ACCEPTANCE'), findsNothing);
+    });
+  });
+
+  // Regression: the phone shell once collapsed to zero body height. The bottom
+  // tab bar's Align (no height factor) expanded to fill the whole screen, so
+  // the Scaffold handed the content body zero height and every tab rendered
+  // empty even though its widgets were all still in the tree. Widget presence
+  // checks cannot see this — the render height must be asserted directly.
+  group('phone shell height', () {
+    testWidgets('the content body takes vertical space after entry', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      // Phone viewport: the compact layout with the bottom tab bar.
+      tester.view.physicalSize = const Size(800, 1720);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(shellApp(const MinerHome()));
+      await pumpFrames(tester, 30);
+      await tester.tap(find.text('ENTER'));
+      await pumpFrames(tester, 10);
+
+      // Before the fix this was Size(400, 0): the whole tab body was zero
+      // pixels tall. A healthy phone body is most of the viewport height.
+      final bodyHeight = tester.getSize(find.byType(MiningScreen)).height;
+      expect(
+        bodyHeight,
+        greaterThan(100),
+        reason: 'the tab body must take vertical space, not collapse to zero',
+      );
+    });
+  });
+
+  // Regression: tapping PROFILE once left the active lens parked on WALLET.
+  // The lens is driven by the raw tab index (0..2), but the AnimationController
+  // defaulted to upperBound 1.0, so animateTo(2.0) was clamped and the lens
+  // could never reach the profile slot. The controller now declares
+  // upperBound = tabCount - 1; this asserts the lens actually settles on 2.0.
+  group('phone shell tab lens', () {
+    testWidgets('tapping PROFILE drives the lens to the profile slot', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(800, 1720);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(shellApp(const MinerHome()));
+      await pumpFrames(tester, 30);
+      await tester.tap(find.text('ENTER'));
+      await pumpFrames(tester, 10);
+
+      await tester.tap(find.text('PROFILE'));
+      // The lens ride is 430ms; a handful of frames carries it to rest.
+      await pumpFrames(tester, 10);
+
+      // The liquid lens is the one CustomPaint whose painter carries the
+      // floating tab index. `t` is a public field on a library-private class,
+      // read here via `dynamic` rather than a golden.
+      double lensPosition() {
+        final paint = tester.widget<CustomPaint>(
+          find.byWidgetPredicate(
+            (w) =>
+                w is CustomPaint &&
+                w.painter?.runtimeType.toString() == '_LiquidBulgePainter',
+          ),
+        );
+        return (paint.painter! as dynamic).t as double;
+      }
+
+      expect(
+        lensPosition(),
+        closeTo(2.0, 0.01),
+        reason:
+            'the lens must settle on the profile slot (index 2), not clamp '
+            'to 1.0 on the wallet slot',
+      );
+    });
+  });
+
+  // The app ships in English and Indonesian. These tests mount the shell under
+  // a named locale, which the screen tests above deliberately do not do: they
+  // read the English fallback, so a missing translation could never fail them.
+  group('localisation', () {
+    testWidgets('the shell reads Indonesian under the Indonesian locale', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(800, 1720);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        shellApp(const MinerHome(), locale: const Locale('id')),
+      );
+      await pumpFrames(tester, 30);
+
+      expect(find.text('MASUK'), findsOneWidget);
+      expect(find.text('ENTER'), findsNothing);
+
+      await tester.tap(find.text('MASUK'));
+      await pumpFrames(tester, 10);
+
+      // The tab strip uppercases its captions, so the Indonesian names arrive
+      // as TAMBANG / DOMPET / PROFIL. The English set has to be gone.
+      expect(find.text('TAMBANG'), findsWidgets);
+      expect(find.text('MINE'), findsNothing);
+      expect(find.text('WALLET'), findsNothing);
+    });
+
+    testWidgets('a stored language is applied at startup', (tester) async {
+      // The choice has to survive a restart: the root reads it back from the
+      // settings store and rebuilds the MaterialApp with that locale.
+      SharedPreferences.setMockInitialValues({
+        SettingsStore.languageKey: AppLanguage.indonesian.code,
+      });
+
+      await tester.pumpWidget(const CeleniumMinerApp());
+      await pumpFrames(tester, 30);
+
+      expect(find.text('MASUK'), findsOneWidget);
+    });
+
+    testWidgets('the profile picker offers both languages and reports the '
+        'choice', (tester) async {
+      AppLanguage? picked;
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        shellApp(
+          Scaffold(
+            body: ProfileScreen(
+              snapshot: snapshotWith(),
+              networkLabel: 'simnet',
+              onLanguageChanged: (choice) => picked = choice,
+              onOpenBridge: () {},
+              onOpenWorkers: () {},
+              onOpenActivity: () {},
+              onOpenBackup: () {},
+              onOpenAbout: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final languageRow = find.text('Language');
+      await tester.ensureVisible(languageRow);
+      await tester.pump();
+
+      // The row states the current choice before the sheet is opened.
+      expect(find.text('System default'), findsOneWidget);
+
+      await tester.tap(languageRow);
+      await tester.pumpAndSettle();
+
+      // Each language is named in its own language: someone looking for
+      // Indonesian reads "Bahasa Indonesia", not "Indonesian". The system
+      // option now appears twice, once as the row's current value and once as
+      // an option in the sheet.
+      expect(find.text('Bahasa Indonesia'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
+      expect(find.text('System default'), findsNWidgets(2));
+
+      await tester.tap(find.text('Bahasa Indonesia'));
+      await tester.pumpAndSettle();
+
+      expect(picked, AppLanguage.indonesian);
+      expect(find.text('Language saved'), findsOneWidget);
     });
   });
 }

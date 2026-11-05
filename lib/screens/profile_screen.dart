@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/bridge.dart';
 import '../services/mining_readout.dart';
 import '../theme/layout.dart';
@@ -19,6 +20,8 @@ class ProfileScreen extends StatelessWidget {
     super.key,
     required this.snapshot,
     required this.networkLabel,
+    this.language = AppLanguage.system,
+    this.onLanguageChanged,
     required this.onOpenBridge,
     required this.onOpenWorkers,
     required this.onOpenActivity,
@@ -28,6 +31,12 @@ class ProfileScreen extends StatelessWidget {
 
   final MinerSnapshot snapshot;
   final String networkLabel;
+
+  /// The interface language in force, and the way to change it. The root owns
+  /// the locale, so the picker reports back rather than switching directly.
+  final AppLanguage language;
+  final ValueChanged<AppLanguage>? onLanguageChanged;
+
   final VoidCallback onOpenBridge;
   final VoidCallback onOpenWorkers;
   final VoidCallback onOpenActivity;
@@ -36,6 +45,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     final readout = MiningReadout.from(snapshot);
     final stats = snapshot.stats;
     final workers = stats?.workers.length ?? 0;
@@ -65,14 +75,14 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   LiveStatus(
-                    label: readout.active ? 'ACTIVE' : 'IDLE',
+                    label: readout.active ? l10n.statusActive : l10n.statusIdle,
                     active: readout.active,
                     tint: Palette.greenDim,
                   ),
                 ],
               ),
               const SizedBox(height: Palette.sm),
-              Text('Profile', style: TypeScale.screenTitle(context)),
+              Text(l10n.profileTitle, style: TypeScale.screenTitle(context)),
             ],
           ),
           const SizedBox(height: Palette.lg),
@@ -100,7 +110,7 @@ class ProfileScreen extends StatelessWidget {
                 Expanded(
                   child: StatCell(
                     value: readout.sessionBlocks?.toString() ?? '—',
-                    label: 'blocks',
+                    label: l10n.profileBlocks,
                     color: Palette.goldLight,
                   ),
                 ),
@@ -108,14 +118,14 @@ class ProfileScreen extends StatelessWidget {
                 Expanded(
                   child: StatCell(
                     value: readout.shares?.toString() ?? '—',
-                    label: 'shares',
+                    label: l10n.profileShares,
                   ),
                 ),
                 const StatDivider(),
                 Expanded(
                   child: StatCell(
                     value: workers > 0 ? workers.toString() : '—',
-                    label: 'workers',
+                    label: l10n.profileWorkers,
                   ),
                 ),
                 const StatDivider(),
@@ -124,14 +134,14 @@ class ProfileScreen extends StatelessWidget {
                     value: readout.hashrateGhs == null
                         ? '—'
                         : formatHashrate(readout.hashrateGhs!).split(' ').first,
-                    label: 'gh/s',
+                    label: l10n.profileGhs,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: Palette.xl),
-          Eyebrow('Settings'),
+          Eyebrow(l10n.profileSettings),
           const SizedBox(height: Palette.sm),
           // One card holding the whole group, rows separated by hairlines.
           // Five floating tiles read as five unrelated things; one card with
@@ -143,9 +153,11 @@ class ProfileScreen extends StatelessWidget {
                 SettingRow(
                   flat: true,
                   icon: Icons.hub_outlined,
-                  label: 'Bridge',
+                  label: l10n.profileBridgeRow,
                   trailing: Text(
-                    nodeAddress == null ? 'not set' : _shortNode(nodeAddress),
+                    nodeAddress == null
+                        ? l10n.profileNotSet
+                        : _shortNode(nodeAddress),
                     style: TypeScale.monoMuted(context, size: 10),
                   ),
                   onTap: onOpenBridge,
@@ -153,7 +165,7 @@ class ProfileScreen extends StatelessWidget {
                 SettingRow(
                   flat: true,
                   icon: Icons.dns_outlined,
-                  label: 'Workers',
+                  label: l10n.profileWorkersRow,
                   trailing: workers > 0
                       ? Pill(label: '$workers', dense: true)
                       : null,
@@ -162,21 +174,35 @@ class ProfileScreen extends StatelessWidget {
                 SettingRow(
                   flat: true,
                   icon: Icons.receipt_long_outlined,
-                  label: 'Activity log',
+                  label: l10n.profileActivityRow,
                   onTap: onOpenActivity,
                 ),
                 SettingRow(
                   flat: true,
                   icon: Icons.shield_outlined,
-                  label: 'Recovery words',
+                  label: l10n.profileRecoveryRow,
                   tint: Palette.goldLight,
                   onTap: onOpenBackup,
                 ),
                 SettingRow(
                   flat: true,
+                  icon: Icons.translate_outlined,
+                  label: l10n.profileLanguage,
+                  trailing: Text(
+                    _languageLabel(l10n, language),
+                    style: TypeScale.monoMuted(context, size: 10),
+                  ),
+                  onTap: () => _showLanguageSheet(
+                    context,
+                    current: language,
+                    onChanged: onLanguageChanged,
+                  ),
+                ),
+                SettingRow(
+                  flat: true,
                   last: true,
                   icon: Icons.info_outline,
-                  label: 'About',
+                  label: l10n.profileAboutRow,
                   tint: Palette.slate,
                   onTap: onOpenAbout,
                 ),
@@ -203,6 +229,7 @@ class _IdentityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     // The cream card, as in the concept: the one large light mass on an
     // otherwise dark screen, which is what makes the white accent read.
     return CenCard.light(
@@ -213,7 +240,7 @@ class _IdentityCard extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: const BoxDecoration(
-              color: Palette.ink,
+              color: Palette.field,
               shape: BoxShape.circle,
             ),
             child: Center(child: BrandMark(size: 30, onDark: true)),
@@ -227,9 +254,9 @@ class _IdentityCard extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        workerName ?? 'No worker',
+                        workerName ?? l10n.commonNoWorker,
                         style: TypeScale.headline(context)
-                            .copyWith(color: Palette.ink),
+                            .copyWith(color: Palette.creamInk),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -238,8 +265,8 @@ class _IdentityCard extends StatelessWidget {
                     // marks a real state: the bridge reports this worker
                     // hashing, which is the only thing there is to verify.
                     if (active)
-                      const Pill(
-                        label: 'ACTIVE',
+                      Pill(
+                        label: l10n.statusActive,
                         background: Palette.green,
                         foreground: Palette.ink,
                         dense: true,
@@ -249,12 +276,12 @@ class _IdentityCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   address == null
-                      ? 'no address reported'
-                      : 'mining to ${_shortAddress(address!)}',
+                      ? l10n.profileNoAddress
+                      : l10n.profileMiningTo(_shortAddress(address!)),
                   style: TypeScale.mono(
                     context,
                     size: 10,
-                  ).copyWith(color: Palette.slate),
+                  ).copyWith(color: Palette.creamInkDim),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -276,4 +303,105 @@ String _shortNode(String address) {
   final separator = address.lastIndexOf(':');
   if (separator <= 0) return address;
   return '…${address.substring(separator)}';
+}
+
+/// The name of a language in the settings row. The system option is spelled
+/// out in the current interface language, because it means "follow the phone",
+/// not a language called System.
+String _languageLabel(AppLocalizations l10n, AppLanguage language) =>
+    language == AppLanguage.system
+    ? l10n.profileLanguageSystem
+    : language.label;
+
+/// Sheet for picking the interface language. Reports the choice back to the
+/// root rather than switching here: only the [MaterialApp] can change locales.
+Future<void> _showLanguageSheet(
+  BuildContext context, {
+  required AppLanguage current,
+  required ValueChanged<AppLanguage>? onChanged,
+}) async {
+  final l10n = l10nOf(context);
+  final selected = await showModalBottomSheet<AppLanguage>(
+    context: context,
+    backgroundColor: Palette.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(Palette.xl)),
+    ),
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Palette.lg,
+              Palette.lg,
+              Palette.lg,
+              Palette.sm,
+            ),
+            child: Text(
+              l10n.profileLanguage,
+              style: TypeScale.title(sheetContext),
+            ),
+          ),
+          for (final option in AppLanguage.values)
+            _LanguageOption(
+              label: option == AppLanguage.system
+                  ? l10n.profileLanguageSystem
+                  : option.label,
+              selected: option == current,
+              onTap: () => Navigator.of(sheetContext).pop(option),
+            ),
+          const SizedBox(height: Palette.sm),
+        ],
+      ),
+    ),
+  );
+
+  if (selected == null || selected == current) return;
+  onChanged?.call(selected);
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(l10n.profileLanguageDone)));
+}
+
+/// One row of the language sheet. Full-width and 52 high so it clears the
+/// 44-pixel touch target with room to spare.
+class _LanguageOption extends StatelessWidget {
+  const _LanguageOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        height: 52,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Palette.lg),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TypeScale.label(
+                    context,
+                  ).copyWith(color: selected ? Palette.gold : Palette.creamDim),
+                ),
+              ),
+              if (selected)
+                const Icon(Icons.check, size: 18, color: Palette.gold),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -267,7 +267,7 @@ class _ScanlinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.height <= 0) return;
-    final paint = Paint()..color = Colors.black.withValues(alpha: opacity);
+    final paint = Paint()..color = Colors.white.withValues(alpha: opacity);
     var y = 0.0;
     while (y < size.height) {
       canvas.drawRect(Rect.fromLTWH(0, y, size.width, 1), paint);

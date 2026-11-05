@@ -1,0 +1,224 @@
+{
+  "@@locale": "en",
+  "commonClose": "Close",
+  "commonCancel": "Cancel",
+  "commonContinue": "Continue",
+  "commonDone": "Done",
+  "commonSave": "Save",
+  "commonSaving": "Saving…",
+  "commonImport": "Import",
+  "commonChecking": "Checking…",
+  "commonCopy": "Copy",
+  "commonToday": "TODAY",
+  "commonYesterday": "YESTERDAY",
+  "commonNoWorker": "No worker",
+  "statusActive": "ACTIVE",
+  "statusIdle": "IDLE",
+  "statusOnline": "ONLINE",
+  "statusOffline": "OFFLINE",
+  "navMine": "Mine",
+  "navWallet": "Wallet",
+  "navProfile": "Profile",
+  "splashEnterSemantics": "Enter the mining console",
+  "splashEnter": "ENTER",
+  "mineNodeNotSet": "node not set",
+  "mineHashRate": "Hash rate",
+  "mineMiningActive": "MINING ACTIVE",
+  "mineBridgeSilent": "The bridge has not answered. Set its address to start reading live figures.",
+  "mineSetBridge": "Set bridge address",
+  "mineTapWorkers": "[ TAP FOR WORKERS ]",
+  "mineWaitingShare": "> waiting for first share",
+  "mineShareAccepted": "> share accepted {hash}",
+  "@mineShareAccepted": {
+    "placeholders": {
+      "hash": {
+        "type": "String",
+        "example": "abc123de…ef4567"
+      }
+    }
+  },
+  "mineAcceptanceSemantics": "Share acceptance. Open workers.",
+  "mineAcceptanceNoShares": "ACCEPTANCE\nno shares yet",
+  "mineAcceptanceRate": "ACCEPTANCE\n{rate}%",
+  "@mineAcceptanceRate": {
+    "placeholders": {
+      "rate": {
+        "type": "String",
+        "example": "98"
+      }
+    }
+  },
+  "mineSessionLabel": "session",
+  "mineTotalLabel": "total",
+  "mineSharesUnit": "shares",
+  "mineAcceptedLabel": "accepted",
+  "mineNoBlock": "no block accepted yet",
+  "mineBlockAccepted": "block accepted {hash}",
+  "@mineBlockAccepted": {
+    "placeholders": {
+      "hash": {
+        "type": "String",
+        "example": "abc123de…ef4567"
+      }
+    }
+  },
+  "walletTitle": "Wallet",
+  "walletTransactions": "Transactions",
+  "walletSeeAll": "SEE ALL",
+  "walletNoTxReason": "No transactions yet. Blocks your workers mine appear here as they land.",
+  "walletTotalBalance": "Total balance",
+  "walletNoBalanceNote": "The bridge reports mining results, not account balances. A direct node connection is needed to read the balance of an address.",
+  "walletMiningAddress": "Mining address",
+  "walletAddressCopied": "Address copied",
+  "walletCopyAddress": "Copy address",
+  "walletSend": "Send",
+  "walletReceive": "Receive",
+  "walletSwap": "Swap",
+  "walletBackupWords": "Back up recovery words",
+  "walletSwapUnavailable": "Swap is not available",
+  "walletSwapBody": "Swapping CEN for another asset needs a market to swap against. CEN is not listed on any exchange or decentralised venue yet, so there is nothing to swap with.",
+  "walletSendUnavailable": "Sending is not available yet",
+  "walletSendBody": "Moving coins needs two things this build does not have: a node that can broadcast a transaction, and the signing key held on this device. Both are planned. Until then the address can be copied and used from the Celenium wallet CLI.",
+  "walletReceiveNote": "Anyone with this address can send coins to it. It is safe to share.",
+  "walletMiningReward": "Mining reward",
+  "backupTitle": "RECOVERY",
+  "backupImportError": "That phrase is not a valid BIP39 phrase. Check the words and try again.",
+  "backupImported": "Imported {address}",
+  "@backupImported": {
+    "placeholders": {
+      "address": {
+        "type": "String",
+        "example": "cen69sim:qabc"
+      }
+    }
+  },
+  "backupRecoveryWords": "Recovery words",
+  "backupIntro": "Twelve words that rebuild your key on any device.",
+  "backupWhyTitle": "Why this matters",
+  "backupWhyBody": "Your coins sit on the blockchain, tied to an address. They survive the app being deleted. The one thing that does not survive is the key to that address, and these twelve words are the key.",
+  "backupHowTitle": "What to do with them",
+  "backupHowBody": "Write them on paper, in order, and keep the paper somewhere that is not this phone. Do not store them in a notes app, a screenshot, or a message to yourself.",
+  "backupCreating": "Creating…",
+  "backupCreateWords": "Create recovery words",
+  "backupHaveWords": "I already have words",
+  "backupWriteNow": "Write these down now",
+  "backupWarningBody": "Anyone who reads these twelve words can move every coin at your address. They are shown once. After you leave this screen they are not shown again.",
+  "backupWordsTitle": "Your 12 words, in order",
+  "backupWrittenCheck": "I have written all twelve words down in order",
+  "backupNotYet": "Not backed up yet",
+  "backupNotYetBody": "Recovery words exist on this device but have not been confirmed as written down. Until they are, losing this phone loses the key.",
+  "backupShowWords": "Show my words",
+  "backupDone": "Backed up",
+  "backupDoneBody": "Your recovery words are confirmed as written down. Keep the paper somewhere this phone is not.",
+  "backupIfDeletedTitle": "If the app is deleted",
+  "backupIfDeletedBody": "Coins are not lost: they stay on the blockchain at your address. Reinstall the app, choose \"I already have words\", and enter the twelve words to take control of the address again.",
+  "backupShowAgain": "Show my words again",
+  "backupImportTitle": "Import words",
+  "backupImportIntro": "Enter your existing 12 or 24 words to take control of that address on this device.",
+  "bridgeTitle": "BRIDGE",
+  "bridgeSaved": "Bridge address saved",
+  "bridgeAddress": "Bridge address",
+  "bridgeAddressNote": "The bridge serves mining results over HTTP. No account and no credentials are sent with the request.",
+  "bridgePollInterval": "Poll interval",
+  "bridgePollNote": "How often the app asks the bridge for fresh figures. A shorter interval updates faster and uses more battery.",
+  "bridgeAdUnit": "Ad unit id",
+  "bridgeAdNote": "Optional. Leave it empty to use the unit built into the app. The banner only appears once a real ad is served: an empty slot reserves no space and shows nothing.",
+  "bridgeNode": "Node",
+  "bridgeInfoAddress": "Address",
+  "bridgeInfoVersion": "Version",
+  "bridgeInfoInstances": "Instances",
+  "workersTitle": "WORKERS",
+  "workersEmpty": "No workers reported. Point a miner at the bridge stratum port with your CEN address as the worker name and they appear here.",
+  "workersHashRate": "hash rate",
+  "workersBlocks": "blocks",
+  "workersStaleInvalid": "{stale} stale · {invalid} invalid",
+  "@workersStaleInvalid": {
+    "placeholders": {
+      "stale": {
+        "type": "int",
+        "example": "1"
+      },
+      "invalid": {
+        "type": "int",
+        "example": "0"
+      }
+    }
+  },
+  "workersSession": "session {duration}",
+  "@workersSession": {
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "1h 20m"
+      }
+    }
+  },
+  "logTitle": "ACTIVITY",
+  "logEmpty": "Nothing logged yet. Connection changes and newly accepted blocks are recorded here as they happen.",
+  "logBridgeReachable": "Bridge reachable at {address}",
+  "@logBridgeReachable": {
+    "placeholders": {
+      "address": {
+        "type": "String",
+        "example": "0.0.0.0:3030"
+      }
+    }
+  },
+  "logBridgeUnreachable": "Bridge unreachable",
+  "logBlockAccepted": "Block accepted ({newCount} new, {total} total)",
+  "@logBlockAccepted": {
+    "placeholders": {
+      "newCount": {
+        "type": "int",
+        "example": "1"
+      },
+      "total": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "logMinerStarted": "Internal CPU miner started",
+  "logMinerStopped": "Internal CPU miner stopped",
+  "logStaleShares": "{count} stale share(s) reported",
+  "@logStaleShares": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "logPollFailed": "Poll failed",
+  "logAdRequestFailed": "Ad request failed",
+  "profileTitle": "Profile",
+  "profileBlocks": "blocks",
+  "profileShares": "shares",
+  "profileWorkers": "workers",
+  "profileGhs": "gh/s",
+  "profileSettings": "Settings",
+  "profileNotSet": "not set",
+  "profileBridgeRow": "Bridge",
+  "profileWorkersRow": "Workers",
+  "profileActivityRow": "Activity log",
+  "profileRecoveryRow": "Recovery words",
+  "profileAboutRow": "About",
+  "profileNoAddress": "no address reported",
+  "profileMiningTo": "mining to {address}",
+  "@profileMiningTo": {
+    "placeholders": {
+      "address": {
+        "type": "String",
+        "example": "cen69sim:qabc…"
+      }
+    }
+  },
+  "profileLanguage": "Language",
+  "profileLanguageSystem": "System default",
+  "profileLanguageDone": "Language saved",
+  "aboutTitle": "ABOUT",
+  "aboutWhatTitle": "What this app does",
+  "aboutWhatBody": "It reads mining results from a Celenium bridge and shows them on your phone. It holds no account, no database, and no coins: the results live on the blockchain and the bridge, and this app is a window onto them.",
+  "aboutVersion": "Version",
+  "aboutCreatedBy": "Created by"
+}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/bridge.dart';
 import '../theme/layout.dart';
 import '../theme/palette.dart';
@@ -17,16 +18,13 @@ class LogScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('ACTIVITY')),
+      appBar: AppBar(title: Text(l10n.logTitle)),
       body: entries.isEmpty
-          ? const Padding(
-              padding: EdgeInsets.all(Palette.lg),
-              child: CenEmpty(
-                reason:
-                    'Nothing logged yet. Connection changes and newly accepted '
-                    'blocks are recorded here as they happen.',
-              ),
+          ? Padding(
+              padding: const EdgeInsets.all(Palette.lg),
+              child: CenEmpty(reason: l10n.logEmpty),
             )
           : CenContent(
               child: ListView.builder(
@@ -92,7 +90,11 @@ class LogEntry {
 
 /// Builds log entries from consecutive snapshots, so only real transitions
 /// are recorded rather than a line per poll.
+///
+/// The messages are localised, so [l10n] is passed in rather than read from a
+/// context: this runs in the polling loop, which outlives any one frame.
 List<LogEntry> diffSnapshots({
+  required AppLocalizations l10n,
   required MinerSnapshot? previous,
   required MinerSnapshot current,
   required bool wasConnected,
@@ -106,8 +108,10 @@ List<LogEntry> diffSnapshots({
       LogEntry(
         time: clock,
         message: isConnected
-            ? 'Bridge reachable at ${current.status?.webBind ?? "configured address"}'
-            : 'Bridge unreachable',
+            ? l10n.logBridgeReachable(
+                current.status?.webBind ?? 'configured address',
+              )
+            : l10n.logBridgeUnreachable,
         isError: !isConnected,
       ),
     );
@@ -120,7 +124,7 @@ List<LogEntry> diffSnapshots({
     entries.add(
       LogEntry(
         time: clock,
-        message: 'Block accepted (${blocks - prevBlocks} new, $blocks total)',
+        message: l10n.logBlockAccepted(blocks - prevBlocks, blocks),
       ),
     );
   }
@@ -131,8 +135,8 @@ List<LogEntry> diffSnapshots({
       LogEntry(
         time: clock,
         message: current.isMining
-            ? 'Internal CPU miner started'
-            : 'Internal CPU miner stopped',
+            ? l10n.logMinerStarted
+            : l10n.logMinerStopped,
       ),
     );
   }
@@ -143,7 +147,7 @@ List<LogEntry> diffSnapshots({
     entries.add(
       LogEntry(
         time: clock,
-        message: '${stale - prevStale} stale share(s) reported',
+        message: l10n.logStaleShares(stale - prevStale),
         isError: true,
       ),
     );

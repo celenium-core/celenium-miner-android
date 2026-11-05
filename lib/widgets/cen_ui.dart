@@ -33,7 +33,7 @@ class CenCard extends StatelessWidget {
     this.radius = Palette.cardRadius,
     this.glow,
   }) : color = Palette.surfaceHigh.withValues(alpha: 0.62),
-       border = const BorderSide(color: Color(0x1FFFFFFF));
+       border = const BorderSide(color: Color(0x1AFFFFFF));
 
   /// The cream panel. Used where the concept puts a light card against the
   /// dark canvas: the identity card on Profile and the balance on Wallet.
@@ -42,7 +42,7 @@ class CenCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(Palette.lg),
     this.radius = Palette.cardRadius,
     this.glow,
-  }) : color = Palette.surfaceLight,
+  }) : color = Palette.cream,
        border = null;
 
   final Widget child;
@@ -286,15 +286,20 @@ class LiveStatus extends StatelessWidget {
     required this.label,
     this.active = true,
     this.tint = Palette.green,
+    this.idleColor = Palette.slate,
   });
 
   final String label;
   final bool active;
   final Color tint;
 
+  /// The colour used when [active] is false. On a light (cream) surface the
+  /// default slate would wash out, so cream cards pass a darker ink instead.
+  final Color idleColor;
+
   @override
   Widget build(BuildContext context) {
-    final color = active ? tint : Palette.slate;
+    final color = active ? tint : idleColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: 6),
       decoration: BoxDecoration(
@@ -353,7 +358,7 @@ class GoldButton extends StatelessWidget {
       onPressed: onPressed,
       style: FilledButton.styleFrom(
         backgroundColor: Palette.gold,
-        foregroundColor: Palette.ink,
+        foregroundColor: Palette.white,
         disabledBackgroundColor: Palette.surfaceHigh,
         disabledForegroundColor: Palette.slate,
         minimumSize: Size(expand ? double.infinity : 0, 46),
@@ -464,7 +469,7 @@ class SettingRow extends StatelessWidget {
               style: TypeScale.title(context).copyWith(
                 // White, as the concept prints its menu labels. Cream is
                 // the body text; the settings list is the accent.
-                color: danger ? Palette.red : Palette.white,
+                color: danger ? Palette.red : Palette.cream,
                 letterSpacing: 0.3,
               ),
             ),
@@ -481,7 +486,7 @@ class SettingRow extends StatelessWidget {
         decoration: BoxDecoration(
           border: last
               ? null
-              : const Border(bottom: BorderSide(color: Color(0x0FFFFFFF))),
+              : const Border(bottom: BorderSide(color: Color(0x14FFFFFF))),
         ),
         child: InkWell(onTap: onTap, child: content),
       );
@@ -494,7 +499,7 @@ class SettingRow extends StatelessWidget {
       color: Palette.surfaceHigh.withValues(alpha: 0.55),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Palette.rowRadius),
-        side: const BorderSide(color: Color(0x14FFFFFF)),
+        side: const BorderSide(color: Color(0x1AFFFFFF)),
       ),
       child: InkWell(
         onTap: onTap,
@@ -540,8 +545,8 @@ class StatCell extends StatelessWidget {
         ? TypeScale.mono(
             context,
             size: 16,
-          ).copyWith(color: color ?? Palette.white, fontWeight: FontWeight.w700)
-        : TypeScale.headline(context).copyWith(color: color ?? Palette.white);
+          ).copyWith(color: color ?? Palette.cream, fontWeight: FontWeight.w700)
+        : TypeScale.headline(context).copyWith(color: color ?? Palette.cream);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
 import '../models/bridge.dart';
 import '../services/mining_readout.dart';
 import '../theme/layout.dart';
@@ -38,6 +39,7 @@ class WalletScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     final address = _address;
     final blocks = _blocks;
 
@@ -62,7 +64,7 @@ class WalletScreen extends StatelessWidget {
           const SizedBox(height: Palette.xl),
           Row(
             children: [
-              Eyebrow('Transactions'),
+              Eyebrow(l10n.walletTransactions),
               const Spacer(),
               if (blocks.isNotEmpty)
                 TextButton(
@@ -72,15 +74,13 @@ class WalletScreen extends StatelessWidget {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('SEE ALL'),
+                  child: Text(l10n.walletSeeAll),
                 ),
             ],
           ),
           const SizedBox(height: Palette.sm),
           if (blocks.isEmpty)
-            const CenEmpty(
-              reason: 'No transactions yet. Blocks your workers mine appear here as they land.',
-            )
+            CenEmpty(reason: l10n.walletNoTxReason)
           else
             for (final block in blocks.take(6)) _BlockRow(block: block),
           const SizedBox(height: Palette.xxl),
@@ -98,6 +98,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     // The concept puts the network label left, a live status right, and the
     // screen title beneath in the serif. Same order here.
     return Column(
@@ -115,14 +116,14 @@ class _Header extends StatelessWidget {
               ),
             ),
             LiveStatus(
-              label: connected ? 'ONLINE' : 'OFFLINE',
+              label: connected ? l10n.statusOnline : l10n.statusOffline,
               active: connected,
               tint: Palette.greenDim,
             ),
           ],
         ),
         const SizedBox(height: Palette.sm),
-        Text('Wallet', style: TypeScale.screenTitle(context)),
+        Text(l10n.walletTitle, style: TypeScale.screenTitle(context)),
       ],
     );
   }
@@ -136,6 +137,7 @@ class _BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     // The cream balance card from the concept: the light mass carries the
     // dark figure, which is the opposite of every other panel here and is
     // what makes the balance the first thing the eye lands on.
@@ -147,12 +149,12 @@ class _BalanceCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Eyebrow('Total balance', color: Palette.slate),
+              Eyebrow(l10n.walletTotalBalance, color: Palette.creamInkDim),
               const Spacer(),
               const Pill(
                 label: 'CEN',
                 background: Palette.gold,
-                foreground: Palette.ink,
+                foreground: Palette.white,
                 dense: true,
               ),
             ],
@@ -160,13 +162,12 @@ class _BalanceCard extends StatelessWidget {
           const SizedBox(height: Palette.sm),
           Text(
             '—',
-            style: TypeScale.hero(context).copyWith(color: Palette.ink),
+            style: TypeScale.hero(context).copyWith(color: Palette.creamInk),
           ),
           const SizedBox(height: Palette.sm),
           Text(
-            'The bridge reports mining results, not account balances. A direct node '
-            'connection is needed to read the balance of an address.',
-            style: TypeScale.caption(context).copyWith(color: Palette.slate),
+            l10n.walletNoBalanceNote,
+            style: TypeScale.caption(context).copyWith(color: Palette.creamInkDim),
           ),
         ],
       ),
@@ -183,11 +184,12 @@ class _AddressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     return CenCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Eyebrow('Mining address'),
+          Eyebrow(l10n.walletMiningAddress),
           const SizedBox(height: Palette.sm),
           SelectableText(
             address,
@@ -202,12 +204,12 @@ class _AddressCard extends StatelessWidget {
             child: TextButton.icon(
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: address));
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Address copied')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.walletAddressCopied)),
+                );
               },
               icon: const Icon(Icons.copy, size: 14),
-              label: const Text('Copy'),
+              label: Text(l10n.commonCopy),
             ),
           ),
         ],
@@ -224,6 +226,7 @@ class _Actions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     return Column(
       children: [
         // Three capsules, send first and in gold: moving coins is the reason
@@ -232,7 +235,7 @@ class _Actions extends StatelessWidget {
           children: [
             Expanded(
               child: _ActionButton(
-                label: 'Send',
+                label: l10n.walletSend,
                 icon: Icons.north_east,
                 primary: true,
                 onTap: () => _showSendUnavailable(context),
@@ -241,7 +244,7 @@ class _Actions extends StatelessWidget {
             const SizedBox(width: Palette.sm),
             Expanded(
               child: _ActionButton(
-                label: 'Receive',
+                label: l10n.walletReceive,
                 icon: Icons.south_west,
                 primary: false,
                 onTap: address == null
@@ -252,7 +255,7 @@ class _Actions extends StatelessWidget {
             const SizedBox(width: Palette.sm),
             Expanded(
               child: _ActionButton(
-                label: 'Swap',
+                label: l10n.walletSwap,
                 icon: Icons.swap_horiz,
                 primary: false,
                 onTap: () => _showSwapUnavailable(context),
@@ -262,7 +265,7 @@ class _Actions extends StatelessWidget {
         ),
         const SizedBox(height: Palette.md),
         GhostButton(
-          label: 'Back up recovery words',
+          label: l10n.walletBackupWords,
           icon: Icons.shield_outlined,
           onPressed: onBackup,
         ),
@@ -272,20 +275,19 @@ class _Actions extends StatelessWidget {
 }
 
 void _showSwapUnavailable(BuildContext context) {
+  final l10n = l10nOf(context);
   showDialog<void>(
     context: context,
     builder: (_) => AlertDialog(
-      title: Text('Swap is not available', style: TypeScale.headline(context)),
+      title: Text(l10n.walletSwapUnavailable, style: TypeScale.headline(context)),
       content: Text(
-        'Swapping CEN for another asset needs a market to swap against. CEN is not '
-        'listed on any exchange or decentralised venue yet, so there is nothing to '
-        'swap with.',
+        l10n.walletSwapBody,
         style: TypeScale.label(context),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          child: Text(l10n.commonClose),
         ),
       ],
     ),
@@ -313,11 +315,11 @@ class _ActionButton extends StatelessWidget {
     // competing for attention.
     final background = primary
         ? Palette.gold
-        : Palette.white.withValues(alpha: 0.06);
-    final foreground = primary ? Palette.ink : Palette.white;
+        : Palette.surfaceHigh;
+    final foreground = primary ? Palette.white : Palette.cream;
     final disabledBg = primary
         ? Palette.goldDim.withValues(alpha: 0.35)
-        : Palette.white.withValues(alpha: 0.03);
+        : Palette.field;
     final disabledFg = Palette.slate;
 
     return Semantics(
@@ -333,7 +335,7 @@ class _ActionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(Palette.pill),
             side: primary
                 ? BorderSide.none
-                : BorderSide(color: Palette.white.withValues(alpha: 0.28)),
+                : BorderSide(color: Palette.slate.withValues(alpha: 0.35)),
           ),
           child: InkWell(
             onTap: onTap,
@@ -376,24 +378,22 @@ void _showReceiveSheet(BuildContext context, String address) {
 }
 
 void _showSendUnavailable(BuildContext context) {
+  final l10n = l10nOf(context);
   showDialog<void>(
     context: context,
     builder: (_) => AlertDialog(
       title: Text(
-        'Sending is not available yet',
+        l10n.walletSendUnavailable,
         style: TypeScale.headline(context),
       ),
       content: Text(
-        'Moving coins needs two things this build does not have: a node that can '
-        'broadcast a transaction, and the signing key held on this device. Both are '
-        'planned. Until then the address can be copied and used from the Celenium '
-        'wallet CLI.',
+        l10n.walletSendBody,
         style: TypeScale.label(context),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          child: Text(l10n.commonClose),
         ),
       ],
     ),
@@ -408,6 +408,7 @@ class _ReceiveSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(Palette.xl),
@@ -415,7 +416,7 @@ class _ReceiveSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Receive', style: TypeScale.screenTitle(context)),
+            Text(l10n.walletReceive, style: TypeScale.screenTitle(context)),
             const SizedBox(height: Palette.lg),
             Container(
               width: double.infinity,
@@ -434,19 +435,19 @@ class _ReceiveSheet extends StatelessWidget {
             ),
             const SizedBox(height: Palette.lg),
             GoldButton(
-              label: 'Copy address',
+              label: l10n.walletCopyAddress,
               icon: Icons.copy,
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: address));
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Address copied')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.walletAddressCopied)),
+                );
                 Navigator.of(context).pop();
               },
             ),
             const SizedBox(height: Palette.sm),
             Text(
-              'Anyone with this address can send coins to it. It is safe to share.',
+              l10n.walletReceiveNote,
               style: TypeScale.caption(context),
             ),
           ],
@@ -480,6 +481,7 @@ class _BlockRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: Palette.sm),
       child: CenCard.glass(
@@ -510,10 +512,10 @@ class _BlockRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Mining reward', style: TypeScale.title(context)),
+                  Text(l10n.walletMiningReward, style: TypeScale.title(context)),
                   const SizedBox(height: 2),
                   Text(
-                    '${_friendlyTime(block.timestamp)} · ${shortHash(block.hash, head: 8, tail: 6)}',
+                    '${_friendlyTime(l10n, block.timestamp)} · ${shortHash(block.hash, head: 8, tail: 6)}',
                     style: TypeScale.monoMuted(context, size: 10),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -544,7 +546,7 @@ class _BlockRow extends StatelessWidget {
 
 /// Turns an ISO timestamp into the concept's short form: TODAY, YESTERDAY, or
 /// a date. Falls back to the raw string when it cannot be parsed.
-String _friendlyTime(String raw) {
+String _friendlyTime(AppLocalizations l10n, String raw) {
   final parsed = DateTime.tryParse(raw);
   if (parsed == null) return raw;
 
@@ -553,8 +555,8 @@ String _friendlyTime(String raw) {
   final then = DateTime(parsed.year, parsed.month, parsed.day);
   final days = today.difference(then).inDays;
 
-  if (days == 0) return 'TODAY';
-  if (days == 1) return 'YESTERDAY';
+  if (days == 0) return l10n.commonToday;
+  if (days == 1) return l10n.commonYesterday;
 
   const months = [
     'JAN',

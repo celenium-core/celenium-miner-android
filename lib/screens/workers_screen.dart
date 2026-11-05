@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/bridge.dart';
 import '../services/mining_readout.dart';
 import '../theme/layout.dart';
@@ -20,18 +21,15 @@ class WorkersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     final workers = snapshot.stats?.workers ?? const [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('WORKERS')),
+      appBar: AppBar(title: Text(l10n.workersTitle)),
       body: workers.isEmpty
-          ? const Padding(
-              padding: EdgeInsets.all(Palette.lg),
-              child: CenEmpty(
-                reason:
-                    'No workers reported. Point a miner at the bridge stratum port '
-                    'with your CEN address as the worker name and they appear here.',
-              ),
+          ? Padding(
+              padding: const EdgeInsets.all(Palette.lg),
+              child: CenEmpty(reason: l10n.workersEmpty),
             )
           : CenContent(
               child: ListView.separated(
@@ -53,6 +51,7 @@ class _WorkerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     final active =
         worker.status?.toLowerCase().contains('active') ?? worker.hashrate > 0;
 
@@ -94,7 +93,7 @@ class _WorkerCard extends StatelessWidget {
                 ),
               ),
               LiveStatus(
-                label: active ? 'ACTIVE' : 'IDLE',
+                label: active ? l10n.statusActive : l10n.statusIdle,
                 active: active,
                 tint: Palette.greenDim,
               ),
@@ -107,16 +106,16 @@ class _WorkerCard extends StatelessWidget {
                 child: StatCell(
                   value: formatHashrate(worker.hashrate),
                   color: Palette.goldLight,
-                  label: 'hash rate',
+                  label: l10n.workersHashRate,
                 ),
               ),
               const StatDivider(),
               Expanded(
-                child: StatCell(value: '${worker.shares}', label: 'shares'),
+                child: StatCell(value: '${worker.shares}', label: l10n.profileShares),
               ),
               const StatDivider(),
               Expanded(
-                child: StatCell(value: '${worker.blocks}', label: 'blocks'),
+                child: StatCell(value: '${worker.blocks}', label: l10n.workersBlocks),
               ),
             ],
           ),
@@ -141,7 +140,7 @@ class _WorkerCard extends StatelessWidget {
                   const SizedBox(width: Palette.sm),
                   Expanded(
                     child: Text(
-                      '${worker.stale} stale · ${worker.invalid} invalid',
+                      l10n.workersStaleInvalid(worker.stale, worker.invalid),
                       style: TypeScale.caption(context)
                           .copyWith(color: Palette.red),
                     ),
@@ -153,7 +152,7 @@ class _WorkerCard extends StatelessWidget {
           if (worker.sessionUptime != null) ...[
             const SizedBox(height: Palette.md),
             Text(
-              'session ${_duration(worker.sessionUptime!)}',
+              l10n.workersSession(_duration(worker.sessionUptime!)),
               style: TypeScale.monoMuted(context, size: 10),
             ),
           ],

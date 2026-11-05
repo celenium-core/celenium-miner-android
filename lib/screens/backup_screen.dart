@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
 import '../services/cen_wallet.dart';
-import '../theme/layout.dart';
 import '../services/keystore.dart';
+import '../theme/layout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/brand_mark.dart';
@@ -106,10 +107,11 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _runImport() async {
+    final l10n = l10nOf(context);
     final mnemonic = Mnemonic.fromPhrase(_importController.text);
     if (!isValidMnemonic(mnemonic, _wordlist)) {
       setState(() {
-        _importError = 'That phrase is not a valid BIP39 phrase. Check the words and try again.';
+        _importError = l10n.backupImportError;
         _importAddress = null;
       });
       return;
@@ -132,11 +134,9 @@ class _BackupScreenState extends State<BackupScreen> {
       });
       // The address is the proof the phrase was accepted, so it is shown
       // rather than silently replaced.
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Imported ${wallet.address}')));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupImported(wallet.address))),
+      );
     } on Object catch (error) {
       if (!mounted) return;
       setState(() {
@@ -154,13 +154,14 @@ class _BackupScreenState extends State<BackupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('RECOVERY'),
+        title: Text(l10n.backupTitle),
       ),
       body: SafeArea(
         child: AnimatedSwitcher(
@@ -193,6 +194,7 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Widget _buildIntro() {
+    final l10n = l10nOf(context);
     return CenContent(
       child: ListView(
         key: const ValueKey('intro'),
@@ -206,16 +208,19 @@ class _BackupScreenState extends State<BackupScreen> {
                   width: 84,
                   height: 84,
                   decoration: const BoxDecoration(
-                    color: Palette.cream,
+                    color: Palette.surfaceHigh,
                     shape: BoxShape.circle,
                   ),
-                  child: Center(child: BrandMark(size: 50)),
+                  child: Center(child: BrandMark(size: 50, onDark: true)),
                 ),
                 const SizedBox(height: Palette.lg),
-                Text('Recovery words', style: TypeScale.screenTitle(context)),
+                Text(
+                  l10n.backupRecoveryWords,
+                  style: TypeScale.screenTitle(context),
+                ),
                 const SizedBox(height: Palette.sm),
                 Text(
-                  'Twelve words that rebuild your key on any device.',
+                  l10n.backupIntro,
                   textAlign: TextAlign.center,
                   style: TypeScale.label(context),
                 ),
@@ -223,56 +228,36 @@ class _BackupScreenState extends State<BackupScreen> {
             ),
           ),
           const SizedBox(height: Palette.xl),
-          const CenCard(
+          CenCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Eyebrow('Why this matters'),
-                SizedBox(height: Palette.sm),
-                Text(
-                  'Your coins sit on the blockchain, tied to an address. They survive '
-                  'the app being deleted. The one thing that does not survive is the '
-                  'key to that address, and these twelve words are the key.',
-                  style: TextStyle(
-                    fontFamily: TypeScale.bodyFamily,
-                    fontSize: 13,
-                    color: Palette.slateLight,
-                    height: 1.55,
-                  ),
-                ),
+                Eyebrow(l10n.backupWhyTitle),
+                const SizedBox(height: Palette.sm),
+                Text(l10n.backupWhyBody, style: _bodyStyle),
               ],
             ),
           ),
           const SizedBox(height: Palette.md),
-          const CenCard(
+          CenCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Eyebrow('What to do with them'),
-                SizedBox(height: Palette.sm),
-                Text(
-                  'Write them on paper, in order, and keep the paper somewhere that '
-                  'is not this phone. Do not store them in a notes app, a '
-                  'screenshot, or a message to yourself.',
-                  style: TextStyle(
-                    fontFamily: TypeScale.bodyFamily,
-                    fontSize: 13,
-                    color: Palette.slateLight,
-                    height: 1.55,
-                  ),
-                ),
+                Eyebrow(l10n.backupHowTitle),
+                const SizedBox(height: Palette.sm),
+                Text(l10n.backupHowBody, style: _bodyStyle),
               ],
             ),
           ),
           const SizedBox(height: Palette.xl),
           GoldButton(
-            label: _busy ? 'Creating…' : 'Create recovery words',
+            label: _busy ? l10n.backupCreating : l10n.backupCreateWords,
             icon: Icons.add,
             onPressed: _busy ? null : _generate,
           ),
           const SizedBox(height: Palette.md),
           GhostButton(
-            label: 'I already have words',
+            label: l10n.backupHaveWords,
             icon: Icons.download_outlined,
             onPressed: () => setState(() => _stage = _Stage.import),
           ),
@@ -282,6 +267,7 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Widget _buildReveal() {
+    final l10n = l10nOf(context);
     return CenContent(
       child: ListView(
         key: const ValueKey('reveal'),
@@ -306,7 +292,7 @@ class _BackupScreenState extends State<BackupScreen> {
                     ),
                     const SizedBox(width: Palette.sm),
                     Text(
-                      'Write these down now',
+                      l10n.backupWriteNow,
                       style: TypeScale.title(context)
                           .copyWith(color: Palette.red),
                     ),
@@ -314,9 +300,7 @@ class _BackupScreenState extends State<BackupScreen> {
                 ),
                 const SizedBox(height: Palette.sm),
                 Text(
-                  'Anyone who reads these twelve words can move every coin at your '
-                  'address. They are shown once. After you leave this screen they '
-                  'are not shown again.',
+                  l10n.backupWarningBody,
                   style: TypeScale.caption(context)
                       .copyWith(color: Palette.red),
                 ),
@@ -324,7 +308,7 @@ class _BackupScreenState extends State<BackupScreen> {
             ),
           ),
           const SizedBox(height: Palette.xl),
-          Eyebrow('Your 12 words, in order'),
+          Eyebrow(l10n.backupWordsTitle),
           const SizedBox(height: Palette.sm),
           _WordGrid(words: _words),
           const SizedBox(height: Palette.xl),
@@ -335,12 +319,12 @@ class _BackupScreenState extends State<BackupScreen> {
                 onChanged: (value) =>
                     setState(() => _confirmed = value ?? false),
                 activeColor: Palette.gold,
-                checkColor: Palette.ink,
+                checkColor: Palette.white,
               ),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'I have written all twelve words down in order',
-                  style: TextStyle(
+                  l10n.backupWrittenCheck,
+                  style: const TextStyle(
                     fontFamily: TypeScale.bodyFamily,
                     fontSize: 13,
                     color: Palette.cream,
@@ -351,7 +335,7 @@ class _BackupScreenState extends State<BackupScreen> {
           ),
           const SizedBox(height: Palette.md),
           GoldButton(
-            label: 'Continue',
+            label: l10n.commonContinue,
             onPressed: _confirmed ? _confirmBackedUp : null,
           ),
         ],
@@ -360,6 +344,7 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Widget _buildConfirm() {
+    final l10n = l10nOf(context);
     return ListView(
       key: const ValueKey('confirm'),
       padding: const EdgeInsets.all(Palette.lg),
@@ -374,11 +359,10 @@ class _BackupScreenState extends State<BackupScreen> {
                 color: Palette.goldLight,
               ),
               const SizedBox(height: Palette.lg),
-              Text('Not backed up yet', style: TypeScale.screenTitle(context)),
+              Text(l10n.backupNotYet, style: TypeScale.screenTitle(context)),
               const SizedBox(height: Palette.sm),
               Text(
-                'Recovery words exist on this device but have not been confirmed as '
-                'written down. Until they are, losing this phone loses the key.',
+                l10n.backupNotYetBody,
                 textAlign: TextAlign.center,
                 style: TypeScale.label(context),
               ),
@@ -387,7 +371,7 @@ class _BackupScreenState extends State<BackupScreen> {
         ),
         const SizedBox(height: Palette.xl),
         GoldButton(
-          label: 'Show my words',
+          label: l10n.backupShowWords,
           icon: Icons.visibility_outlined,
           onPressed: _revealAgain,
         ),
@@ -396,6 +380,7 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Widget _buildSaved() {
+    final l10n = l10nOf(context);
     return ListView(
       key: const ValueKey('saved'),
       padding: const EdgeInsets.all(Palette.lg),
@@ -418,11 +403,10 @@ class _BackupScreenState extends State<BackupScreen> {
                 ),
               ),
               const SizedBox(height: Palette.lg),
-              Text('Backed up', style: TypeScale.screenTitle(context)),
+              Text(l10n.backupDone, style: TypeScale.screenTitle(context)),
               const SizedBox(height: Palette.sm),
               Text(
-                'Your recovery words are confirmed as written down. Keep the paper '
-                'somewhere this phone is not.',
+                l10n.backupDoneBody,
                 textAlign: TextAlign.center,
                 style: TypeScale.label(context),
               ),
@@ -430,50 +414,37 @@ class _BackupScreenState extends State<BackupScreen> {
           ),
         ),
         const SizedBox(height: Palette.xl),
-        const CenCard(
+        CenCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Eyebrow('If the app is deleted'),
-              SizedBox(height: Palette.sm),
-              Text(
-                'Coins are not lost: they stay on the blockchain at your address. '
-                'Reinstall the app, choose "I already have words", and enter the '
-                'twelve words to take control of the address again.',
-                style: TextStyle(
-                  fontFamily: TypeScale.bodyFamily,
-                  fontSize: 13,
-                  color: Palette.slateLight,
-                  height: 1.55,
-                ),
-              ),
+              Eyebrow(l10n.backupIfDeletedTitle),
+              const SizedBox(height: Palette.sm),
+              Text(l10n.backupIfDeletedBody, style: _bodyStyle),
             ],
           ),
         ),
         const SizedBox(height: Palette.xl),
         GhostButton(
-          label: 'Show my words again',
+          label: l10n.backupShowAgain,
           icon: Icons.visibility_outlined,
           onPressed: _revealAgain,
         ),
         const SizedBox(height: Palette.md),
-        TextButton(onPressed: widget.onDone, child: const Text('Done')),
+        TextButton(onPressed: widget.onDone, child: Text(l10n.commonDone)),
       ],
     );
   }
 
   Widget _buildImport() {
+    final l10n = l10nOf(context);
     return ListView(
       key: const ValueKey('import'),
       padding: const EdgeInsets.all(Palette.lg),
       children: [
-        Text('Import words', style: TypeScale.screenTitle(context)),
+        Text(l10n.backupImportTitle, style: TypeScale.screenTitle(context)),
         const SizedBox(height: Palette.sm),
-        Text(
-          'Enter your existing 12 or 24 words to take control of that address on '
-          'this device.',
-          style: TypeScale.label(context),
-        ),
+        Text(l10n.backupImportIntro, style: TypeScale.label(context)),
         const SizedBox(height: Palette.xl),
         TextField(
           controller: _importController,
@@ -505,12 +476,12 @@ class _BackupScreenState extends State<BackupScreen> {
         ],
         const SizedBox(height: Palette.xl),
         GoldButton(
-          label: _busy ? 'Checking…' : 'Import',
+          label: _busy ? l10n.commonChecking : l10n.commonImport,
           onPressed: _busy ? null : _runImport,
         ),
         const SizedBox(height: Palette.md),
         GhostButton(
-          label: 'Cancel',
+          label: l10n.commonCancel,
           onPressed: () => setState(() {
             _importError = null;
             _stage = _Stage.none;
@@ -520,6 +491,14 @@ class _BackupScreenState extends State<BackupScreen> {
     );
   }
 }
+
+/// The long-form body copy, identical in every card on this screen.
+const TextStyle _bodyStyle = TextStyle(
+  fontFamily: TypeScale.bodyFamily,
+  fontSize: 13,
+  color: Palette.slateLight,
+  height: 1.55,
+);
 
 /// The words in a numbered grid. Numbers are part of the data: the order is
 /// what makes the phrase sufficient.
