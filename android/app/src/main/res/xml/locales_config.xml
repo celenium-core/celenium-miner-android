@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Per-app language on Android 13+. Listing a locale here is what puts
+     Celenium Miner in Settings > System > Languages > App languages, and it is
+     how Android knows the app serves that language when the user picks one.
+     The list must match the ARB files in lib/l10n: English and Indonesian. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en"/>
+    <locale android:name="id"/>
+</locale-config>

@@ -2,6 +2,7 @@
 /.dart_tool/
 /.idea/
 *.iml
+.flutter-plugins-dependencies
 
 # Native lib dirs a wayward unzip or the Android release build drops next to
 # the Dart sources. Ignoring bare /lib/ once hid the whole Dart tree from git.
