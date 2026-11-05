@@ -1,7 +1,7 @@
 name: celenium_miner
 description: "Celenium (CEN) mining control for desktop and Android."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+9001
 
 environment:
   sdk: ^3.13.7
@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Material/Cupertino strings plus the generated AppLocalizations delegates.
+  # intl is left unpinned: flutter_localizations decides the version.
+  flutter_localizations:
+    sdk: flutter
+  intl: any
 
   http: ^1.2.2
   shared_preferences: ^2.3.2
@@ -18,6 +23,7 @@ dependencies:
   pointycastle: ^3.9.1
   bech32: ^0.2.2
   flutter_secure_storage: ^9.2.2
+  google_mobile_ads: ^9.2.0
 
 dev_dependencies:
   flutter_test:
@@ -26,6 +32,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Regenerates lib/l10n/app_localizations*.dart from the ARB files on every
+  # build; l10n.yaml points the generator at lib/l10n.
+  generate: true
 
   fonts:
     - family: Sora

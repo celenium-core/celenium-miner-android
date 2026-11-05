@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'models/bridge.dart';
+import 'l10n/l10n.dart';
 import 'screens/backup_screen.dart';
 import 'screens/bridge_screen.dart';
 import 'screens/log_screen.dart';
@@ -14,8 +17,10 @@ import 'screens/profile_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/wallet_screen.dart';
 import 'screens/workers_screen.dart';
+import 'services/ad_units.dart';
 import 'services/bridge_api.dart';
 import 'services/cen_wallet.dart';
+import 'services/crash_log.dart';
 import 'services/settings_store.dart';
 import 'theme/app_theme.dart';
 import 'theme/layout.dart';
@@ -25,14 +30,54 @@ import 'widgets/ad_banner.dart';
 import 'widgets/hacker_fx.dart';
 import 'widgets/brand_mark.dart';
 import 'widgets/cen_ui.dart';
-import 'widgets/side_rail.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // No ad SDK call happens before the first frame: its init talks to Play
+  // Services, and an unhandled failure there kills the process on launch.
+  // The banner warms the SDK lazily, where every failure is contained.
+  installCrashHandlers();
   runApp(const CeleniumMinerApp());
 }
 
-class CeleniumMinerApp extends StatelessWidget {
+class CeleniumMinerApp extends StatefulWidget {
   const CeleniumMinerApp({super.key});
+
+  @override
+  State<CeleniumMinerApp> createState() => _CeleniumMinerAppState();
+}
+
+class _CeleniumMinerAppState extends State<CeleniumMinerApp> {
+  final SettingsStore _settings = SettingsStore();
+
+  /// The language the app is currently drawing in. A notifier rather than a
+  /// field because the picker lives deep in the profile screen: changing it
+  /// there has to rebuild the whole [MaterialApp], and only the root owns the
+  /// locale.
+  final ValueNotifier<AppLanguage> _language = ValueNotifier(
+    // Start on the system language so the first frame after the splash is not
+    // briefly wrong while the stored value loads.
+    AppLanguage.system,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _settings.language().then((stored) {
+      if (mounted) _language.value = stored;
+    });
+  }
+
+  @override
+  void dispose() {
+    _language.dispose();
+    super.dispose();
+  }
+
+  Future<void> _setLanguage(AppLanguage language) async {
+    _language.value = language;
+    await _settings.setLanguage(language);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,11 +91,23 @@ class CeleniumMinerApp extends StatelessWidget {
       if (tab == 'profile') initialTab = _Tab.profile;
     }
 
-    return MaterialApp(
-      title: 'Celenium Miner',
-      debugShowCheckedModeBanner: false,
-      theme: buildCenTheme(),
-      home: MinerHome(initialTab: initialTab),
+    return ValueListenableBuilder<AppLanguage>(
+      valueListenable: _language,
+      builder: (context, language, _) => MaterialApp(
+        title: 'Celenium Miner',
+        debugShowCheckedModeBanner: false,
+        theme: buildCenTheme(),
+        // Null locale means "let the platform decide", which is what the
+        // system option is for.
+        locale: language.locale,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: MinerHome(
+          initialTab: initialTab,
+          language: language,
+          onLanguageChanged: _setLanguage,
+        ),
+      ),
     );
   }
 }
@@ -58,21 +115,34 @@ class CeleniumMinerApp extends StatelessWidget {
 /// The three primary destinations.
 enum _Tab { mine, wallet, profile }
 
-const _tabLabels = {
-  _Tab.mine: 'Mine',
-  _Tab.wallet: 'Wallet',
-  _Tab.profile: 'Profile',
+/// The tab strip's labels, in the language currently selected.
+String _tabLabel(AppLocalizations l10n, _Tab tab) => switch (tab) {
+  _Tab.mine => l10n.navMine,
+  _Tab.wallet => l10n.navWallet,
+  _Tab.profile => l10n.navProfile,
 };
 
 /// Secondary screens, reached from the profile settings list.
 enum _Route { bridge, workers, activity, backup, about }
 
 class MinerHome extends StatefulWidget {
-  const MinerHome({super.key, this.initialTab = _Tab.mine});
+  const MinerHome({
+    super.key,
+    this.initialTab = _Tab.mine,
+    this.language = AppLanguage.system,
+    this.onLanguageChanged,
+  });
 
   /// Which tab opens first. Set from the `--tab` argument so a screenshot run
   /// can land directly on a screen instead of driving the bottom nav.
   final _Tab initialTab;
+
+  /// Current interface language, shown in the profile settings.
+  final AppLanguage language;
+
+  /// Called when the user picks a different language. Null in tests that do
+  /// not exercise the picker.
+  final ValueChanged<AppLanguage>? onLanguageChanged;
 
   @override
   State<MinerHome> createState() => _MinerHomeState();
@@ -125,10 +195,17 @@ class _MinerHomeState extends State<MinerHome> {
   /// asset and left the widget untestable without a bundle.
   List<String>? _wordlist;
 
-  /// The ad itself, supplied by an ad network once it actually returns one.
-  /// Null until then, which is exactly why the banner stays invisible instead
-  /// of reserving space for an ad that never arrived.
-  Widget? _adWidget;
+  /// The banner actually on screen. Null until AdMob hands one over, which is
+  /// exactly why the slot stays invisible instead of reserving space for an
+  /// ad that never arrived.
+  BannerAd? _banner;
+
+  /// True once a request came back empty. The slot then collapses for the
+  /// rest of the session instead of re-asking AdMob on every rebuild.
+  bool _adFailed = false;
+
+  /// One-shot guard: a rebuild must never re-request the banner.
+  bool _adRequested = false;
 
   /// True until the entry button on the splash is pressed.
   ///
@@ -147,6 +224,7 @@ class _MinerHomeState extends State<MinerHome> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _banner?.dispose();
     super.dispose();
   }
 
@@ -171,10 +249,14 @@ class _MinerHomeState extends State<MinerHome> {
     setState(() {
       _intervalMs = interval;
       _api = BridgeApi(baseUrl: url);
-      _adUnitId = adUnitId;
+      // An id typed into Node settings wins; otherwise the live unit takes
+      // over in release and Google's test unit in debug, so the slot works
+      // out of the box instead of sitting unconfigured forever.
+      _adUnitId = resolveBannerUnitId(adUnitId);
       _adDismissed = adDismissed;
       _wordlist = wordlist;
     });
+    await _loadAd();
     await _poll();
     // Without this guard, disposing the screen while the first poll is still
     // in flight still starts the periodic timer, and nothing ever cancels it.
@@ -190,14 +272,120 @@ class _MinerHomeState extends State<MinerHome> {
   /// so a kill right after the tap cannot bring the banner back.
   Future<void> _dismissAd() async {
     await _settings.setAdDismissed(true);
+    _banner?.dispose();
     if (!mounted) return;
-    setState(() => _adDismissed = true);
+    setState(() {
+      _banner = null;
+      _adDismissed = true;
+    });
+  }
+
+  /// Asks AdMob for one banner, sized to the slot that will hold it.
+  ///
+  /// A fixed 320x50 unit does not fit a phone: the slot also carries the "Ad"
+  /// badge and the close button. The adaptive size is requested at the exact
+  /// leftover width, so the ad is drawn whole instead of clipped.
+  /// Asks AdMob for one banner, sized to the slot that will hold it.
+  ///
+  /// A fixed 320x50 unit does not fit a phone: the slot also carries the "Ad"
+  /// badge and the close button. The adaptive size is requested at the exact
+  /// leftover width, so the ad is drawn whole instead of clipped.
+  ///
+  /// Best-effort by design: every failure - the SDK refusing to start, a bad
+  /// size, a rejected request - collapses the slot instead of surfacing as an
+  /// unhandled error that takes the whole app down.
+  Future<void> _loadAd() async {
+    if (_adRequested) return;
+    _adRequested = true;
+    final unitId = _adUnitId;
+    if (unitId == null || !adsSupported) return;
+
+    await ensureAdsReady();
+    if (!mounted) return;
+
+    try {
+      final media = MediaQuery.maybeOf(context);
+      if (media == null) return;
+      // The replacement (the ...Large... variant) allows ads up to 15% of the
+      // screen height, which is taller than this slot; the classic adaptive
+      // size stays at 50dp across phone widths.
+      // ignore: deprecated_member_use
+      final AdSize? adaptive = await AdSize.getAnchoredAdaptiveBannerAdSize(
+        media.orientation,
+        bannerAdWidth(media.size.width).round(),
+      );
+      if (!mounted) return;
+
+      final banner = BannerAd(
+        adUnitId: unitId,
+        size: adaptive ?? AdSize.banner,
+        request: const AdRequest(),
+        listener: BannerAdListener(
+          onAdLoaded: (ad) {
+            // A taller-than-slot ad would be clipped, and a clipped ad may not
+            // be shown: drop it and collapse the slot instead.
+            if (ad is! BannerAd || ad.size.height > AdBanner.height) {
+              ad.dispose();
+              if (mounted) setState(() => _adFailed = true);
+              return;
+            }
+            if (!mounted) {
+              ad.dispose();
+              return;
+            }
+            setState(() => _banner = ad);
+          },
+          onAdFailedToLoad: (ad, error) {
+            ad.dispose();
+            if (!mounted) return;
+            setState(() {
+              _adFailed = true;
+              _pushLog([
+                LogEntry(
+                  time: _clock,
+                  message: l10nOf(context).logAdRequestFailed,
+                  isError: true,
+                ),
+              ]);
+            });
+          },
+        ),
+      );
+      await banner.load();
+    } catch (error, stack) {
+      recordCaughtError(error, stack: stack);
+      if (!mounted) return;
+      setState(() {
+        _adFailed = true;
+        _pushLog([
+          LogEntry(
+            time: _clock,
+            message: l10nOf(context).logAdRequestFailed,
+            isError: true,
+          ),
+        ]);
+      });
+    }
   }
 
   AdSlotState get _adSlotState {
     if (_adDismissed) return AdSlotState.dismissed;
     if (_adUnitId == null) return AdSlotState.unconfigured;
+    if (_banner != null) return AdSlotState.loaded;
+    if (_adFailed) return AdSlotState.noFill;
     return AdSlotState.awaitingSdk;
+  }
+
+  /// The banner wrapped in the exact box AdMob filled, so the ad is drawn at
+  /// its own size and is never stretched or cropped by the row around it.
+  Widget? get _adWidget {
+    final ad = _banner;
+    if (ad == null) return null;
+    return SizedBox(
+      width: ad.size.width.toDouble(),
+      height: ad.size.height.toDouble(),
+      child: AdWidget(ad: ad),
+    );
   }
 
   String get _clock {
@@ -225,6 +413,7 @@ class _MinerHomeState extends State<MinerHome> {
         _connected = connected;
         _pushLog(
           diffSnapshots(
+            l10n: l10nOf(context),
             previous: previous,
             current: snapshot,
             wasConnected: wasConnected,
@@ -238,7 +427,11 @@ class _MinerHomeState extends State<MinerHome> {
       setState(() {
         _connected = false;
         _pushLog([
-          LogEntry(time: _clock, message: 'Poll failed', isError: true),
+          LogEntry(
+            time: _clock,
+            message: l10nOf(context).logPollFailed,
+            isError: true,
+          ),
         ]);
       });
     } finally {
@@ -305,9 +498,7 @@ class _MinerHomeState extends State<MinerHome> {
 
     // Keyboard shortcuts only earn their keep on a desktop, where a keyboard
     // is guaranteed. On a phone they would fight the soft keyboard.
-    final shell = layout.isExpanded
-        ? _buildDesktopShell(snapshot, showBanner)
-        : _buildPhoneShell(snapshot, showBanner);
+    final shell = _buildPhoneShell(snapshot, showBanner);
 
     if (layout.isCompact) {
       return PopScope(
@@ -339,115 +530,65 @@ class _MinerHomeState extends State<MinerHome> {
     const SingleActivator(LogicalKeyboardKey.escape): _handleBack,
   };
 
-  CenDestination get _destination => switch (_tab) {
-    _Tab.mine => CenDestination.mine,
-    _Tab.wallet => CenDestination.wallet,
-    _Tab.profile => CenDestination.profile,
-  };
-
   /// Phone shell: the cream pill floats above the content, as designed.
   Widget _buildPhoneShell(MinerSnapshot snapshot, bool showBanner) {
-    return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            _ambientLayers(),
-            Padding(
-              padding: EdgeInsets.only(
-                bottom: showBanner ? AdBanner.footprint : 0,
-              ),
-              child: _buildTab(snapshot),
-            ),
-            _overlayLayers(),
-            _adLayer(),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _BottomTabs(
-        current: _tab,
-        onSelect: (tab) => setState(() => _tab = tab),
-      ),
-    );
-  }
-
-  /// Desktop shell: the same cream pill, stood on its side as a rail. The
-  /// ambient effects still run the full window behind it, so the console feel
-  /// is unchanged; only the navigation furniture moves.
-  Widget _buildDesktopShell(MinerSnapshot snapshot, bool showBanner) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          _ambientLayers(),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              CenSideRail(
-                current: _destination,
-                onSelect: (destination) => setState(() {
-                  _tab = switch (destination) {
-                    CenDestination.mine => _Tab.mine,
-                    CenDestination.wallet => _Tab.wallet,
-                    CenDestination.profile => _Tab.profile,
-                  };
-                }),
-              ),
-              Expanded(
-                child: SafeArea(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: showBanner ? AdBanner.footprint : 0,
-                    ),
-                    child: _buildTab(snapshot),
+    return Stack(
+      children: [
+        // One continuous console canvas (field + rain + CRT texture) painted
+        // edge to edge behind BOTH the content and the floating tab bar. The
+        // Scaffold is transparent, so the canvas behind the pill is the same
+        // dark field the content sits on — no seam where the tab bar begins.
+        _canvas(),
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: showBanner ? AdBanner.footprint : 0,
                   ),
+                  child: _buildTab(snapshot),
                 ),
-              ),
-            ],
+                _adLayer(),
+              ],
+            ),
           ),
-          _overlayLayers(),
-          _adLayer(),
-        ],
-      ),
+          bottomNavigationBar: _BottomTabs(
+            current: _tab,
+            onSelect: (tab) => setState(() => _tab = tab),
+          ),
+        ),
+      ],
     );
   }
 
-  /// Ambient binary rain behind every tab. It sits under the content at low
-  /// opacity so the console feel is present on Mining, Profile and Wallet
-  /// alike without competing with the readings, and it is the one effect that
-  /// never stops.
-  Widget _ambientLayers() {
+  /// Full-screen console backdrop: the dark field, the always-on binary rain,
+  /// and the CRT scanline/sweep texture. Drawn once behind the whole shell so
+  /// the three layers read as one continuous plane instead of stopping at the
+  /// bottom-indicator line where the content and the tab bar meet.
+  Widget _canvas() {
     return Positioned.fill(
       child: IgnorePointer(
         child: ExcludeSemantics(
-          child: Opacity(
-            opacity: 0.13,
-            child: BinaryRain(
-              expand: true,
-              columns: 5,
-              color: Palette.greenDim,
-            ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: const [
+              ColoredBox(color: Palette.field),
+              Opacity(
+                opacity: 0.13,
+                child: BinaryRain(
+                  expand: true,
+                  columns: 5,
+                  color: Palette.greenDim,
+                ),
+              ),
+              ScanlineOverlay(opacity: 0.06, spacing: 3),
+              ScanSweep(),
+            ],
           ),
         ),
       ),
-    );
-  }
-
-  /// CRT scanlines plus one slow sweep of light: the console look with no
-  /// motion that competes with the readings.
-  Widget _overlayLayers() {
-    return const Stack(
-      children: [
-        Positioned.fill(
-          child: IgnorePointer(
-            child: ScanlineOverlay(opacity: 0.06, spacing: 3),
-          ),
-        ),
-        // A slow sweep of light down the screen, the CRT refresh the
-        // scanlines imply. Bounded to one pass so it never loops into
-        // a distraction.
-        Positioned.fill(
-          child: IgnorePointer(child: ExcludeSemantics(child: ScanSweep())),
-        ),
-      ],
     );
   }
 
@@ -487,6 +628,8 @@ class _MinerHomeState extends State<MinerHome> {
         return ProfileScreen(
           snapshot: snapshot,
           networkLabel: 'simnet',
+          language: widget.language,
+          onLanguageChanged: widget.onLanguageChanged,
           onOpenBridge: () => _open(_Route.bridge),
           onOpenWorkers: () => _open(_Route.workers),
           onOpenActivity: () => _open(_Route.activity),
@@ -504,7 +647,20 @@ class _MinerHomeState extends State<MinerHome> {
       case _Route.workers:
         return WorkersScreen(snapshot: snapshot);
       case _Route.activity:
-        return LogScreen(entries: _log);
+        // Caught errors ride on top of the poll log, so a failure the user
+        // felt shows up where they look for what the app has been doing.
+        return LogScreen(
+          entries: [
+            ...crashJournal.map(
+              (error) => LogEntry(
+                time: error.time,
+                message: error.message,
+                isError: true,
+              ),
+            ),
+            ..._log,
+          ],
+        );
       case _Route.backup:
         return BackupScreen(onDone: _closeRoute, wordlist: _wordlist);
       case _Route.about:
@@ -514,54 +670,145 @@ class _MinerHomeState extends State<MinerHome> {
 }
 
 /// Bottom navigation: a cream pill floating above the content, as in the
-/// concept. The active tab carries a gold disc with the brand mark.
-class _BottomTabs extends StatelessWidget {
+/// concept. Instead of a fixed disc on every tab, a single navy "lens" rides
+/// behind the active tab and morphs — it slides and stretches — as the selected
+/// tab changes, so the indicator reads as liquid rather than swapping discs.
+class _BottomTabs extends StatefulWidget {
   const _BottomTabs({required this.current, required this.onSelect});
 
   final _Tab current;
   final ValueChanged<_Tab> onSelect;
 
   @override
+  State<_BottomTabs> createState() => _BottomTabsState();
+}
+
+class _BottomTabsState extends State<_BottomTabs>
+    with SingleTickerProviderStateMixin {
+  /// Width of one tab slot. Fixed so the lens has a known home on each tab.
+  static const double _slotW = 68;
+
+  /// Height of the tab strip, which the lens bulges within.
+  static const double _barH = 58;
+
+  /// Drives the lens between the tabs. Its value is the floating tab index, so
+  /// a mid-flight value sits between two homes and the painter can stretch the
+  /// lens toward the nearer one.
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 430),
+      value: widget.current.index.toDouble(),
+      // The lens is driven by the raw tab index (0..2), so the controller
+      // must be allowed to animate past its default upperBound of 1.0.
+      upperBound: (_Tab.values.length - 1).toDouble(),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _BottomTabs oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.current != widget.current) {
+      _controller.animateTo(
+        widget.current.index.toDouble(),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// How strongly a slot reads as selected, 0..1. Slides smoothly with the
+  /// lens so the label and mark crossfade in step with the moving bulge.
+  double _selectiveness(int slot) {
+    return (1 - (_controller.value - slot).abs()).clamp(0.0, 1.0);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final count = _Tab.values.length;
+    final width = _slotW * _Tab.values.length;
+
     return SafeArea(
       top: false,
       child: Padding(
-        // Floating, not docked: the pill hovers over the content with a gap
-        // on every side, which is what reads as "floating" rather than "a bar
-        // that shifted in".
+        // Cream pill that hugs its three items and is centred on a fully
+        // transparent bar: the dark canvas shows through on both sides of
+        // the pill, so the menu reads as floating cream tabs rather than a
+        // full-width bar.
         padding: const EdgeInsets.fromLTRB(
           Palette.lg,
           0,
           Palette.lg,
           Palette.md,
         ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Palette.sm,
-            vertical: Palette.sm,
-          ),
-          decoration: BoxDecoration(
-            color: Palette.surfaceLight,
-            borderRadius: BorderRadius.circular(Palette.pill),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.45),
-                blurRadius: 18,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              for (final tab in _Tab.values)
-                _TabButton(
-                  tab: tab,
-                  label: _tabLabels[tab]!,
-                  selected: tab == current,
-                  onTap: () => onSelect(tab),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          // Without a height factor, Align expands to fill the body and the
+          // Scaffold gives the whole screen to the bottom bar, collapsing the
+          // body (and every tab inside it) to zero height.
+          heightFactor: 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Palette.sm,
+              vertical: Palette.sm,
+            ),
+            decoration: BoxDecoration(
+              color: Palette.cream,
+              borderRadius: BorderRadius.circular(Palette.pill),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
                 ),
-            ],
+              ],
+            ),
+            child: SizedBox(
+              width: width,
+              height: _barH,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (_, _) => Stack(
+                  // The lens is taller than the tab slot, so it is allowed to
+                  // paint a few pixels past the strip's rect while the pill
+                  // above never clips it.
+                  clipBehavior: Clip.none,
+                  children: [
+                    CustomPaint(
+                      size: Size(width, _barH),
+                      painter: _LiquidBulgePainter(
+                        t: _controller.value,
+                        slotW: _slotW,
+                        barH: _barH,
+                        color: Palette.field,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        for (var i = 0; i < count; i++)
+                          _LiquidTab(
+                            tab: _Tab.values[i],
+                            label: _tabLabel(l10nOf(context), _Tab.values[i]),
+                            width: _slotW,
+                            sel: _selectiveness(i),
+                            selected: _Tab.values[i] == widget.current,
+                            onTap: () => widget.onSelect(_Tab.values[i]),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -569,25 +816,110 @@ class _BottomTabs extends StatelessWidget {
   }
 }
 
-class _TabButton extends StatelessWidget {
-  const _TabButton({
+/// The liquid ride itself: a superellipse "lens" that bulges behind the active
+/// tab and stretches horizontally while it travels, then settles back to its
+/// rest shape. A superellipse (not a disc or a stadium) is what gives the
+/// liquid-glass look — a fuller centre that tapers to soft, rounded tips.
+class _LiquidBulgePainter extends CustomPainter {
+  _LiquidBulgePainter({
+    required this.t,
+    required this.slotW,
+    required this.barH,
+    required this.color,
+  });
+
+  /// Floating tab index (0..2), fractional while in flight.
+  final double t;
+
+  final double slotW;
+  final double barH;
+  final Color color;
+
+  /// Rest semi-axes. Wide-but-short reads as a lens, taller than an icon glyph.
+  static const double _a0 = 26;
+  static const double _b0 = 19;
+
+  /// Superellipse exponent. 3.4 is full in the middle with softly tapered tips;
+  /// neither a hard rectangle nor a plain ellipse.
+  static const double _n = 3.4;
+
+  /// Extra horizontal reach the lens gains at the peak of a jump.
+  static const double _stretch = 14;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Distance from the nearest integer home, 0..0.5, so the stretch is zero at
+    // rest and greatest midway between two tabs — the classic liquid squash.
+    final frac = (t - t.roundToDouble()).abs();
+    final envelope = math.sin(math.pi * frac);
+
+    final cx = t * slotW + slotW / 2;
+    final cy = barH / 2 - 6.5; // centres on the icon row, not the label
+    final a = _a0 + _stretch * envelope;
+    final b = _b0 * (1 - 0.22 * envelope);
+
+    final path = Path();
+    const steps = 48;
+    for (var i = 0; i <= steps; i++) {
+      final angle = 2 * math.pi * i / steps;
+      final x = cx + a * _superCoord(math.cos(angle));
+      final y = cy + b * _superCoord(math.sin(angle));
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+
+    canvas.drawShadow(path, Colors.black54, 6, true);
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  /// Superellipse coordinate: keeps the curve full in the middle and tapers
+  /// the tips, which is what distinguishes the lens from a plain oval.
+  double _superCoord(double value) {
+    final magnitude = value.abs();
+    return value.sign * math.pow(magnitude, 2 / _n).toDouble();
+  }
+
+  @override
+  bool shouldRepaint(covariant _LiquidBulgePainter oldDelegate) {
+    return oldDelegate.t != t ||
+        oldDelegate.slotW != slotW ||
+        oldDelegate.barH != barH ||
+        oldDelegate.color != color;
+  }
+}
+
+class _LiquidTab extends StatelessWidget {
+  const _LiquidTab({
     required this.tab,
     required this.label,
+    required this.width,
+    required this.sel,
     required this.selected,
     required this.onTap,
   });
 
   final _Tab tab;
   final String label;
+  final double width;
+
+  /// Smooth 0..1 selection, crossfades the mark and label in step with the lens.
+  final double sel;
+
+  /// Discrete selection, only for the accessibility flag.
   final bool selected;
+
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    // On the cream pill, plain gold text would fail contrast. The active tab
-    // is carried by the gold disc; its label uses the deep gold so it stays
-    // readable while still reading as the gold family.
-    final color = selected ? Palette.goldDim : Palette.slate;
+    // On the cream pill the ink is navy. The cream mark fades in against the
+    // navy lens as it arrives; idle tabs keep the dim navy glyph.
+    final labelColor = Color.lerp(Palette.creamInkDim, Palette.creamInk, sel)!;
+    final weight = sel >= 0.5 ? FontWeight.w700 : FontWeight.w500;
 
     return Semantics(
       button: true,
@@ -596,37 +928,43 @@ class _TabButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(Palette.pill),
-        child: Container(
-          // 44px minimum touch target (R-03).
-          constraints: const BoxConstraints(minWidth: 64, minHeight: 48),
-          padding: const EdgeInsets.symmetric(
-            horizontal: Palette.md,
-            vertical: 6,
-          ),
+        child: SizedBox(
+          width: width,
+          height: 58,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
+              SizedBox(
+                // 44px minimum touch target (R-03) comes from the slot, which
+                // is far wider than 44 and as tall as the whole strip.
                 width: 34,
                 height: 34,
-                decoration: BoxDecoration(
-                  color: selected ? Palette.gold : Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: selected
-                      ? BrandMark(size: 18)
-                      : Icon(_iconFor(tab), size: 19, color: color),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Opacity(
+                      opacity: 1 - sel,
+                      child: Icon(
+                        _iconFor(tab),
+                        size: 19,
+                        color: Palette.creamInkDim,
+                      ),
+                    ),
+                    if (sel > 0)
+                      Opacity(
+                        opacity: sel,
+                        child: BrandMark(size: 20, onDark: true),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 3),
               Text(
                 label.toUpperCase(),
                 style: TypeScale.monoMuted(context, size: 8).copyWith(
-                  color: color,
+                  color: labelColor,
                   letterSpacing: 1.3,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: weight,
                 ),
               ),
             ],
@@ -653,13 +991,14 @@ class _AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('ABOUT'),
+        title: Text(l10n.aboutTitle),
       ),
       body: CenContent(
         child: ListView(
@@ -673,10 +1012,10 @@ class _AboutScreen extends StatelessWidget {
                     width: 84,
                     height: 84,
                     decoration: const BoxDecoration(
-                      color: Palette.cream,
+                      color: Palette.surfaceHigh,
                       shape: BoxShape.circle,
                     ),
-                    child: Center(child: BrandMark(size: 50)),
+                    child: Center(child: BrandMark(size: 50, onDark: true)),
                   ),
                   const SizedBox(height: Palette.lg),
                   Text('CELENIUM', style: TypeScale.wordmark(context)),
@@ -692,18 +1031,15 @@ class _AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: Palette.xxl),
-            const CenCard(
+            CenCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Eyebrow('What this app does'),
-                  SizedBox(height: Palette.sm),
+                  Eyebrow(l10n.aboutWhatTitle),
+                  const SizedBox(height: Palette.sm),
                   Text(
-                    'It reads mining results from a Celenium bridge and shows them on '
-                    'your phone. It holds no account, no database, and no coins: the '
-                    'results live on the blockchain and the bridge, and this app is a '
-                    'window onto them.',
-                    style: TextStyle(
+                    l10n.aboutWhatBody,
+                    style: const TextStyle(
                       fontFamily: TypeScale.bodyFamily,
                       fontSize: 13,
                       color: Palette.slateLight,
@@ -714,18 +1050,37 @@ class _AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: Palette.md),
-            const CenCard(
+            CenCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Eyebrow('Version'),
-                  SizedBox(height: Palette.sm),
-                  Text(
+                  Eyebrow(l10n.aboutVersion),
+                  const SizedBox(height: Palette.sm),
+                  const Text(
                     '1.0.0',
                     style: TextStyle(
                       fontFamily: TypeScale.monoFamily,
                       fontSize: 12,
                       color: Palette.creamDim,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Palette.md),
+            CenCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Eyebrow(l10n.aboutCreatedBy),
+                  const SizedBox(height: Palette.sm),
+                  const Text(
+                    'Dimas A. Pradana',
+                    style: TextStyle(
+                      fontFamily: TypeScale.monoFamily,
+                      fontSize: 12,
+                      color: Palette.gold,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],

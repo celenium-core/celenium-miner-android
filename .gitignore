@@ -3,5 +3,9 @@
 /.idea/
 *.iml
 
-# Native libs emitted by the Android release build into the project root.
-/lib/
+# Native lib dirs a wayward unzip or the Android release build drops next to
+# the Dart sources. Ignoring bare /lib/ once hid the whole Dart tree from git.
+/lib/arm64-v8a/
+/lib/armeabi-v7a/
+/lib/x86_64/
+/lib/*.so
