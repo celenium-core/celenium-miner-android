@@ -225,3 +225,58 @@ class MinerSnapshot {
   int get stale => stats?.internalCpu?.stale ?? 0;
   int get invalid => stats?.internalCpu?.invalid ?? 0;
 }
+
+/// `GET /api/balance` — an account balance in pradha.
+/// 1 CEN = 1e8 pradha (the smallest unit). The bridge returns only the integer
+/// pradha count, so the CEN value is derived here rather than trusted from JSON.
+class AccountBalance {
+  final String address;
+  final int pradha;
+
+  const AccountBalance({required this.address, required this.pradha});
+
+  static const int _pradhaPerCen = 100000000;
+
+  /// `pradha` rendered as CEN with up to 8 fractional digits and no trailing
+  /// zeros. Computed from the integer so large balances stay exact — a `double`
+  /// would silently round once pradha passes 2^53.
+  String get formattedCen {
+    final whole = pradha ~/ _pradhaPerCen;
+    final frac = pradha % _pradhaPerCen;
+    var text = '$whole.${frac.toString().padLeft(8, '0')}';
+    text = text.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    return text;
+  }
+
+  /// `null` when the bridge answered an error body (node not ready / unknown
+  /// address) — "no balance" must not be mistaken for "zero balance".
+  static AccountBalance? tryParse(Object? json) {
+    if (json is! Map<String, dynamic>) return null;
+    if (json.containsKey('error')) return null;
+    final pradha = (json['balancePradha'] as num?)?.toInt();
+    if (pradha == null) return null;
+    return AccountBalance(address: json['address'] as String? ?? '', pradha: pradha);
+  }
+}
+
+/// `POST /api/send` — a submitted transfer's transaction id, or the bridge's
+/// error text when the node rejected it.
+class SendResult {
+  final String? txid;
+  final String? error;
+
+  const SendResult({this.txid, this.error});
+
+  /// True when the bridge returned a transaction id, i.e. the transfer was
+  /// accepted into the mempool.
+  bool get ok => txid != null;
+
+  /// `null` when the body carried neither a txid nor an error.
+  static SendResult? tryParse(Object? json) {
+    if (json is! Map<String, dynamic>) return null;
+    final txid = json['txid'] as String?;
+    final error = json['error'] as String?;
+    if (txid == null && error == null) return null;
+    return SendResult(txid: txid, error: error);
+  }
+}

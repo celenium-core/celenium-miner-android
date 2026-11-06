@@ -18,6 +18,8 @@ import 'package:celenium_miner/widgets/ad_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A snapshot shaped like a real bridge response: one worker hashing, two
@@ -570,7 +572,7 @@ void main() {
   });
 
   group('wallet screen', () {
-    Widget host(MinerSnapshot snapshot) {
+    Widget host(MinerSnapshot snapshot, {BridgeApi? api}) {
       return MediaQuery(
         data: const MediaQueryData(size: Size(400, 2600)),
         child: MaterialApp(
@@ -579,6 +581,7 @@ void main() {
             body: WalletScreen(
               snapshot: snapshot,
               networkLabel: 'simnet',
+              api: api,
               onBackup: () {},
               onOpenActivity: () {},
             ),
@@ -598,25 +601,54 @@ void main() {
     });
 
     testWidgets('does not invent a balance', (tester) async {
-      // The bridge reports mining results, not balances. Showing 0.00 here
-      // would tell the user their coins are gone.
+      // With no bridge to answer it, the card shows "unknown" (an em-dash) and
+      // never a hardcoded 0.00 that would tell the user their coins are gone.
       await tester.pumpWidget(host(snapshotWith()));
 
-      expect(
-        find.textContaining('The bridge reports mining results'),
-        findsOneWidget,
-      );
+      expect(find.text('—'), findsWidgets);
       expect(find.text('0,00'), findsNothing);
       expect(find.text('0.00'), findsNothing);
     });
 
-    testWidgets('send is disabled with an honest reason', (tester) async {
+    testWidgets('shows the balance returned by the bridge', (tester) async {
+      final api = BridgeApi(
+        baseUrl: 'http://127.0.0.1:3030',
+        client: MockClient((request) async {
+          expect(request.url.path, '/api/balance');
+          expect(request.url.queryParameters['address'], 'cen69sim:qabc');
+          return http.Response(
+            '{"address": "cen69sim:qabc", "balancePradha": 123456789}',
+            200,
+          );
+        }),
+      );
+
+      await tester.pumpWidget(host(snapshotWith(), api: api));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1.23456789'), findsOneWidget);
+    });
+
+    testWidgets('send explains why it is unavailable without a node', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(snapshotWith()));
 
       await tester.tap(find.text('Send'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Sending is not available yet'), findsOneWidget);
+      expect(find.text("The node isn't reachable"), findsOneWidget);
+    });
+
+    testWidgets('send explains why it is unavailable before the first block', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(snapshotWith(wallet: '')));
+
+      await tester.tap(find.text('Send'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No wallet address yet'), findsOneWidget);
     });
 
     testWidgets('an empty block list explains what fills it', (tester) async {

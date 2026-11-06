@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../l10n/l10n.dart';
 import '../models/bridge.dart';
+import '../services/bridge_api.dart';
+import '../services/cen_wallet.dart';
+import '../services/keystore.dart';
 import '../services/mining_readout.dart';
 import '../theme/layout.dart';
 import '../theme/palette.dart';
@@ -11,31 +14,59 @@ import '../widgets/cen_ui.dart';
 
 /// Wallet.
 ///
-/// What this screen can show honestly comes from two places: the address the
-/// bridge is mining to, and the blocks the bridge has accepted. It cannot show
-/// a balance, because the bridge reports mining results rather than account
-/// balances, and it cannot send, because that needs a node connection and the
-/// signing key. Both gaps are stated on the screen instead of filled with a
-/// number.
-class WalletScreen extends StatelessWidget {
+/// Shows the address the bridge mines to, the balance the bridge reports for
+/// it, and the blocks the bridge has accepted. Sending is available on
+/// Android, Windows, and Linux: the app derives the key from the locally
+/// stored recovery words and hands it to the bridge for one signed transfer,
+/// which the bridge broadcasts to the node.
+class WalletScreen extends StatefulWidget {
   const WalletScreen({
     super.key,
     required this.snapshot,
     required this.networkLabel,
     required this.onBackup,
     required this.onOpenActivity,
+    this.api,
+    this.keystore,
+    this.network = CenNetwork.simnet,
   });
 
   final MinerSnapshot snapshot;
   final String networkLabel;
 
+  /// Client used to query the account balance and send transactions. Null
+  /// while settings are still loading or the bridge is unreachable, in which
+  /// case the balance card keeps showing "unknown" and sending is disabled.
+  final BridgeApi? api;
+
+  /// Locally stored wallet. Null when none is configured yet.
+  final Keystore? keystore;
+
+  /// Which network the local key belongs to (the UI reads it from settings).
+  final CenNetwork network;
+
   /// Opens the backup flow for the locally generated key.
   final VoidCallback onBackup;
   final VoidCallback onOpenActivity;
 
-  String? get _address => snapshot.stats?.internalCpu?.wallet;
+  @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
 
-  List<BlockInfo> get _blocks => snapshot.stats?.blocks ?? const [];
+class _WalletScreenState extends State<WalletScreen> {
+  /// Bumped after a successful send so the balance card re-fetches. A new key
+  /// recreates the card's state and re-runs its initial balance query.
+  int _balanceEpoch = 0;
+
+  /// The address the bridge is mining to, or null when none exists yet. An
+  /// empty string is treated as "no address": the bridge reports an empty
+  /// wallet slot until its first accepted block.
+  String? get _address {
+    final wallet = widget.snapshot.stats?.internalCpu?.wallet;
+    return (wallet == null || wallet.isEmpty) ? null : wallet;
+  }
+
+  List<BlockInfo> get _blocks => widget.snapshot.stats?.blocks ?? const [];
 
   @override
   Widget build(BuildContext context) {
@@ -50,17 +81,28 @@ class WalletScreen extends StatelessWidget {
         children: [
           const SizedBox(height: Palette.sm),
           _Header(
-            networkLabel: networkLabel,
-            connected: snapshot.stats != null,
+            networkLabel: widget.networkLabel,
+            connected: widget.snapshot.stats != null,
           ),
           const SizedBox(height: Palette.lg),
-          _BalanceCard(hasAddress: address != null),
+          _BalanceCard(
+            key: ValueKey('balance-$_balanceEpoch'),
+            address: address,
+            api: widget.api,
+          ),
           const SizedBox(height: Palette.lg),
           if (address != null) ...[
             _AddressCard(address: address),
             const SizedBox(height: Palette.lg),
           ],
-          _Actions(address: address, onBackup: onBackup),
+          _Actions(
+            address: address,
+            api: widget.api,
+            keystore: widget.keystore,
+            network: widget.network,
+            onBackup: widget.onBackup,
+            onSent: () => setState(() => _balanceEpoch++),
+          ),
           const SizedBox(height: Palette.xl),
           Row(
             children: [
@@ -68,7 +110,7 @@ class WalletScreen extends StatelessWidget {
               const Spacer(),
               if (blocks.isNotEmpty)
                 TextButton(
-                  onPressed: onOpenActivity,
+                  onPressed: widget.onOpenActivity,
                   style: TextButton.styleFrom(
                     padding: EdgeInsets.zero,
                     minimumSize: Size.zero,
@@ -129,15 +171,57 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Balance is unknown, and the card says so rather than showing a zero.
-class _BalanceCard extends StatelessWidget {
-  const _BalanceCard({required this.hasAddress});
+/// Fetches the account balance from the bridge and shows it. A real zero is
+/// shown as `0`; the em-dash only appears when there is no address or the node
+/// can't be reached, so "unknown" is never rendered as a false zero.
+class _BalanceCard extends StatefulWidget {
+  const _BalanceCard({super.key, required this.address, required this.api});
 
-  final bool hasAddress;
+  final String? address;
+  final BridgeApi? api;
+
+  @override
+  State<_BalanceCard> createState() => _BalanceCardState();
+}
+
+class _BalanceCardState extends State<_BalanceCard> {
+  AccountBalance? _balance;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BalanceCard old) {
+    super.didUpdateWidget(old);
+    if (old.address != widget.address || old.api != widget.api) {
+      _balance = null;
+      _refresh();
+    }
+  }
+
+  Future<void> _refresh() async {
+    final address = widget.address;
+    final api = widget.api;
+    if (address == null || address.isEmpty || api == null) return;
+    AccountBalance? result;
+    try {
+      result = await api.fetchBalance(address);
+    } on Object {
+      result = null;
+    }
+    if (!mounted) return;
+    setState(() => _balance = result);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
+    final balance = _balance;
+    final needsNote = balance == null;
+
     // The cream balance card from the concept: the light mass carries the
     // dark figure, which is the opposite of every other panel here and is
     // what makes the balance the first thing the eye lands on.
@@ -161,14 +245,18 @@ class _BalanceCard extends StatelessWidget {
           ),
           const SizedBox(height: Palette.sm),
           Text(
-            '—',
+            balance?.formattedCen ?? '—',
             style: TypeScale.hero(context).copyWith(color: Palette.creamInk),
           ),
-          const SizedBox(height: Palette.sm),
-          Text(
-            l10n.walletNoBalanceNote,
-            style: TypeScale.caption(context).copyWith(color: Palette.creamInkDim),
-          ),
+          if (needsNote) ...[
+            const SizedBox(height: Palette.sm),
+            Text(
+              l10n.walletNoBalanceNote,
+              style: TypeScale.caption(
+                context,
+              ).copyWith(color: Palette.creamInkDim),
+            ),
+          ],
         ],
       ),
     );
@@ -219,10 +307,21 @@ class _AddressCard extends StatelessWidget {
 }
 
 class _Actions extends StatelessWidget {
-  const _Actions({required this.address, required this.onBackup});
+  const _Actions({
+    required this.address,
+    required this.api,
+    required this.keystore,
+    required this.network,
+    required this.onBackup,
+    required this.onSent,
+  });
 
   final String? address;
+  final BridgeApi? api;
+  final Keystore? keystore;
+  final CenNetwork network;
   final VoidCallback onBackup;
+  final VoidCallback onSent;
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +337,14 @@ class _Actions extends StatelessWidget {
                 label: l10n.walletSend,
                 icon: Icons.north_east,
                 primary: true,
-                onTap: () => _showSendUnavailable(context),
+                onTap: () => _showSendOrReason(
+                  context,
+                  address: address,
+                  api: api,
+                  keystore: keystore,
+                  network: network,
+                  onSent: onSent,
+                ),
               ),
             ),
             const SizedBox(width: Palette.sm),
@@ -377,27 +483,362 @@ void _showReceiveSheet(BuildContext context, String address) {
   );
 }
 
-void _showSendUnavailable(BuildContext context) {
+void _showSendOrReason(
+  BuildContext context, {
+  required String? address,
+  required BridgeApi? api,
+  required Keystore? keystore,
+  required CenNetwork network,
+  required VoidCallback onSent,
+}) {
   final l10n = l10nOf(context);
-  showDialog<void>(
+  final String? reasonTitle;
+  final String? reasonBody;
+  if (address == null) {
+    reasonTitle = l10n.walletSendNoAddress;
+    reasonBody = l10n.walletSendNoAddressBody;
+  } else if (api == null) {
+    reasonTitle = l10n.walletSendNodeDown;
+    reasonBody = l10n.walletSendNodeDownBody;
+  } else {
+    reasonTitle = null;
+    reasonBody = null;
+  }
+
+  if (reasonTitle != null) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(reasonTitle!, style: TypeScale.headline(context)),
+        content: Text(reasonBody ?? '', style: TypeScale.label(context)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.commonClose),
+          ),
+        ],
+      ),
+    );
+    return;
+  }
+
+  _showSendSheet(
+    context,
+    from: address!,
+    api: api!,
+    keystore: keystore,
+    network: network,
+    onSent: onSent,
+  );
+}
+
+void _showSendSheet(
+  BuildContext context, {
+  required String from,
+  required BridgeApi api,
+  required Keystore? keystore,
+  required CenNetwork network,
+  required VoidCallback onSent,
+}) {
+  showModalBottomSheet<void>(
     context: context,
-    builder: (_) => AlertDialog(
-      title: Text(
-        l10n.walletSendUnavailable,
-        style: TypeScale.headline(context),
-      ),
-      content: Text(
-        l10n.walletSendBody,
-        style: TypeScale.label(context),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.commonClose),
-        ),
-      ],
+    isScrollControlled: true,
+    builder: (_) => _SendSheet(
+      from: from,
+      api: api,
+      keystore: keystore,
+      network: network,
+      onSent: onSent,
     ),
   );
+}
+
+/// The send form: recipient, amount, and the fixed network fee.
+///
+/// Signing happens inside the bridge. The app reads the locally stored
+/// recovery words, derives the key, and hands it over per-request, so the key
+/// exists on the device only in the form of those words and is never logged.
+class _SendSheet extends StatefulWidget {
+  const _SendSheet({
+    required this.from,
+    required this.api,
+    required this.keystore,
+    required this.network,
+    required this.onSent,
+  });
+
+  final String from;
+  final BridgeApi api;
+  final Keystore? keystore;
+  final CenNetwork network;
+  final VoidCallback onSent;
+
+  @override
+  State<_SendSheet> createState() => _SendSheetState();
+}
+
+class _SendSheetState extends State<_SendSheet> {
+  static const int _pradhaPerCen = 100000000;
+
+  /// Fixed fee, matching the proven `--fee` default in `tx_e2e`: 0.01 CEN.
+  static const int feePradha = 1000000;
+  static const String _feeDisplay = '0.01 CEN';
+
+  /// Highest spendable value (i64 max). The chain's u64 range is wider, but a
+  /// real amount cannot approach either bound: total supply is 34.5M CEN.
+  static final BigInt _maxPradha = BigInt.from(0x7FFFFFFFFFFFFFFF);
+
+  late final Keystore _keystore = widget.keystore ?? Keystore();
+
+  final _toController = TextEditingController();
+  final _amountController = TextEditingController();
+
+  bool _busy = false;
+  String? _error;
+  String? _txid;
+
+  @override
+  void dispose() {
+    _toController.dispose();
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  /// Parses a decimal CEN amount into pradha with integer math, so values stay
+  /// exact past 2^53. Null when the input is not a positive decimal with at
+  /// most eight fractional digits (a fraction of a pradha cannot be sent).
+  int? _amountToPradha() {
+    final trimmed = _amountController.text.trim();
+    final match = RegExp(r'^(\d+)(?:\.(\d{0,8}))?$').firstMatch(trimmed);
+    if (match == null) return null;
+    final whole = BigInt.parse(match.group(1)!);
+    final fracDigits = match.group(2) ?? '';
+    final frac = fracDigits.isEmpty
+        ? BigInt.zero
+        : BigInt.parse(fracDigits.padRight(8, '0'));
+    final total = whole * BigInt.from(_pradhaPerCen) + frac;
+    if (total <= BigInt.zero || total > _maxPradha) return null;
+    return total.toInt();
+  }
+
+  Future<void> _submit() async {
+    final l10n = l10nOf(context);
+    final to = _toController.text.trim();
+    final amountPradha = _amountToPradha();
+
+    if (to.isEmpty) {
+      setState(() => _error = l10n.walletSendNeedRecipient);
+      return;
+    }
+    if (amountPradha == null) {
+      setState(() => _error = l10n.walletSendInvalidAmount);
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      final phrase = await _keystore.readPhrase();
+      if (phrase == null) {
+        if (mounted) setState(() => _error = l10n.walletSendNoKey);
+        return;
+      }
+      final wallet = CenWallet.fromMnemonic(
+        Mnemonic.fromPhrase(phrase),
+        widget.network,
+      );
+      if (wallet.address != widget.from) {
+        if (mounted) setState(() => _error = l10n.walletSendKeyMismatch);
+        return;
+      }
+      final result = await widget.api.sendCoins(
+        from: widget.from,
+        to: to,
+        amountPradha: amountPradha,
+        feePradha: feePradha,
+        privateKeyHex: wallet.privateKeyHex,
+      );
+      if (!mounted) return;
+      if (result.ok) {
+        setState(() => _txid = result.txid);
+        widget.onSent();
+      } else {
+        setState(() => _error = result.error ?? l10n.walletSendFailed);
+      }
+    } on Object catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  InputDecoration _field(BuildContext context, {required String hint, String? suffix}) {
+    return InputDecoration(
+      hintText: hint,
+      suffixText: suffix,
+      filled: true,
+      fillColor: Palette.field,
+      hintStyle: TypeScale.monoMuted(context, size: 12),
+      suffixStyle: TypeScale.monoMuted(context, size: 12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(Palette.rowRadius),
+        borderSide: const BorderSide(color: Palette.surfaceHigh),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(Palette.rowRadius),
+        borderSide: const BorderSide(color: Palette.goldLight),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: Palette.xl,
+          right: Palette.xl,
+          top: Palette.xl,
+          bottom: MediaQuery.of(context).viewInsets.bottom + Palette.xl,
+        ),
+        child: _txid == null ? _buildForm(l10n) : _buildSuccess(l10n),
+      ),
+    );
+  }
+
+  Widget _buildForm(AppLocalizations l10n) {
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.walletSendTitle, style: TypeScale.screenTitle(context)),
+          const SizedBox(height: Palette.sm),
+          Text(
+            widget.from,
+            style: TypeScale.monoMuted(context, size: 10),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: Palette.lg),
+          Eyebrow(l10n.walletSendRecipient),
+          const SizedBox(height: Palette.sm),
+          TextField(
+            controller: _toController,
+            autocorrect: false,
+            enableSuggestions: false,
+            textInputAction: TextInputAction.next,
+            style: TypeScale.mono(context, size: 13).copyWith(
+              color: Palette.cream,
+            ),
+            decoration: _field(context, hint: '${widget.network.prefix}:…'),
+          ),
+          const SizedBox(height: Palette.lg),
+          Eyebrow(l10n.walletSendAmount),
+          const SizedBox(height: Palette.sm),
+          TextField(
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: TypeScale.hero(context).copyWith(color: Palette.cream),
+            decoration: _field(context, hint: '0.00', suffix: 'CEN'),
+          ),
+          const SizedBox(height: Palette.lg),
+          Row(
+            children: [
+              Text(l10n.walletSendFee, style: TypeScale.label(context)),
+              const Spacer(),
+              Text(
+                _feeDisplay,
+                style: TypeScale.mono(
+                  context,
+                  size: 12,
+                ).copyWith(color: Palette.goldLight),
+              ),
+            ],
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: Palette.md),
+            Text(
+              _error!,
+              style: TypeScale.caption(context).copyWith(color: Palette.red),
+            ),
+          ],
+          const SizedBox(height: Palette.xl),
+          GoldButton(
+            label: _busy ? l10n.walletSendSending : l10n.walletSendConfirm,
+            icon: Icons.north_east,
+            onPressed: _busy ? null : _submit,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuccess(AppLocalizations l10n) {
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Column(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Palette.green.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    size: 30,
+                    color: Palette.greenDim,
+                  ),
+                ),
+                const SizedBox(height: Palette.md),
+                Text(l10n.walletSendSuccess, style: TypeScale.screenTitle(context)),
+                const SizedBox(height: Palette.sm),
+                Text(
+                  l10n.walletSendSuccessBody,
+                  textAlign: TextAlign.center,
+                  style: TypeScale.label(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Palette.xl),
+          Eyebrow(l10n.walletSendTxId),
+          const SizedBox(height: Palette.sm),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(Palette.md),
+            decoration: BoxDecoration(
+              color: Palette.surfaceHigh,
+              borderRadius: BorderRadius.circular(Palette.rowRadius),
+            ),
+            child: SelectableText(
+              _txid!,
+              style: TypeScale.mono(
+                context,
+                size: 10,
+              ).copyWith(color: Palette.goldLight),
+            ),
+          ),
+          const SizedBox(height: Palette.xl),
+          GoldButton(
+            label: l10n.commonDone,
+            icon: Icons.check,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Receive sheet: the address, long enough to be read and copied in full.
@@ -460,8 +901,8 @@ class _ReceiveSheet extends StatelessWidget {
 /// The block subsidy in CEN.
 ///
 /// Taken from consensus/core/src/config/bps.rs:
-/// `pre_deflationary_phase_base_subsidy() = 50000000000 / BPS` sompi, with
-/// BPS = 10, and 1 CEN = 100000000 sompi. That gives 50 CEN per block.
+/// `pre_deflationary_phase_base_subsidy() = 50000000000 / BPS` pradha, with
+/// BPS = 10, and 1 CEN = 100000000 pradha. That gives 50 CEN per block.
 ///
 /// This is the pre-deflationary value. The subsidy halves every six months,
 /// so once the network passes its first halving this figure is stale. It is

@@ -148,7 +148,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletNoBalanceNote =>
-      'The bridge reports mining results, not account balances. A direct node connection is needed to read the balance of an address.';
+      'Balance appears once the bridge is connected to a synced node.';
 
   @override
   String get walletMiningAddress => 'Mining address';
@@ -179,18 +179,71 @@ class AppLocalizationsEn extends AppLocalizations {
       'Swapping CEN for another asset needs a market to swap against. CEN is not listed on any exchange or decentralised venue yet, so there is nothing to swap with.';
 
   @override
-  String get walletSendUnavailable => 'Sending is not available yet';
-
-  @override
-  String get walletSendBody =>
-      'Moving coins needs two things this build does not have: a node that can broadcast a transaction, and the signing key held on this device. Both are planned. Until then the address can be copied and used from the Celenium wallet CLI.';
-
-  @override
   String get walletReceiveNote =>
       'Anyone with this address can send coins to it. It is safe to share.';
 
   @override
   String get walletMiningReward => 'Mining reward';
+
+  @override
+  String get walletSendTitle => 'Send CEN';
+
+  @override
+  String get walletSendRecipient => 'Recipient address';
+
+  @override
+  String get walletSendAmount => 'Amount';
+
+  @override
+  String get walletSendFee => 'Network fee';
+
+  @override
+  String get walletSendConfirm => 'Send';
+
+  @override
+  String get walletSendSending => 'Sending…';
+
+  @override
+  String get walletSendNeedRecipient => 'Enter a recipient address.';
+
+  @override
+  String get walletSendInvalidAmount =>
+      'Enter a valid amount (up to 8 decimal places).';
+
+  @override
+  String get walletSendNoKey =>
+      'No recovery words on this device. Back them up first.';
+
+  @override
+  String get walletSendKeyMismatch =>
+      'This device\'s recovery words do not own the mining address. Import the matching words first.';
+
+  @override
+  String get walletSendFailed => 'The node rejected the transfer.';
+
+  @override
+  String get walletSendSuccess => 'Transfer sent';
+
+  @override
+  String get walletSendSuccessBody =>
+      'The transaction is now in the mempool and lands on-chain once a block includes it.';
+
+  @override
+  String get walletSendTxId => 'Transaction id';
+
+  @override
+  String get walletSendNoAddress => 'No wallet address yet';
+
+  @override
+  String get walletSendNoAddressBody =>
+      'The address appears once the bridge mines its first block. Until then there is nothing to send from.';
+
+  @override
+  String get walletSendNodeDown => 'The node isn\'t reachable';
+
+  @override
+  String get walletSendNodeDownBody =>
+      'The wallet reaches your node through the bridge. Open the Miner tab and connect a node first.';
 
   @override
   String get backupTitle => 'RECOVERY';

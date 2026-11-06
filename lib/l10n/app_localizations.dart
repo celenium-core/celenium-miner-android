@@ -359,7 +359,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletNoBalanceNote.
   ///
   /// In en, this message translates to:
-  /// **'The bridge reports mining results, not account balances. A direct node connection is needed to read the balance of an address.'**
+  /// **'Balance appears once the bridge is connected to a synced node.'**
   String get walletNoBalanceNote;
 
   /// No description provided for @walletMiningAddress.
@@ -416,18 +416,6 @@ abstract class AppLocalizations {
   /// **'Swapping CEN for another asset needs a market to swap against. CEN is not listed on any exchange or decentralised venue yet, so there is nothing to swap with.'**
   String get walletSwapBody;
 
-  /// No description provided for @walletSendUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Sending is not available yet'**
-  String get walletSendUnavailable;
-
-  /// No description provided for @walletSendBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Moving coins needs two things this build does not have: a node that can broadcast a transaction, and the signing key held on this device. Both are planned. Until then the address can be copied and used from the Celenium wallet CLI.'**
-  String get walletSendBody;
-
   /// No description provided for @walletReceiveNote.
   ///
   /// In en, this message translates to:
@@ -439,6 +427,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mining reward'**
   String get walletMiningReward;
+
+  /// No description provided for @walletSendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send CEN'**
+  String get walletSendTitle;
+
+  /// No description provided for @walletSendRecipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipient address'**
+  String get walletSendRecipient;
+
+  /// No description provided for @walletSendAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get walletSendAmount;
+
+  /// No description provided for @walletSendFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fee'**
+  String get walletSendFee;
+
+  /// No description provided for @walletSendConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get walletSendConfirm;
+
+  /// No description provided for @walletSendSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get walletSendSending;
+
+  /// No description provided for @walletSendNeedRecipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a recipient address.'**
+  String get walletSendNeedRecipient;
+
+  /// No description provided for @walletSendInvalidAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid amount (up to 8 decimal places).'**
+  String get walletSendInvalidAmount;
+
+  /// No description provided for @walletSendNoKey.
+  ///
+  /// In en, this message translates to:
+  /// **'No recovery words on this device. Back them up first.'**
+  String get walletSendNoKey;
+
+  /// No description provided for @walletSendKeyMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'This device\'s recovery words do not own the mining address. Import the matching words first.'**
+  String get walletSendKeyMismatch;
+
+  /// No description provided for @walletSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The node rejected the transfer.'**
+  String get walletSendFailed;
+
+  /// No description provided for @walletSendSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer sent'**
+  String get walletSendSuccess;
+
+  /// No description provided for @walletSendSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The transaction is now in the mempool and lands on-chain once a block includes it.'**
+  String get walletSendSuccessBody;
+
+  /// No description provided for @walletSendTxId.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction id'**
+  String get walletSendTxId;
+
+  /// No description provided for @walletSendNoAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet address yet'**
+  String get walletSendNoAddress;
+
+  /// No description provided for @walletSendNoAddressBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The address appears once the bridge mines its first block. Until then there is nothing to send from.'**
+  String get walletSendNoAddressBody;
+
+  /// No description provided for @walletSendNodeDown.
+  ///
+  /// In en, this message translates to:
+  /// **'The node isn\'t reachable'**
+  String get walletSendNodeDown;
+
+  /// No description provided for @walletSendNodeDownBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The wallet reaches your node through the bridge. Open the Miner tab and connect a node first.'**
+  String get walletSendNodeDownBody;
 
   /// No description provided for @backupTitle.
   ///

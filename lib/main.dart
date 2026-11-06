@@ -621,6 +621,7 @@ class _MinerHomeState extends State<MinerHome> {
         return WalletScreen(
           snapshot: snapshot,
           networkLabel: 'simnet',
+          api: _api,
           onBackup: () => _open(_Route.backup),
           onOpenActivity: () => _open(_Route.activity),
         );

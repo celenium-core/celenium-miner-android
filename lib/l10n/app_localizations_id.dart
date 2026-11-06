@@ -148,7 +148,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get walletNoBalanceNote =>
-      'Bridge melaporkan hasil mining, bukan saldo akun. Untuk membaca saldo sebuah alamat, aplikasi perlu terhubung langsung ke node.';
+      'Saldo muncul setelah bridge terhubung ke node yang tersinkron.';
 
   @override
   String get walletMiningAddress => 'Alamat mining';
@@ -179,18 +179,71 @@ class AppLocalizationsId extends AppLocalizations {
       'Menukar CEN dengan aset lain butuh pasar sebagai lawan tukar. CEN belum terdaftar di bursa mana pun, jadi belum ada yang bisa ditukar.';
 
   @override
-  String get walletSendUnavailable => 'Kirim belum tersedia';
-
-  @override
-  String get walletSendBody =>
-      'Memindahkan koin butuh dua hal yang belum ada di versi ini: node yang bisa menyiarkan transaksi, dan kunci penandatangan yang disimpan di perangkat ini. Keduanya masih direncanakan. Untuk sekarang, alamatnya bisa disalin dan dipakai lewat CLI wallet Celenium.';
-
-  @override
   String get walletReceiveNote =>
       'Siapa pun yang punya alamat ini bisa mengirim koin ke sana. Aman untuk dibagikan.';
 
   @override
   String get walletMiningReward => 'Imbalan mining';
+
+  @override
+  String get walletSendTitle => 'Kirim CEN';
+
+  @override
+  String get walletSendRecipient => 'Alamat tujuan';
+
+  @override
+  String get walletSendAmount => 'Jumlah';
+
+  @override
+  String get walletSendFee => 'Biaya jaringan';
+
+  @override
+  String get walletSendConfirm => 'Kirim';
+
+  @override
+  String get walletSendSending => 'Mengirim…';
+
+  @override
+  String get walletSendNeedRecipient => 'Masukkan alamat tujuan.';
+
+  @override
+  String get walletSendInvalidAmount =>
+      'Masukkan jumlah yang valid (maksimal 8 angka desimal).';
+
+  @override
+  String get walletSendNoKey =>
+      'Belum ada kata pemulihan di perangkat ini. Buat cadangannya dulu.';
+
+  @override
+  String get walletSendKeyMismatch =>
+      'Kata pemulihan di perangkat ini bukan pemilik alamat mining tersebut. Impor kata yang sesuai dulu.';
+
+  @override
+  String get walletSendFailed => 'Node menolak transaksi ini.';
+
+  @override
+  String get walletSendSuccess => 'Transaksi terkirim';
+
+  @override
+  String get walletSendSuccessBody =>
+      'Transaksi kini di mempool dan masuk ke chain begitu ada blok yang memuatnya.';
+
+  @override
+  String get walletSendTxId => 'ID transaksi';
+
+  @override
+  String get walletSendNoAddress => 'Belum ada alamat wallet';
+
+  @override
+  String get walletSendNoAddressBody =>
+      'Alamat muncul setelah bridge menambang blok pertama. Sebelum itu belum ada yang bisa dikirim.';
+
+  @override
+  String get walletSendNodeDown => 'Node tidak terjangkau';
+
+  @override
+  String get walletSendNodeDownBody =>
+      'Wallet terhubung ke node lewat bridge. Buka tab Miner dan sambungkan node dulu.';
 
   @override
   String get backupTitle => 'PEMULIHAN';

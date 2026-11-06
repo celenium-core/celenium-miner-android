@@ -31,3 +31,8 @@
 /cen_*.png
 /navbar_fix_*.png
 /preview_desktop.png
+
+# Desktop platform scaffolding from `flutter create`/`build` — this repo is
+# android-only; the desktop app lives in celenium-miner-desktop.
+/linux/
+/windows/
