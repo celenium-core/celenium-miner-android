@@ -414,6 +414,77 @@ class GhostButton extends StatelessWidget {
   }
 }
 
+/// Solid neon-yellow capsule with a soft glow: the "protect your key" backup
+/// action. It sits outside the blue primary family so the one thing the user
+/// must do for themselves cannot be mistaken for a run-of-the-mill flow step.
+class NeonButton extends StatelessWidget {
+  const NeonButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.expand = true,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool expand;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Row(
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 17, color: Palette.field),
+          const SizedBox(width: Palette.sm),
+        ],
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: TypeScale.bodyFamily,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.4,
+            color: Palette.field,
+          ),
+        ),
+      ],
+    );
+
+    final button = FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: Palette.neon,
+        foregroundColor: Palette.field,
+        disabledBackgroundColor: Palette.surfaceHigh,
+        disabledForegroundColor: Palette.slate,
+        minimumSize: Size(expand ? double.infinity : 0, 48),
+        padding: const EdgeInsets.symmetric(horizontal: Palette.lg),
+      ),
+      child: child,
+    );
+
+    // The neon reads as a lit sign: a soft pool of the same colour sat just
+    // behind the capsule, not a hard drop shadow.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Palette.pill),
+        boxShadow: [
+          BoxShadow(
+            color: Palette.neon.withValues(alpha: 0.28),
+            blurRadius: 18,
+            spreadRadius: -4,
+          ),
+        ],
+      ),
+      child: expand ? button : Center(child: button),
+    );
+  }
+}
+
 /// A row in the profile settings list: tinted icon square, label, trailing.
 class SettingRow extends StatelessWidget {
   const SettingRow({

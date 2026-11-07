@@ -85,6 +85,7 @@ http.Client _connectedBridge() {
             'networkDifficulty': 8.00,
             'networkBlockCount': 4,
             'activeWorkers': 1,
+            'miningEnabled': true,
             'internalCpu': {
               'hashrateGhs': 1.42,
               'hashesTried': 12983210,
@@ -137,6 +138,7 @@ void main() {
     _phoneViewport(tester);
 
     await tester.pumpWidget(_host(client: _connectedBridge()));
+    await precacheMarkImages(tester);
     await _enterShell(tester);
 
     await expectLater(
@@ -151,6 +153,7 @@ void main() {
     _phoneViewport(tester);
 
     await tester.pumpWidget(_host());
+    await precacheMarkImages(tester);
     await _enterShell(tester);
 
     await expectLater(

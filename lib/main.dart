@@ -438,6 +438,32 @@ class _MinerHomeState extends State<MinerHome> {
     }
   }
 
+  /// Flips the bridge's runtime mining switch and reflects the state the bridge
+  /// actually applied, so the dial and its glow match reality rather than the
+  /// caller's wish. Any drift is reconciled by the next scheduled poll.
+  Future<void> _setMining(bool enabled) async {
+    final api = _api;
+    if (api == null) return;
+    try {
+      final control = await api.setMining(enabled);
+      if (!mounted) return;
+      setState(() {
+        _snapshot = _snapshot?.withMiningEnabled(control.enabled);
+        _pushLog([
+          LogEntry(
+            time: _clock,
+            message: control.enabled
+                ? l10nOf(context).logMinerStarted
+                : l10nOf(context).logMinerStopped,
+          ),
+        ]);
+      });
+    } on Object {
+      // The toggle did not stick. Leave the state untouched; the poll log will
+      // note the failure on its own terms.
+    }
+  }
+
   void _pushLog(List<LogEntry> entries) {
     if (entries.isEmpty) return;
     _log.insertAll(0, entries);
@@ -615,11 +641,11 @@ class _MinerHomeState extends State<MinerHome> {
           onOpenWorkers: () => _open(_Route.workers),
           onOpenActivity: () => _open(_Route.activity),
           onConnectNode: () => _open(_Route.bridge),
+          onSetMining: _setMining,
         );
       case _Tab.wallet:
         return WalletScreen(
           snapshot: snapshot,
-          networkLabel: 'simnet',
           api: _api,
           onBackup: () => _open(_Route.backup),
           onOpenActivity: () => _open(_Route.activity),
@@ -627,7 +653,6 @@ class _MinerHomeState extends State<MinerHome> {
       case _Tab.profile:
         return ProfileScreen(
           snapshot: snapshot,
-          networkLabel: 'simnet',
           language: widget.language,
           onLanguageChanged: widget.onLanguageChanged,
           onOpenBridge: () => _open(_Route.bridge),
@@ -1057,7 +1082,7 @@ class _AboutScreen extends StatelessWidget {
                   Eyebrow(l10n.aboutVersion),
                   const SizedBox(height: Palette.sm),
                   const Text(
-                    '1.0.2',
+                    '1.0.3',
                     style: TextStyle(
                       fontFamily: TypeScale.monoFamily,
                       fontSize: 12,

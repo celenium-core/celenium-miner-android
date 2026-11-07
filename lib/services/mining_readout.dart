@@ -19,6 +19,8 @@ class MiningReadout {
     this.latestBlockTime,
     this.bridgeUptime,
     this.active = false,
+    this.miningEnabled = false,
+    this.miningAvailable = false,
   });
 
   /// Live hashrate in GH/s.
@@ -48,6 +50,12 @@ class MiningReadout {
 
   /// True when the bridge reports a worker actually hashing.
   final bool active;
+
+  /// Whether the bridge's internal miner is switched on right now.
+  final bool miningEnabled;
+
+  /// Whether the bridge exposes a start/stop control at all.
+  final bool miningAvailable;
 
   static const MiningReadout empty = MiningReadout(active: false);
 
@@ -99,6 +107,8 @@ class MiningReadout {
       latestBlockTime: latest?.timestamp,
       bridgeUptime: stats.bridgeUptime,
       active: active,
+      miningEnabled: snapshot.miningEnabled,
+      miningAvailable: snapshot.miningAvailable,
     );
   }
 }

@@ -37,6 +37,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get commonCopy => 'Salin';
 
   @override
+  String get commonGotIt => 'Mengerti';
+
+  @override
   String get commonToday => 'HARI INI';
 
   @override
@@ -90,6 +93,15 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get mineTapWorkers => '[ TAP UNTUK WORKER ]';
+
+  @override
+  String get mineMiningOn => 'MINING AKTIF';
+
+  @override
+  String get mineMiningOff => 'MINING BERHENTI';
+
+  @override
+  String get mineToggleSemantics => 'Mulai atau hentikan mining';
 
   @override
   String get mineWaitingShare => '> menunggu share pertama';
@@ -160,6 +172,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get walletCopyAddress => 'Salin alamat';
 
   @override
+  String get walletShowAddress => 'Tampilkan alamat';
+
+  @override
+  String get walletHideAddress => 'Sembunyikan alamat';
+
+  @override
   String get walletSend => 'Kirim';
 
   @override
@@ -172,11 +190,14 @@ class AppLocalizationsId extends AppLocalizations {
   String get walletBackupWords => 'Cadangkan kata pemulihan';
 
   @override
+  String get walletSwapSoon => 'SEGERA HADIR';
+
+  @override
   String get walletSwapUnavailable => 'Tukar belum tersedia';
 
   @override
   String get walletSwapBody =>
-      'Menukar CEN dengan aset lain butuh pasar sebagai lawan tukar. CEN belum terdaftar di bursa mana pun, jadi belum ada yang bisa ditukar.';
+      'CEN belum terdaftar di bursa mana pun, jadi belum ada yang bisa ditukar.';
 
   @override
   String get walletReceiveNote =>

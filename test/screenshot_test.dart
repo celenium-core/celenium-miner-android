@@ -27,6 +27,7 @@ MinerSnapshot snapshotWith({String wallet = 'cen69sim:qabc'}) {
       'networkDifficulty': 1234567.5,
       'networkBlockCount': 1920,
       'activeWorkers': 1,
+      'miningEnabled': true,
       'internalCpu': {
         'hashrateGhs': 1.42,
         'hashesTried': 900000000,
@@ -170,6 +171,7 @@ Future<void> _pumpDesktop(WidgetTester tester, MinerSnapshot snapshot) async {
   tester.view.devicePixelRatio = 2.0;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(_host(snapshot));
+  await precacheMarkImages(tester);
   // A handful of frames lets entrance transitions settle; repeating live
   // indicators mean pumpAndSettle never returns.
   for (var i = 0; i < 6; i++) {

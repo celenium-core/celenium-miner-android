@@ -63,6 +63,7 @@ void main() {
     _phoneViewport(tester);
 
     await tester.pumpWidget(_host(const Locale('id')));
+    await precacheMarkImages(tester);
     await _settle(tester, frames: 32);
     await expectLater(
       _screen,
@@ -79,6 +80,7 @@ void main() {
     _phoneViewport(tester);
 
     await tester.pumpWidget(_host(const Locale('id')));
+    await precacheMarkImages(tester);
     await _enterShell(tester, 'MASUK');
     await _openProfile(tester, 'PROFIL');
 
@@ -103,6 +105,7 @@ void main() {
     await tester.pumpWidget(
       _host(const Locale('en'), language: AppLanguage.english),
     );
+    await precacheMarkImages(tester);
     await _enterShell(tester, 'ENTER');
     await _openProfile(tester, 'PROFILE');
 

@@ -3,14 +3,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/palette.dart';
-import '../widgets/brand_mark.dart';
 
-/// The mining dial.
+/// The mining dial: only the instrument face (ticks and the acceptance ring).
 ///
 /// The ring is a real reading: the fraction of submitted shares the network
 /// accepted, drawn as segments that fill clockwise. When no shares have been
 /// submitted the ring stays empty rather than showing a decorative fill, so
 /// the dial never claims work that has not happened.
+///
+/// The centre is left empty for the caller: the mining screen drops its own
+/// start/stop logo button there.
 class MiningDial extends StatelessWidget {
   const MiningDial({
     super.key,
@@ -35,17 +37,6 @@ class MiningDial extends StatelessWidget {
       dimension: size,
       child: CustomPaint(
         painter: _DialPainter(rate: rate, active: active, segments: segments),
-        child: Center(
-          child: Container(
-            width: size * 0.46,
-            height: size * 0.46,
-            decoration: const BoxDecoration(
-              color: Palette.cream,
-              shape: BoxShape.circle,
-            ),
-            child: Center(child: BrandMark(size: size * 0.30, onDark: false)),
-          ),
-        ),
       ),
     );
   }

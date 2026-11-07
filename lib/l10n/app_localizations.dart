@@ -152,6 +152,12 @@ abstract class AppLocalizations {
   /// **'Copy'**
   String get commonCopy;
 
+  /// No description provided for @commonGotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get commonGotIt;
+
   /// No description provided for @commonToday.
   ///
   /// In en, this message translates to:
@@ -259,6 +265,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'[ TAP FOR WORKERS ]'**
   String get mineTapWorkers;
+
+  /// No description provided for @mineMiningOn.
+  ///
+  /// In en, this message translates to:
+  /// **'MINING ON'**
+  String get mineMiningOn;
+
+  /// No description provided for @mineMiningOff.
+  ///
+  /// In en, this message translates to:
+  /// **'MINING OFF'**
+  String get mineMiningOff;
+
+  /// No description provided for @mineToggleSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Start or stop mining'**
+  String get mineToggleSemantics;
 
   /// No description provided for @mineWaitingShare.
   ///
@@ -380,6 +404,18 @@ abstract class AppLocalizations {
   /// **'Copy address'**
   String get walletCopyAddress;
 
+  /// No description provided for @walletShowAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Show address'**
+  String get walletShowAddress;
+
+  /// No description provided for @walletHideAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide address'**
+  String get walletHideAddress;
+
   /// No description provided for @walletSend.
   ///
   /// In en, this message translates to:
@@ -404,6 +440,12 @@ abstract class AppLocalizations {
   /// **'Back up recovery words'**
   String get walletBackupWords;
 
+  /// No description provided for @walletSwapSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'COMING SOON'**
+  String get walletSwapSoon;
+
   /// No description provided for @walletSwapUnavailable.
   ///
   /// In en, this message translates to:
@@ -413,7 +455,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSwapBody.
   ///
   /// In en, this message translates to:
-  /// **'Swapping CEN for another asset needs a market to swap against. CEN is not listed on any exchange or decentralised venue yet, so there is nothing to swap with.'**
+  /// **'CEN isn\'t listed on any exchange yet, so there\'s nothing to swap with.'**
   String get walletSwapBody;
 
   /// No description provided for @walletReceiveNote.

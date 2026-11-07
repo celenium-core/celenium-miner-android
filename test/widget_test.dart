@@ -522,7 +522,6 @@ void main() {
           home: Scaffold(
             body: WalletScreen(
               snapshot: snapshotWith(),
-              networkLabel: 'simnet',
               onBackup: () {},
               onOpenActivity: () {},
             ),
@@ -566,7 +565,6 @@ void main() {
           home: Scaffold(
             body: WalletScreen(
               snapshot: snapshot,
-              networkLabel: 'simnet',
               api: api,
               onBackup: () {},
               onOpenActivity: () {},
@@ -643,6 +641,50 @@ void main() {
       );
 
       expect(find.textContaining('No transactions yet'), findsOneWidget);
+    });
+
+    testWidgets('the address eye blurs the card and toggles back', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(snapshotWith()));
+
+      // Revealed by default: no veil, the open-eye glyph, and the copy button
+      // is active.
+      expect(find.byType(ImageFiltered), findsNothing);
+      expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.visibility_outlined));
+      await tester.pump();
+
+      // Hidden: the eyebrow, the address and the copy button are each veiled,
+      // and the glyph flips to the closed eye. Only the eye stays crisp.
+      expect(find.byType(ImageFiltered), findsNWidgets(3));
+      expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.visibility_outlined), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.visibility_off_outlined));
+      await tester.pump();
+
+      expect(find.byType(ImageFiltered), findsNothing);
+      expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+    });
+
+    testWidgets('swap looks off but explains it is coming soon', (
+      tester,
+    ) async {
+      // Tukar has no market to trade against yet. It must stay visible but
+      // muted, and tapping it must explain in one line instead of pretending
+      // to work or silently doing nothing.
+      await tester.pumpWidget(host(snapshotWith()));
+
+      expect(find.text('Swap'), findsOneWidget);
+
+      await tester.tap(find.text('Swap'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('COMING SOON'), findsOneWidget);
+      expect(find.text('Swap is not available'), findsOneWidget);
+      expect(find.text('Got it'), findsOneWidget);
     });
   });
 
@@ -946,7 +988,6 @@ void main() {
           Scaffold(
             body: ProfileScreen(
               snapshot: snapshotWith(),
-              networkLabel: 'simnet',
               onLanguageChanged: (choice) => picked = choice,
               onOpenBridge: () {},
               onOpenWorkers: () {},

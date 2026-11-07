@@ -151,6 +151,7 @@ class BridgeStats {
   final int networkBlockCount;
   final int activeWorkers;
   final InternalCpuStats? internalCpu;
+  final bool miningEnabled;
   final List<BlockInfo> blocks;
   final List<WorkerInfo> workers;
   final int? bridgeUptime;
@@ -163,6 +164,7 @@ class BridgeStats {
     required this.networkBlockCount,
     required this.activeWorkers,
     required this.internalCpu,
+    this.miningEnabled = false,
     required this.blocks,
     required this.workers,
     this.bridgeUptime,
@@ -199,11 +201,28 @@ class BridgeStats {
       networkBlockCount: (json['networkBlockCount'] as num?)?.toInt() ?? 0,
       activeWorkers: (json['activeWorkers'] as num?)?.toInt() ?? 0,
       internalCpu: InternalCpuStats.tryParse(json['internalCpu']),
+      miningEnabled: (json['miningEnabled'] as bool?) ?? false,
       blocks: blocks,
       workers: workers,
       bridgeUptime: (json['bridgeUptime'] as num?)?.toInt(),
     );
   }
+
+  /// A copy with [miningEnabled] overridden, used to reflect a confirmed
+  /// start/stop without waiting for the next poll.
+  BridgeStats withMiningEnabled(bool enabled) => BridgeStats(
+        totalBlocks: totalBlocks,
+        totalShares: totalShares,
+        networkHashrate: networkHashrate,
+        networkDifficulty: networkDifficulty,
+        networkBlockCount: networkBlockCount,
+        activeWorkers: activeWorkers,
+        internalCpu: internalCpu,
+        miningEnabled: enabled,
+        blocks: blocks,
+        workers: workers,
+        bridgeUptime: bridgeUptime,
+      );
 }
 
 /// A snapshot of everything the app shows, fetched together.
@@ -213,8 +232,17 @@ class MinerSnapshot {
 
   const MinerSnapshot({this.status, this.stats});
 
-  /// True when the bridge reports an internal CPU miner is running.
-  bool get isMining => stats?.internalCpu != null;
+  /// True when the bridge has an internal CPU miner it can start and stop.
+  /// External ASICs (the usual wireless-pool setup) never report one, so the
+  /// start/stop control stays hidden for them.
+  bool get miningAvailable => stats?.internalCpu != null;
+
+  /// Whether mining is switched on right now: a miner exists and its runtime
+  /// toggle is not paused.
+  bool get miningEnabled => stats?.miningEnabled ?? false;
+
+  /// True when a miner is present AND switched on.
+  bool get isMining => miningAvailable && miningEnabled;
 
   /// Local hashrate in GH/s, or 0 when not mining.
   double get hashrateGhs => stats?.internalCpu?.hashrateGhs ?? 0;
@@ -224,6 +252,31 @@ class MinerSnapshot {
   int get shares => stats?.internalCpu?.shares ?? 0;
   int get stale => stats?.internalCpu?.stale ?? 0;
   int get invalid => stats?.internalCpu?.invalid ?? 0;
+
+  /// A copy with only the mining switch state changed, so a confirmed start or
+  /// stop can update the UI without discarding the rest of the snapshot.
+  MinerSnapshot withMiningEnabled(bool enabled) => MinerSnapshot(
+        status: status,
+        stats: stats?.withMiningEnabled(enabled),
+      );
+}
+
+/// `GET /api/mining` and `POST /api/mining` — the bridge's runtime mining
+/// switch. [enabled] is the switch state, [available] whether a startable
+/// internal CPU miner exists at all.
+class MiningControl {
+  final bool enabled;
+  final bool available;
+
+  const MiningControl({required this.enabled, required this.available});
+
+  static MiningControl? tryParse(Object? json) {
+    if (json is! Map<String, dynamic>) return null;
+    return MiningControl(
+      enabled: (json['enabled'] as bool?) ?? false,
+      available: (json['available'] as bool?) ?? false,
+    );
+  }
 }
 
 /// `GET /api/balance` — an account balance in pradha.

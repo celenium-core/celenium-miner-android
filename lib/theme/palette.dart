@@ -27,6 +27,12 @@ class Palette {
   static const Color goldPale = Color(0xFF1E3A8A);
   static const Color goldDim = Color(0xFF2563EB);
 
+  /// Neon yellow: the one accent outside the blue family. Reserved for the
+  /// "protect your key" backup action, so it can't be missed among the blue
+  /// primaries. Its ink is the dark canvas, matching the light-card contrast
+  /// pair rather than the usual white-on-colour.
+  static const Color neon = Color(0xFFE6FF00);
+
   // Text
   static const Color cream = Color(0xFFE6EDF7);
   static const Color creamDim = Color(0xFF9AA7BD);

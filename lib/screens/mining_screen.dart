@@ -24,6 +24,7 @@ class MiningScreen extends StatelessWidget {
     required this.onOpenWorkers,
     required this.onOpenActivity,
     required this.onConnectNode,
+    this.onSetMining,
   });
 
   final MinerSnapshot snapshot;
@@ -31,6 +32,10 @@ class MiningScreen extends StatelessWidget {
   final VoidCallback onOpenWorkers;
   final VoidCallback onOpenActivity;
   final VoidCallback onConnectNode;
+
+  /// Starts or stops mining. Null disables the control (an external ASIC
+  /// bridge has no internal miner to start or stop).
+  final ValueChanged<bool>? onSetMining;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +47,11 @@ class MiningScreen extends StatelessWidget {
       nodeAddress: nodeAddress,
       onConnectNode: onConnectNode,
     );
-    final dial = _DialBlock(readout: readout, onTap: onOpenWorkers);
+    final dial = _DialBlock(
+      readout: readout,
+      onTap: onOpenWorkers,
+      onSetMining: onSetMining,
+    );
     final stats = _StatsStrip(readout: readout);
     // A hex stream that runs only while the bridge reports hashing: the
     // motion is the app saying data is arriving right now.
@@ -311,10 +320,13 @@ class _DialCaption extends StatelessWidget {
     final latest = readout.latestBlockHash;
     return Column(
       children: [
-        // The app reads the bridge; it does not start or stop hashing, so the
-        // control here opens the worker list rather than claiming to pause.
+        // The dial centre is now the start/stop control, so the caption states
+        // the switch position. Where no internal miner exists, the old worker
+        // hint still applies (the ring opens the worker list).
         Text(
-          l10n.mineTapWorkers,
+          readout.miningAvailable
+              ? (readout.miningEnabled ? l10n.mineMiningOn : l10n.mineMiningOff)
+              : l10n.mineTapWorkers,
           style: TypeScale.monoMuted(
             context,
             size: 10,
@@ -359,10 +371,15 @@ String _uptime(int? seconds) {
 
 /// Dial plus the caption that says what tapping it does.
 class _DialBlock extends StatelessWidget {
-  const _DialBlock({required this.readout, required this.onTap});
+  const _DialBlock({
+    required this.readout,
+    required this.onTap,
+    this.onSetMining,
+  });
 
   final MiningReadout readout;
   final VoidCallback onTap;
+  final ValueChanged<bool>? onSetMining;
 
   @override
   Widget build(BuildContext context) {
@@ -372,12 +389,22 @@ class _DialBlock extends StatelessWidget {
     return Column(
       children: [
         Semantics(
-          button: true,
           label: l10n.mineAcceptanceSemantics,
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const CircleBorder(),
-            child: MiningDial(rate: rate, active: readout.active, size: 232),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              InkWell(
+                onTap: onTap,
+                customBorder: const CircleBorder(),
+                child: MiningDial(rate: rate, active: readout.active, size: 232),
+              ),
+              _MiningToggle(
+                size: 232,
+                enabled: readout.miningEnabled,
+                available: readout.miningAvailable,
+                onSetMining: onSetMining,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: Palette.lg),
@@ -396,6 +423,89 @@ class _DialBlock extends StatelessWidget {
         const SizedBox(height: Palette.md),
         _DialCaption(readout: readout, onTap: onTap),
       ],
+    );
+  }
+}
+
+/// The big logo in the dial centre, repurposed as the mining on/off button.
+///
+/// A white neon halo lifts the disc off the dial while mining is on, so the
+/// switch position is legible at a glance; off is flat and slightly dimmed.
+/// When no internal miner exists (an external ASIC) the disc shrinks, dims,
+/// and stops responding — the ring still opens the worker list.
+class _MiningToggle extends StatelessWidget {
+  const _MiningToggle({
+    required this.size,
+    required this.enabled,
+    required this.available,
+    required this.onSetMining,
+  });
+
+  /// The dial's size, keeping the disc proportional to the ring.
+  final double size;
+
+  final bool enabled;
+  final bool available;
+  final ValueChanged<bool>? onSetMining;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
+    final canToggle = available && onSetMining != null;
+    final disc = available ? size * 0.46 : size * 0.40;
+
+    return Semantics(
+      button: true,
+      enabled: canToggle,
+      label: l10n.mineToggleSemantics,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        width: disc,
+        height: disc,
+        decoration: BoxDecoration(
+          color: Palette.cream,
+          shape: BoxShape.circle,
+          // On: a soft dark rim raises the disc (timbul), then two white halos
+          // give the neon rim around the logo. Off: a flat, faint drop shadow.
+          boxShadow: enabled
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.30),
+                    offset: const Offset(0, 3),
+                    blurRadius: 8,
+                  ),
+                  BoxShadow(
+                    color: Palette.white.withValues(alpha: 0.90),
+                    blurRadius: 18,
+                    spreadRadius: 4,
+                  ),
+                  BoxShadow(
+                    color: Palette.white.withValues(alpha: 0.40),
+                    blurRadius: 44,
+                    spreadRadius: 10,
+                  ),
+                ]
+              : const [
+                  BoxShadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 3),
+                ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: canToggle ? () => onSetMining!(!enabled) : null,
+            customBorder: const CircleBorder(),
+            child: Center(
+              child: Opacity(
+                opacity: available ? 1.0 : 0.45,
+                child: BrandMark(size: size * 0.30, onDark: false),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

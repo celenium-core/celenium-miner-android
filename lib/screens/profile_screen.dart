@@ -19,7 +19,6 @@ class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     super.key,
     required this.snapshot,
-    required this.networkLabel,
     this.language = AppLanguage.system,
     this.onLanguageChanged,
     required this.onOpenBridge,
@@ -30,7 +29,6 @@ class ProfileScreen extends StatelessWidget {
   });
 
   final MinerSnapshot snapshot;
-  final String networkLabel;
 
   /// The interface language in force, and the way to change it. The root owns
   /// the locale, so the picker reports back rather than switching directly.
@@ -58,31 +56,25 @@ class ProfileScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: Palette.sm),
-          // Network label left, live status right, serif title beneath: the
-          // same top bar the concept uses on both Profile and Wallet.
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Page name left, live status right: the same compact top bar Wallet
+          // uses. The network label is gone — it only ever said SIMNET, which
+          // is no longer true past mainnet — so the page name carries its slot.
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      networkLabel.toUpperCase(),
-                      style: TypeScale.monoMuted(
-                        context,
-                        size: 10,
-                      ).copyWith(letterSpacing: 1.4),
-                    ),
+              Expanded(
+                child: Text(
+                  l10n.profileTitle.toUpperCase(),
+                  style: TypeScale.caption(context).copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
                   ),
-                  LiveStatus(
-                    label: readout.active ? l10n.statusActive : l10n.statusIdle,
-                    active: readout.active,
-                    tint: Palette.greenDim,
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: Palette.sm),
-              Text(l10n.profileTitle, style: TypeScale.screenTitle(context)),
+              LiveStatus(
+                label: readout.active ? l10n.statusActive : l10n.statusIdle,
+                active: readout.active,
+                tint: Palette.greenDim,
+              ),
             ],
           ),
           const SizedBox(height: Palette.lg),

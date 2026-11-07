@@ -1,7 +1,7 @@
 name: celenium_miner
 description: "Celenium (CEN) mining control for desktop and Android."
 publish_to: 'none'
-version: 1.0.2+9002
+version: 1.0.3+9003
 
 environment:
   sdk: ^3.13.7
@@ -50,6 +50,9 @@ flutter:
     - family: JetBrains Mono
       fonts:
         - asset: assets/fonts/JetBrainsMono[wght].ttf
+    - family: Press Start 2P
+      fonts:
+        - asset: assets/fonts/PressStart2P-Regular.ttf
 
   assets:
     - assets/wordlists/english.txt

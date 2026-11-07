@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -23,7 +25,6 @@ class WalletScreen extends StatefulWidget {
   const WalletScreen({
     super.key,
     required this.snapshot,
-    required this.networkLabel,
     required this.onBackup,
     required this.onOpenActivity,
     this.api,
@@ -32,7 +33,6 @@ class WalletScreen extends StatefulWidget {
   });
 
   final MinerSnapshot snapshot;
-  final String networkLabel;
 
   /// Client used to query the account balance and send transactions. Null
   /// while settings are still loading or the bridge is unreachable, in which
@@ -81,7 +81,6 @@ class _WalletScreenState extends State<WalletScreen> {
         children: [
           const SizedBox(height: Palette.sm),
           _Header(
-            networkLabel: widget.networkLabel,
             connected: widget.snapshot.stats != null,
           ),
           const SizedBox(height: Palette.lg),
@@ -133,39 +132,33 @@ class _WalletScreenState extends State<WalletScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.networkLabel, required this.connected});
+  const _Header({required this.connected});
 
-  final String networkLabel;
   final bool connected;
 
   @override
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
-    // The concept puts the network label left, a live status right, and the
-    // screen title beneath in the serif. Same order here.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // One compact top bar: the page name left, the live status right. The
+    // network label is gone — it only ever said SIMNET, and on mainnet that
+    // is no longer true — so the page name carries its slot at the same size
+    // as the status beside it.
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                networkLabel.toUpperCase(),
-                style: TypeScale.monoMuted(
-                  context,
-                  size: 10,
-                ).copyWith(letterSpacing: 1.4),
-              ),
+        Expanded(
+          child: Text(
+            l10n.walletTitle.toUpperCase(),
+            style: TypeScale.caption(context).copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
             ),
-            LiveStatus(
-              label: connected ? l10n.statusOnline : l10n.statusOffline,
-              active: connected,
-              tint: Palette.greenDim,
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: Palette.sm),
-        Text(l10n.walletTitle, style: TypeScale.screenTitle(context)),
+        LiveStatus(
+          label: connected ? l10n.statusOnline : l10n.statusOffline,
+          active: connected,
+          tint: Palette.greenDim,
+        ),
       ],
     );
   }
@@ -244,9 +237,25 @@ class _BalanceCardState extends State<_BalanceCard> {
             ],
           ),
           const SizedBox(height: Palette.sm),
-          Text(
-            balance?.formattedCen ?? '—',
-            style: TypeScale.hero(context).copyWith(color: Palette.creamInk),
+          // The page's one big number, in an arcade pixel face. Press Start
+          // 2P has no em-dash glyph, so the "unknown" dash keeps the display
+          // face; the pixel face takes over only for a real figure. A
+          // FittedBox lets a long balance scale instead of overflowing the
+          // cream card.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                balance?.formattedCen ?? '—',
+                maxLines: 1,
+                style: (balance == null
+                        ? TypeScale.hero(context)
+                        : TypeScale.pixel(context, size: 28))
+                    .copyWith(color: Palette.creamInk),
+              ),
+            ),
           ),
           if (needsNote) ...[
             const SizedBox(height: Palette.sm),
@@ -264,11 +273,39 @@ class _BalanceCardState extends State<_BalanceCard> {
 }
 
 /// The address the bridge is mining to. This is the number the user copies
-/// into the bridge, so it is shown in full rather than truncated.
-class _AddressCard extends StatelessWidget {
+/// into the bridge, so it is shown in full rather than truncated. An eye
+/// toggle blurs the eyebrow, the address and the copy button for privacy; the
+/// eye itself stays sharp and tappable, so hiding is always reversible.
+class _AddressCard extends StatefulWidget {
   const _AddressCard({required this.address});
 
   final String address;
+
+  @override
+  State<_AddressCard> createState() => _AddressCardState();
+}
+
+class _AddressCardState extends State<_AddressCard> {
+  bool _revealed = true;
+
+  /// Blurs and deactivates [child] while hidden, so the address cannot be
+  /// read or long-pressed into the clipboard off the screen.
+  Widget _veil(Widget child) {
+    if (_revealed) return child;
+    return IgnorePointer(
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+        child: child,
+      ),
+    );
+  }
+
+  void _copy() {
+    Clipboard.setData(ClipboardData(text: widget.address));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10nOf(context).walletAddressCopied)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -277,30 +314,80 @@ class _AddressCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Eyebrow(l10n.walletMiningAddress),
+          _veil(Eyebrow(l10n.walletMiningAddress)),
           const SizedBox(height: Palette.sm),
-          SelectableText(
-            address,
-            style: TypeScale.mono(
-              context,
-              size: 11,
-            ).copyWith(color: Palette.goldLight),
-          ),
-          const SizedBox(height: Palette.md),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: address));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.walletAddressCopied)),
-                );
-              },
-              icon: const Icon(Icons.copy, size: 14),
-              label: Text(l10n.commonCopy),
+          _veil(
+            SelectableText(
+              widget.address,
+              style: TypeScale.mono(
+                context,
+                size: 11,
+              ).copyWith(color: Palette.goldLight),
             ),
           ),
+          const SizedBox(height: Palette.md),
+          Row(
+            children: [
+              _veil(
+                TextButton.icon(
+                  onPressed: _revealed ? _copy : null,
+                  icon: const Icon(Icons.copy, size: 14),
+                  label: Text(l10n.commonCopy),
+                ),
+              ),
+              const Spacer(),
+              _RevealButton(
+                revealed: _revealed,
+                onTap: () => setState(() => _revealed = !_revealed),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// The eye that toggles address privacy: a soft gold disc when the address is
+/// readable, a flat one when it is blurred, with the classic eye / eye-off
+/// glyph. It is deliberately outside the veil, so hiding never locks the user
+/// out. 44px keeps the touch target above the accessibility minimum.
+class _RevealButton extends StatelessWidget {
+  const _RevealButton({required this.revealed, required this.onTap});
+
+  final bool revealed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
+    final label = revealed ? l10n.walletHideAddress : l10n.walletShowAddress;
+    return Semantics(
+      button: true,
+      toggled: revealed,
+      child: Tooltip(
+        message: label,
+        child: Material(
+          color: revealed
+              ? Palette.gold.withValues(alpha: 0.12)
+              : Palette.surfaceHigh,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(
+                revealed
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                size: 20,
+                color: revealed ? Palette.goldLight : Palette.slate,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -328,15 +415,17 @@ class _Actions extends StatelessWidget {
     final l10n = l10nOf(context);
     return Column(
       children: [
-        // Three capsules, send first and in gold: moving coins is the reason
-        // the screen exists, so it takes the primary slot.
+        // Three capsules with one accent each: send (blue, primary), receive
+        // (green = incoming), swap (slate = not available yet). Swap still
+        // opens a note on tap, so it reads "off" without hiding the release
+        // plan behind it.
         Row(
           children: [
             Expanded(
               child: _ActionButton(
                 label: l10n.walletSend,
                 icon: Icons.north_east,
-                primary: true,
+                kind: _ActionKind.primary,
                 onTap: () => _showSendOrReason(
                   context,
                   address: address,
@@ -352,7 +441,7 @@ class _Actions extends StatelessWidget {
               child: _ActionButton(
                 label: l10n.walletReceive,
                 icon: Icons.south_west,
-                primary: false,
+                kind: _ActionKind.secondary,
                 onTap: address == null
                     ? null
                     : () => _showReceiveSheet(context, address!),
@@ -363,14 +452,14 @@ class _Actions extends StatelessWidget {
               child: _ActionButton(
                 label: l10n.walletSwap,
                 icon: Icons.swap_horiz,
-                primary: false,
+                kind: _ActionKind.soon,
                 onTap: () => _showSwapUnavailable(context),
               ),
             ),
           ],
         ),
         const SizedBox(height: Palette.md),
-        GhostButton(
+        NeonButton(
           label: l10n.walletBackupWords,
           icon: Icons.shield_outlined,
           onPressed: onBackup,
@@ -380,97 +469,198 @@ class _Actions extends StatelessWidget {
   }
 }
 
+/// Swap is a planned feature, not a bug: CEN has no exchange listing yet, so
+/// there is nothing to swap against. The button is deliberately de-emphasised
+/// and this card spells out, in one line, why it doesn't work and that it
+/// will later.
 void _showSwapUnavailable(BuildContext context) {
   final l10n = l10nOf(context);
   showDialog<void>(
     context: context,
-    builder: (_) => AlertDialog(
-      title: Text(l10n.walletSwapUnavailable, style: TypeScale.headline(context)),
-      content: Text(
-        l10n.walletSwapBody,
-        style: TypeScale.label(context),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.commonClose),
-        ),
-      ],
+    builder: (_) => _SwapSoonDialog(
+      eyebrow: l10n.walletSwapSoon,
+      title: l10n.walletSwapUnavailable,
+      body: l10n.walletSwapBody,
+      actionLabel: l10n.commonGotIt,
     ),
   );
 }
+
+/// A small amber notice: a tinted swap glyph over a pill that reads "coming
+/// soon", a one-line reason, and a single positive close. Amber, not blue, so
+/// it reads as information rather than a call to action.
+class _SwapSoonDialog extends StatelessWidget {
+  const _SwapSoonDialog({
+    required this.eyebrow,
+    required this.title,
+    required this.body,
+    required this.actionLabel,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String body;
+  final String actionLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Palette.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: Palette.xl),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(Palette.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Palette.amber.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: const SizedBox(
+                width: 64,
+                height: 64,
+                child: Center(
+                  child: Icon(Icons.swap_horiz, size: 28, color: Palette.amber),
+                ),
+              ),
+            ),
+            const SizedBox(height: Palette.lg),
+            Pill(
+              label: eyebrow,
+              background: Palette.amber.withValues(alpha: 0.16),
+              foreground: Palette.amber,
+              dense: true,
+            ),
+            const SizedBox(height: Palette.md),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TypeScale.headline(context),
+            ),
+            const SizedBox(height: Palette.sm),
+            Text(
+              body,
+              textAlign: TextAlign.center,
+              style: TypeScale.label(context),
+            ),
+            const SizedBox(height: Palette.xl),
+            GoldButton(
+              label: actionLabel,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _ActionKind { primary, secondary, soon }
 
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.label,
     required this.icon,
-    required this.primary,
+    required this.kind,
     this.onTap,
   });
 
   final String label;
   final IconData icon;
-  final bool primary;
+  final _ActionKind kind;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    // Send is the solid gold capsule. Receive and Swap are the translucent
-    // pills with a white outline the concept uses, so the three read as one
-    // primary action and two secondary ones without a second solid block
-    // competing for attention.
-    final background = primary
-        ? Palette.gold
-        : Palette.surfaceHigh;
-    final foreground = primary ? Palette.white : Palette.cream;
-    final disabledBg = primary
-        ? Palette.goldDim.withValues(alpha: 0.35)
-        : Palette.field;
-    final disabledFg = Palette.slate;
+    // primary (send) is solid blue with a soft glow; secondary (receive) is a
+    // translucent pill with a green "incoming" glyph; soon (swap) is the same
+    // pill drained to slate so it reads as not-yet-available without hiding
+    // the release note behind it.
+    final l10n = l10nOf(context);
+    final filled = kind == _ActionKind.primary;
+    final soon = kind == _ActionKind.soon;
+    final disabled = onTap == null;
 
-    return Semantics(
-      button: true,
-      enabled: onTap != null,
-      child: Opacity(
-        opacity: onTap == null ? 0.55 : 1,
+    final Color background = filled
+        ? Palette.gold
+        : (soon || disabled)
+            ? Palette.field
+            : Palette.surfaceHigh;
+    final Color foreground = filled
+        ? Palette.white
+        : (soon || disabled)
+            ? Palette.slate
+            : Palette.cream;
+    final Color iconColor = filled
+        ? Palette.white
+        : (soon || disabled)
+            ? Palette.slate
+            : Palette.green;
+
+    final Widget pill = Opacity(
+      opacity: disabled ? 0.55 : 1,
+      child: Material(
         // Material takes either a shape or a borderRadius, never both, so the
         // pill shape carries the radius and the outline lives inside it.
-        child: Material(
-          color: onTap == null ? disabledBg : background,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Palette.pill),
-            side: primary
-                ? BorderSide.none
-                : BorderSide(color: Palette.slate.withValues(alpha: 0.35)),
-          ),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(Palette.pill),
-            child: Container(
-              height: 50,
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    size: 17,
-                    color: onTap == null ? disabledFg : foreground,
-                  ),
-                  const SizedBox(width: Palette.sm),
-                  Text(
+        color: background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Palette.pill),
+          side: filled
+              ? BorderSide.none
+              : BorderSide(
+                  color: Palette.slate.withValues(alpha: soon ? 0.28 : 0.35),
+                ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(Palette.pill),
+          child: Container(
+            height: 50,
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 17, color: iconColor),
+                const SizedBox(width: Palette.sm),
+                Flexible(
+                  child: Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TypeScale.title(context).copyWith(
-                      color: onTap == null ? disabledFg : foreground,
+                      color: foreground,
                       letterSpacing: 0.4,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       ),
+    );
+
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      hint: soon ? l10n.walletSwapUnavailable : null,
+      child: filled
+          ? DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(Palette.pill),
+                boxShadow: [
+                  BoxShadow(
+                    color: Palette.gold.withValues(alpha: 0.22),
+                    blurRadius: 16,
+                    spreadRadius: -4,
+                  ),
+                ],
+              ),
+              child: pill,
+            )
+          : pill,
     );
   }
 }
@@ -675,21 +865,32 @@ class _SendSheetState extends State<_SendSheet> {
     }
   }
 
-  InputDecoration _field(BuildContext context, {required String hint, String? suffix}) {
+  InputDecoration _field(
+    BuildContext context, {
+    required String hint,
+    String? suffix,
+    bool green = false,
+  }) {
+    final enabled = green
+        ? Palette.green.withValues(alpha: 0.35)
+        : Palette.surfaceHigh;
+    final focused = green ? Palette.green : Palette.goldLight;
     return InputDecoration(
       hintText: hint,
       suffixText: suffix,
       filled: true,
-      fillColor: Palette.field,
+      fillColor: green
+          ? Palette.green.withValues(alpha: 0.06)
+          : Palette.field,
       hintStyle: TypeScale.monoMuted(context, size: 12),
       suffixStyle: TypeScale.monoMuted(context, size: 12),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(Palette.rowRadius),
-        borderSide: const BorderSide(color: Palette.surfaceHigh),
+        borderSide: BorderSide(color: enabled),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(Palette.rowRadius),
-        borderSide: const BorderSide(color: Palette.goldLight),
+        borderSide: BorderSide(color: focused),
       ),
     );
   }
@@ -717,15 +918,29 @@ class _SendSheetState extends State<_SendSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(l10n.walletSendTitle, style: TypeScale.screenTitle(context)),
-          const SizedBox(height: Palette.sm),
-          Text(
-            widget.from,
-            style: TypeScale.monoMuted(context, size: 10),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          const SizedBox(height: Palette.lg),
+          CenCard(
+            padding: const EdgeInsets.all(Palette.lg),
+            color: Palette.green.withValues(alpha: 0.08),
+            border: BorderSide(color: Palette.green.withValues(alpha: 0.30)),
+            radius: Palette.rowRadius,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Eyebrow(l10n.walletMiningAddress, color: Palette.green),
+                const SizedBox(height: Palette.sm),
+                SelectableText(
+                  widget.from,
+                  style: TypeScale.mono(
+                    context,
+                    size: 12,
+                  ).copyWith(color: Palette.cream),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: Palette.lg),
-          Eyebrow(l10n.walletSendRecipient),
+          Eyebrow(l10n.walletSendRecipient, color: Palette.green),
           const SizedBox(height: Palette.sm),
           TextField(
             controller: _toController,
@@ -735,7 +950,11 @@ class _SendSheetState extends State<_SendSheet> {
             style: TypeScale.mono(context, size: 13).copyWith(
               color: Palette.cream,
             ),
-            decoration: _field(context, hint: '${widget.network.prefix}:…'),
+            decoration: _field(
+              context,
+              hint: '${widget.network.prefix}:…',
+              green: true,
+            ),
           ),
           const SizedBox(height: Palette.lg),
           Eyebrow(l10n.walletSendAmount),
@@ -863,15 +1082,18 @@ class _ReceiveSheet extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(Palette.lg),
               decoration: BoxDecoration(
-                color: Palette.surfaceHigh,
+                color: Palette.green.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(Palette.rowRadius),
+                border: Border.all(
+                  color: Palette.green.withValues(alpha: 0.30),
+                ),
               ),
               child: SelectableText(
                 address,
                 style: TypeScale.mono(
                   context,
                   size: 12,
-                ).copyWith(color: Palette.goldLight),
+                ).copyWith(color: Palette.cream),
               ),
             ),
             const SizedBox(height: Palette.lg),

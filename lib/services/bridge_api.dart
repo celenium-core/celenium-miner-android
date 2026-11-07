@@ -7,7 +7,8 @@ import '../models/bridge.dart';
 /// Client for the Celenium stratum bridge HTTP API.
 ///
 /// The bridge serves `GET /api/status`, `GET /api/stats`,
-/// `GET /api/balance`, and `POST /api/send` on its web dashboard port. All
+/// `GET /api/balance`, `GET/POST /api/mining`, and `POST /api/send` on its
+/// web dashboard port. All
 /// return plain JSON and set `Access-Control-Allow-Origin: *`, so no special
 /// headers are needed.
 class BridgeApi {
@@ -41,6 +42,28 @@ class BridgeApi {
     final parsed = BridgeStats.tryParse(body);
     if (parsed == null) {
       throw const FormatException('Bridge returned an unexpected stats body');
+    }
+    return parsed;
+  }
+
+  /// `GET /api/mining` — the bridge's runtime mining switch state.
+  Future<MiningControl> fetchMining() async {
+    final body = await _get('/api/mining');
+    return _parseMining(body);
+  }
+
+  /// `POST /api/mining` — flip the runtime mining switch and return the state
+  /// the bridge actually applied, so the UI shows the server truth, not the
+  /// caller's wish.
+  Future<MiningControl> setMining(bool enabled) async {
+    final body = await _post('/api/mining', {'enabled': enabled});
+    return _parseMining(body);
+  }
+
+  MiningControl _parseMining(Object? body) {
+    final parsed = MiningControl.tryParse(body);
+    if (parsed == null) {
+      throw const FormatException('Bridge returned an unexpected mining body');
     }
     return parsed;
   }

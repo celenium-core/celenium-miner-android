@@ -37,6 +37,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonCopy => 'Copy';
 
   @override
+  String get commonGotIt => 'Got it';
+
+  @override
   String get commonToday => 'TODAY';
 
   @override
@@ -90,6 +93,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mineTapWorkers => '[ TAP FOR WORKERS ]';
+
+  @override
+  String get mineMiningOn => 'MINING ON';
+
+  @override
+  String get mineMiningOff => 'MINING OFF';
+
+  @override
+  String get mineToggleSemantics => 'Start or stop mining';
 
   @override
   String get mineWaitingShare => '> waiting for first share';
@@ -160,6 +172,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletCopyAddress => 'Copy address';
 
   @override
+  String get walletShowAddress => 'Show address';
+
+  @override
+  String get walletHideAddress => 'Hide address';
+
+  @override
   String get walletSend => 'Send';
 
   @override
@@ -172,11 +190,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupWords => 'Back up recovery words';
 
   @override
+  String get walletSwapSoon => 'COMING SOON';
+
+  @override
   String get walletSwapUnavailable => 'Swap is not available';
 
   @override
   String get walletSwapBody =>
-      'Swapping CEN for another asset needs a market to swap against. CEN is not listed on any exchange or decentralised venue yet, so there is nothing to swap with.';
+      'CEN isn\'t listed on any exchange yet, so there\'s nothing to swap with.';
 
   @override
   String get walletReceiveNote =>
