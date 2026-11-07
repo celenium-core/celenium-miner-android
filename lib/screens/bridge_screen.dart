@@ -11,8 +11,8 @@ import '../widgets/cen_ui.dart';
 /// Bridge and app settings.
 ///
 /// This is the screen that makes the rest of the app work: it holds the one
-/// address the app needs, how often it polls, and the ad slot. Everything is
-/// plain text input; nothing here is a secret.
+/// address the app needs, and how often it polls. Everything is plain text
+/// input; nothing here is a secret.
 class BridgeScreen extends StatefulWidget {
   const BridgeScreen({
     super.key,
@@ -29,7 +29,6 @@ class BridgeScreen extends StatefulWidget {
 
 class _BridgeScreenState extends State<BridgeScreen> {
   final _urlController = TextEditingController();
-  final _adController = TextEditingController();
   bool _loading = true;
   bool _saving = false;
   int _intervalMs = SettingsStore.defaultIntervalMs;
@@ -42,11 +41,9 @@ class _BridgeScreenState extends State<BridgeScreen> {
 
   Future<void> _load() async {
     final url = await widget.settings.baseUrl();
-    final ad = await widget.settings.adUnitId();
     final interval = await widget.settings.intervalMs();
     if (!mounted) return;
     _urlController.text = url;
-    _adController.text = ad ?? '';
     _intervalMs = interval;
     setState(() => _loading = false);
   }
@@ -54,7 +51,6 @@ class _BridgeScreenState extends State<BridgeScreen> {
   Future<void> _save() async {
     setState(() => _saving = true);
     await widget.settings.setBaseUrl(_urlController.text.trim());
-    await widget.settings.setAdUnitId(_adController.text);
     if (!mounted) return;
     setState(() => _saving = false);
     if (!context.mounted) return;
@@ -66,7 +62,6 @@ class _BridgeScreenState extends State<BridgeScreen> {
   @override
   void dispose() {
     _urlController.dispose();
-    _adController.dispose();
     super.dispose();
   }
 
@@ -133,32 +128,6 @@ class _BridgeScreenState extends State<BridgeScreen> {
                         const SizedBox(height: Palette.sm),
                         Text(
                           l10n.bridgePollNote,
-                          style: TypeScale.caption(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: Palette.md),
-                  CenCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Eyebrow(l10n.bridgeAdUnit),
-                        const SizedBox(height: Palette.sm),
-                        TextField(
-                          controller: _adController,
-                          autocorrect: false,
-                          style: TypeScale.mono(
-                            context,
-                            size: 13,
-                          ).copyWith(color: Palette.cream),
-                          decoration: const InputDecoration(
-                            hintText: 'ca-app-pub-…/…',
-                          ),
-                        ),
-                        const SizedBox(height: Palette.sm),
-                        Text(
-                          l10n.bridgeAdNote,
                           style: TypeScale.caption(context),
                         ),
                       ],

@@ -32,6 +32,9 @@
 /navbar_fix_*.png
 /preview_desktop.png
 
+# Golden-test failure artifacts (diff/oops images) flutter test writes here.
+/test/failures/
+
 # Desktop platform scaffolding from `flutter create`/`build` — this repo is
 # android-only; the desktop app lives in celenium-miner-desktop.
 /linux/

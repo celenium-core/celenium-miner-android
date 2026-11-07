@@ -377,22 +377,6 @@ void main() {
   });
 
   group('ad settings persistence', () {
-    test(
-      'a blank ad unit id round-trips to null, not to an empty slot',
-      () async {
-        SharedPreferences.setMockInitialValues({});
-        final store = SettingsStore();
-
-        expect(await store.adUnitId(), isNull);
-
-        await store.setAdUnitId('   ');
-        expect(await store.adUnitId(), isNull);
-
-        await store.setAdUnitId('  ca-app-pub-1/2  ');
-        expect(await store.adUnitId(), 'ca-app-pub-1/2');
-      },
-    );
-
     test('a dismissal survives a restart', () async {
       SharedPreferences.setMockInitialValues({});
       final store = SettingsStore();
@@ -459,22 +443,22 @@ void main() {
       expect(find.textContaining(r'$'), findsNothing);
     });
 
-    testWidgets('the level badge is derived from the hashrate, not invented', (
+    testWidgets('difficulty sits inline with the hashrate when reported', (
       tester,
     ) async {
       await tester.pumpWidget(host(snapshotWith()));
 
-      // 1.42 GH/s floors to 1, so the badge reads LV.1. The badge only
-      // appears once there is a hashrate to derive it from.
-      expect(find.text('LV.1'), findsOneWidget);
+      // The card keeps difficulty small and beside the hashrate, only when the
+      // bridge reported one, rather than as a badge next to the number.
+      expect(find.text('DIFF 8.00'), findsOneWidget);
     });
 
-    testWidgets('no level badge when the bridge has not answered', (
+    testWidgets('no difficulty line when the bridge has not answered', (
       tester,
     ) async {
       await tester.pumpWidget(host(const MinerSnapshot()));
 
-      expect(find.textContaining('LV.'), findsNothing);
+      expect(find.textContaining('DIFF'), findsNothing);
     });
   });
 

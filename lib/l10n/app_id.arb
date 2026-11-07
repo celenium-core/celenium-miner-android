@@ -137,8 +137,6 @@
   "bridgeAddressNote": "Bridge menyajikan hasil mining lewat HTTP. Tidak ada akun dan tidak ada kredensial yang ikut dikirim.",
   "bridgePollInterval": "Interval polling",
   "bridgePollNote": "Seberapa sering aplikasi meminta angka baru ke bridge. Interval lebih pendek membuat tampilan lebih cepat berubah dan lebih boros baterai.",
-  "bridgeAdUnit": "ID unit iklan",
-  "bridgeAdNote": "Opsional. Kosongkan untuk memakai unit bawaan aplikasi. Banner hanya muncul setelah iklan benar-benar tersedia: slot kosong tidak memakan ruang dan tidak menampilkan apa pun.",
   "bridgeNode": "Node",
   "bridgeInfoAddress": "Alamat",
   "bridgeInfoVersion": "Versi",

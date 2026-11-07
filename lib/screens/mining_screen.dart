@@ -140,19 +140,18 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row: identity on the left, hashrate on the right, exactly as
-          // the concept lays it out.
+          // Identity on the left, live status on the right. The worker name is
+          // clamped to one line so a long name cannot shove the status pill.
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 40,
+                height: 40,
                 decoration: const BoxDecoration(
                   color: Palette.field,
                   shape: BoxShape.circle,
                 ),
-                child: Center(child: BrandMark(size: 24, onDark: true)),
+                child: Center(child: BrandMark(size: 22, onDark: true)),
               ),
               const SizedBox(width: Palette.md),
               Expanded(
@@ -161,6 +160,8 @@ class _SummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       readout.workerName ?? l10n.commonNoWorker,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TypeScale.title(context).copyWith(
                         color: Palette.creamInk,
                         fontWeight: FontWeight.w700,
@@ -169,75 +170,14 @@ class _SummaryCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       nodeAddress ?? l10n.mineNodeNotSet,
-                      style: TypeScale.monoInk(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TypeScale.mono(
                         context,
                         size: 10,
                       ).copyWith(color: Palette.creamInkDim),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: Palette.sm),
-              // Hash rate block sits on the right, with the level badge
-              // beside the value.
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Eyebrow(l10n.mineHashRate, color: Palette.creamInkDim),
-                  const SizedBox(height: 2),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        readout.hashrateGhs == null
-                            ? '—'
-                            : formatHashrate(readout.hashrateGhs!),
-                        style: TypeScale.hero(context)
-                            .copyWith(color: Palette.creamInk, fontSize: 30),
-                      ),
-                      // Gold level badge, as in the concept. The level is
-                      // derived from the hashrate so the number means
-                      // something rather than being decoration.
-                      if (readout.hashrateGhs != null) ...[
-                        const SizedBox(width: Palette.sm),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: Palette.md,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Palette.gold,
-                            borderRadius: BorderRadius.circular(Palette.pill),
-                          ),
-                          child: Text(
-                            'LV.${readout.hashrateGhs!.floor().clamp(1, 99)}',
-                            style: TypeScale.caption(context).copyWith(
-                              color: Palette.white,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: Palette.lg),
-          // Lower row: worker and difficulty on the left, live status on the
-          // right, as in the concept.
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${readout.workerName ?? 'WORKER-00'} · DIFF ${readout.difficulty == null ? '—' : readout.difficulty!.toStringAsFixed(2)}',
-                  style: TypeScale.monoInk(
-                    context,
-                    size: 10,
-                  ).copyWith(color: Palette.creamInkDim),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: Palette.sm),
@@ -247,6 +187,36 @@ class _SummaryCard extends StatelessWidget {
                 tint: Palette.greenDim,
                 idleColor: Palette.creamInkDim,
               ),
+            ],
+          ),
+          const SizedBox(height: Palette.lg),
+          // Hashrate stays small: a machine reading, not a title. The unit in
+          // the value is self-describing, so it carries no label above it.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                readout.hashrateGhs == null
+                    ? '—'
+                    : formatHashrate(readout.hashrateGhs!),
+                style: TypeScale.mono(context, size: 20)
+                    .copyWith(
+                      color: Palette.creamInk,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              // Difficulty belongs next to the hashrate, and only when the
+              // bridge actually reported one.
+              if (readout.difficulty != null) ...[
+                const SizedBox(width: Palette.sm),
+                Text(
+                  'DIFF ${readout.difficulty!.toStringAsFixed(2)}',
+                  style: TypeScale.mono(
+                    context,
+                    size: 10,
+                  ).copyWith(color: Palette.creamInkDim),
+                ),
+              ],
             ],
           ),
           if (!connected) ...[

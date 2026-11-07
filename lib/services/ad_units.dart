@@ -20,10 +20,9 @@ const String kTestBannerUnitId = 'ca-app-pub-3940256099942544/6300978111';
 /// Android only; the desktop targets keep the same shell without ads.
 bool get adsSupported => !kIsWeb && Platform.isAndroid;
 
-/// The unit the slot requests. An explicit id typed in Node settings wins;
-/// otherwise release builds serve the live unit and debug builds the test one.
-String resolveBannerUnitId(String? override) =>
-    override ?? (kDebugMode ? kTestBannerUnitId : kLiveBannerUnitId);
+/// The unit the slot requests. The id is compiled in, never user-editable:
+/// release builds serve the live unit, debug builds Google's test unit.
+String get bannerUnitId => kDebugMode ? kTestBannerUnitId : kLiveBannerUnitId;
 
 /// Width to ask AdMob for, given the screen width.
 ///

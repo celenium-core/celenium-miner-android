@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:http/http.dart' as http;
 
 import 'models/bridge.dart';
 import 'l10n/l10n.dart';
@@ -131,6 +132,7 @@ class MinerHome extends StatefulWidget {
     this.initialTab = _Tab.mine,
     this.language = AppLanguage.system,
     this.onLanguageChanged,
+    this.client,
   });
 
   /// Which tab opens first. Set from the `--tab` argument so a screenshot run
@@ -143,6 +145,10 @@ class MinerHome extends StatefulWidget {
   /// Called when the user picks a different language. Null in tests that do
   /// not exercise the picker.
   final ValueChanged<AppLanguage>? onLanguageChanged;
+
+  /// Injected HTTP client so widget tests can feed bridge responses without a
+  /// live celeniumd. Null in production, where a real client is used.
+  final http.Client? client;
 
   @override
   State<MinerHome> createState() => _MinerHomeState();
@@ -187,7 +193,6 @@ class _MinerHomeState extends State<MinerHome> {
   bool _polling = false;
   late _Tab _tab = widget.initialTab;
   _Route? _route;
-  String? _adUnitId;
   bool _adDismissed = false;
 
   /// The BIP39 wordlist, loaded once at startup and handed to the recovery
@@ -235,7 +240,6 @@ class _MinerHomeState extends State<MinerHome> {
   Future<void> _loadSettings() async {
     final url = await _settings.baseUrl();
     final interval = await _settings.intervalMs();
-    final adUnitId = await _settings.adUnitId();
     final adDismissed = await _settings.adDismissed();
     List<String>? wordlist;
     try {
@@ -248,11 +252,7 @@ class _MinerHomeState extends State<MinerHome> {
     if (!mounted) return;
     setState(() {
       _intervalMs = interval;
-      _api = BridgeApi(baseUrl: url);
-      // An id typed into Node settings wins; otherwise the live unit takes
-      // over in release and Google's test unit in debug, so the slot works
-      // out of the box instead of sitting unconfigured forever.
-      _adUnitId = resolveBannerUnitId(adUnitId);
+      _api = BridgeApi(baseUrl: url, client: widget.client);
       _adDismissed = adDismissed;
       _wordlist = wordlist;
     });
@@ -297,8 +297,8 @@ class _MinerHomeState extends State<MinerHome> {
   Future<void> _loadAd() async {
     if (_adRequested) return;
     _adRequested = true;
-    final unitId = _adUnitId;
-    if (unitId == null || !adsSupported) return;
+    final unitId = bannerUnitId;
+    if (!adsSupported) return;
 
     await ensureAdsReady();
     if (!mounted) return;
@@ -370,7 +370,6 @@ class _MinerHomeState extends State<MinerHome> {
 
   AdSlotState get _adSlotState {
     if (_adDismissed) return AdSlotState.dismissed;
-    if (_adUnitId == null) return AdSlotState.unconfigured;
     if (_banner != null) return AdSlotState.loaded;
     if (_adFailed) return AdSlotState.noFill;
     return AdSlotState.awaitingSdk;

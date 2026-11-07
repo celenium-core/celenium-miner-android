@@ -728,18 +728,6 @@ abstract class AppLocalizations {
   /// **'How often the app asks the bridge for fresh figures. A shorter interval updates faster and uses more battery.'**
   String get bridgePollNote;
 
-  /// No description provided for @bridgeAdUnit.
-  ///
-  /// In en, this message translates to:
-  /// **'Ad unit id'**
-  String get bridgeAdUnit;
-
-  /// No description provided for @bridgeAdNote.
-  ///
-  /// In en, this message translates to:
-  /// **'Optional. Leave it empty to use the unit built into the app. The banner only appears once a real ad is served: an empty slot reserves no space and shows nothing.'**
-  String get bridgeAdNote;
-
   /// No description provided for @bridgeNode.
   ///
   /// In en, this message translates to:

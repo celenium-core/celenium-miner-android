@@ -356,13 +356,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Seberapa sering aplikasi meminta angka baru ke bridge. Interval lebih pendek membuat tampilan lebih cepat berubah dan lebih boros baterai.';
 
   @override
-  String get bridgeAdUnit => 'ID unit iklan';
-
-  @override
-  String get bridgeAdNote =>
-      'Opsional. Kosongkan untuk memakai unit bawaan aplikasi. Banner hanya muncul setelah iklan benar-benar tersedia: slot kosong tidak memakan ruang dan tidak menampilkan apa pun.';
-
-  @override
   String get bridgeNode => 'Node';
 
   @override

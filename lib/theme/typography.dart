@@ -107,7 +107,4 @@ class TypeScale {
 
   static TextStyle monoMuted(BuildContext context, {double size = 11}) =>
       mono(context, size: size).copyWith(color: Palette.slate);
-
-  static TextStyle monoInk(BuildContext context, {double size = 12}) =>
-      mono(context, size: size).copyWith(color: Palette.ink);
 }

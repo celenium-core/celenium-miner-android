@@ -355,13 +355,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'How often the app asks the bridge for fresh figures. A shorter interval updates faster and uses more battery.';
 
   @override
-  String get bridgeAdUnit => 'Ad unit id';
-
-  @override
-  String get bridgeAdNote =>
-      'Optional. Leave it empty to use the unit built into the app. The banner only appears once a real ad is served: an empty slot reserves no space and shows nothing.';
-
-  @override
   String get bridgeNode => 'Node';
 
   @override

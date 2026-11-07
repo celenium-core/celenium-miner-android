@@ -137,8 +137,6 @@
   "bridgeAddressNote": "The bridge serves mining results over HTTP. No account and no credentials are sent with the request.",
   "bridgePollInterval": "Poll interval",
   "bridgePollNote": "How often the app asks the bridge for fresh figures. A shorter interval updates faster and uses more battery.",
-  "bridgeAdUnit": "Ad unit id",
-  "bridgeAdNote": "Optional. Leave it empty to use the unit built into the app. The banner only appears once a real ad is served: an empty slot reserves no space and shows nothing.",
   "bridgeNode": "Node",
   "bridgeInfoAddress": "Address",
   "bridgeInfoVersion": "Version",

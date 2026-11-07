@@ -4,13 +4,12 @@ import '../l10n/l10n.dart';
 
 /// Persisted app settings.
 ///
-/// Only the bridge address, the polling interval, the ad slot, and the chosen
-/// language are stored. No secrets: the app never holds a private key, and it
-/// has nothing to sign.
+/// Only the bridge address, the polling interval, and the chosen language are
+/// stored. No secrets: the app never holds a private key, and it has nothing
+/// to sign.
 class SettingsStore {
   static const String _keyBaseUrl = 'bridge_base_url';
   static const String _keyInterval = 'poll_interval_ms';
-  static const String _keyAdUnitId = 'ad_unit_id';
   static const String _keyAdDismissed = 'ad_dismissed';
 
   /// Public so tests can seed the stored language instead of hard-coding the
@@ -40,26 +39,6 @@ class SettingsStore {
   Future<void> setIntervalMs(int value) async {
     final prefs = await _prefs;
     await prefs.setInt(_keyInterval, value);
-  }
-
-  /// The banner ad unit id, or null when none is configured.
-  ///
-  /// Empty and whitespace-only values are normalised to null so an accidental
-  /// blank save cannot leave a slot that reserves space and shows nothing.
-  Future<String?> adUnitId() async {
-    final prefs = await _prefs;
-    final raw = prefs.getString(_keyAdUnitId)?.trim();
-    return (raw == null || raw.isEmpty) ? null : raw;
-  }
-
-  Future<void> setAdUnitId(String? value) async {
-    final prefs = await _prefs;
-    final trimmed = value?.trim();
-    if (trimmed == null || trimmed.isEmpty) {
-      await prefs.remove(_keyAdUnitId);
-      return;
-    }
-    await prefs.setString(_keyAdUnitId, trimmed);
   }
 
   /// Whether the user closed the banner. Persisted, because a close button

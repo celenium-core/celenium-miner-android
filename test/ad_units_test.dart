@@ -22,13 +22,9 @@ void main() {
   });
 
   group('unit id resolution', () {
-    test('a typed id always wins', () {
-      expect(resolveBannerUnitId('ca-app-pub-1/2'), 'ca-app-pub-1/2');
-    });
-
-    test('without an override the build decides the unit', () {
+    test('the unit is compiled in, never user-editable', () {
       // Tests run in debug, where serving live ads gets an account limited.
-      expect(resolveBannerUnitId(null), kTestBannerUnitId);
+      expect(bannerUnitId, kTestBannerUnitId);
       expect(kLiveBannerUnitId, startsWith('ca-app-pub-'));
       expect(kTestBannerUnitId, startsWith('ca-app-pub-'));
     });
