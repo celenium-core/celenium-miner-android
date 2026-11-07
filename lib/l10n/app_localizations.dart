@@ -260,11 +260,11 @@ abstract class AppLocalizations {
   /// **'Set bridge address'**
   String get mineSetBridge;
 
-  /// No description provided for @mineTapWorkers.
+  /// No description provided for @mineNoInternalMiner.
   ///
   /// In en, this message translates to:
-  /// **'[ TAP FOR WORKERS ]'**
-  String get mineTapWorkers;
+  /// **'NO INTERNAL MINER'**
+  String get mineNoInternalMiner;
 
   /// No description provided for @mineMiningOn.
   ///
@@ -871,6 +871,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Internal CPU miner stopped'**
   String get logMinerStopped;
+
+  /// No description provided for @logMinerToggleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not toggle mining — bridge did not respond'**
+  String get logMinerToggleFailed;
 
   /// No description provided for @logStaleShares.
   ///

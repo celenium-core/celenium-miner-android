@@ -92,7 +92,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineSetBridge => 'Set bridge address';
 
   @override
-  String get mineTapWorkers => '[ TAP FOR WORKERS ]';
+  String get mineNoInternalMiner => 'NO INTERNAL MINER';
 
   @override
   String get mineMiningOn => 'MINING ON';
@@ -435,6 +435,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logMinerStopped => 'Internal CPU miner stopped';
+
+  @override
+  String get logMinerToggleFailed =>
+      'Could not toggle mining — bridge did not respond';
 
   @override
   String logStaleShares(int count) {

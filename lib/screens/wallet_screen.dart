@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../l10n/l10n.dart';
 import '../models/bridge.dart';
+import '../services/block_time.dart';
 import '../services/bridge_api.dart';
 import '../services/cen_wallet.dart';
 import '../services/keystore.dart';
@@ -1207,33 +1208,14 @@ class _BlockRow extends StatelessWidget {
   }
 }
 
-/// Turns an ISO timestamp into the concept's short form: TODAY, YESTERDAY, or
+/// Turns a block timestamp into the concept's short form: TODAY, YESTERDAY, or
 /// a date. Falls back to the raw string when it cannot be parsed.
-String _friendlyTime(AppLocalizations l10n, String raw) {
-  final parsed = DateTime.tryParse(raw);
-  if (parsed == null) return raw;
-
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final then = DateTime(parsed.year, parsed.month, parsed.day);
-  final days = today.difference(then).inDays;
-
-  if (days == 0) return l10n.commonToday;
-  if (days == 1) return l10n.commonYesterday;
-
-  const months = [
-    'JAN',
-    'FEB',
-    'MAR',
-    'APR',
-    'MAY',
-    'JUN',
-    'JUL',
-    'AUG',
-    'SEP',
-    'OCT',
-    'NOV',
-    'DEC',
-  ];
-  return '${months[parsed.month - 1]} ${parsed.day}';
-}
+///
+/// The bridge reports Unix seconds (see [friendlyBlockTime]), so the value is
+/// routed through the shared parser rather than `DateTime.tryParse` here —
+/// a raw epoch parses to nothing and would otherwise leak through verbatim.
+String _friendlyTime(AppLocalizations l10n, String raw) => friendlyBlockTime(
+      raw,
+      todayLabel: l10n.commonToday,
+      yesterdayLabel: l10n.commonYesterday,
+    );

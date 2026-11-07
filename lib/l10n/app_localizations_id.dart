@@ -92,7 +92,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get mineSetBridge => 'Atur alamat bridge';
 
   @override
-  String get mineTapWorkers => '[ TAP UNTUK WORKER ]';
+  String get mineNoInternalMiner => 'MINER INTERNAL TIDAK TERSEDIA';
 
   @override
   String get mineMiningOn => 'MINING AKTIF';
@@ -436,6 +436,10 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get logMinerStopped => 'CPU miner internal berhenti';
+
+  @override
+  String get logMinerToggleFailed =>
+      'Gagal mengubah status mining — bridge tidak merespons';
 
   @override
   String logStaleShares(int count) {

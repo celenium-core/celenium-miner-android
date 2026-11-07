@@ -27,7 +27,7 @@
   "mineConnected": "connect",
   "mineBridgeSilent": "Bridge belum menjawab. Atur alamatnya untuk mulai membaca angka langsung.",
   "mineSetBridge": "Atur alamat bridge",
-  "mineTapWorkers": "[ TAP UNTUK WORKER ]",
+  "mineNoInternalMiner": "MINER INTERNAL TIDAK TERSEDIA",
   "mineMiningOn": "MINING AKTIF",
   "mineMiningOff": "MINING BERHENTI",
   "mineToggleSemantics": "Mulai atau hentikan mining",
@@ -201,6 +201,7 @@
   },
   "logMinerStarted": "CPU miner internal mulai jalan",
   "logMinerStopped": "CPU miner internal berhenti",
+  "logMinerToggleFailed": "Gagal mengubah status mining — bridge tidak merespons",
   "logStaleShares": "{count} share usang dilaporkan",
   "@logStaleShares": {
     "placeholders": {

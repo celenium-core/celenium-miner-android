@@ -459,8 +459,19 @@ class _MinerHomeState extends State<MinerHome> {
         ]);
       });
     } on Object {
-      // The toggle did not stick. Leave the state untouched; the poll log will
-      // note the failure on its own terms.
+      // The toggle did not stick. Say so in the log instead of failing
+      // silently — otherwise a stale bridge (or a 404 on /api/mining) looks
+      // like a dead button with no explanation.
+      if (!mounted) return;
+      setState(() {
+        _pushLog([
+          LogEntry(
+            time: _clock,
+            message: l10nOf(context).logMinerToggleFailed,
+            isError: true,
+          ),
+        ]);
+      });
     }
   }
 

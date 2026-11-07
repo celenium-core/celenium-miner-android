@@ -27,7 +27,7 @@
   "mineConnected": "connect",
   "mineBridgeSilent": "The bridge has not answered. Set its address to start reading live figures.",
   "mineSetBridge": "Set bridge address",
-  "mineTapWorkers": "[ TAP FOR WORKERS ]",
+  "mineNoInternalMiner": "NO INTERNAL MINER",
   "mineMiningOn": "MINING ON",
   "mineMiningOff": "MINING OFF",
   "mineToggleSemantics": "Start or stop mining",
@@ -201,6 +201,7 @@
   },
   "logMinerStarted": "Internal CPU miner started",
   "logMinerStopped": "Internal CPU miner stopped",
+  "logMinerToggleFailed": "Could not toggle mining — bridge did not respond",
   "logStaleShares": "{count} stale share(s) reported",
   "@logStaleShares": {
     "placeholders": {

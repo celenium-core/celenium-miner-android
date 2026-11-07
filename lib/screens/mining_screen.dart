@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../models/bridge.dart';
+import '../services/block_time.dart';
 import '../services/mining_readout.dart';
 import '../theme/layout.dart';
 import '../theme/palette.dart';
@@ -321,12 +322,13 @@ class _DialCaption extends StatelessWidget {
     return Column(
       children: [
         // The dial centre is now the start/stop control, so the caption states
-        // the switch position. Where no internal miner exists, the old worker
-        // hint still applies (the ring opens the worker list).
+        // the switch position. Where no internal miner runs (no mining address
+        // configured — the common pre-release state), say so plainly instead
+        // of steering the reader to the worker list.
         Text(
           readout.miningAvailable
               ? (readout.miningEnabled ? l10n.mineMiningOn : l10n.mineMiningOff)
-              : l10n.mineTapWorkers,
+              : l10n.mineNoInternalMiner,
           style: TypeScale.monoMuted(
             context,
             size: 10,
@@ -565,6 +567,10 @@ class _LatestLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
     final hash = readout.latestBlockHash;
+    final rawTime = readout.latestBlockTime;
+    final timeLabel = rawTime == null
+        ? ''
+        : ' · ${friendlyBlockTime(rawTime, todayLabel: l10n.commonToday, yesterdayLabel: l10n.commonYesterday)}';
 
     return Material(
       color: Palette.surface,
@@ -585,7 +591,7 @@ class _LatestLine extends StatelessWidget {
                 child: Text(
                   hash == null
                       ? l10n.mineNoBlock
-                      : '${l10n.mineBlockAccepted(shortHash(hash))}${readout.latestBlockTime == null ? '' : ' · ${readout.latestBlockTime}'}',
+                      : '${l10n.mineBlockAccepted(shortHash(hash))}$timeLabel',
                   style: TypeScale.mono(
                     context,
                     size: 11,
