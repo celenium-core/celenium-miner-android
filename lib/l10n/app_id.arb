@@ -23,7 +23,7 @@
   "splashEnter": "MASUK",
   "mineNodeNotSet": "node belum diatur",
   "mineHashRate": "Laju hash",
-  "mineMiningActive": "SEDANG MENAMBANG",
+  "mineConnected": "connect",
   "mineBridgeSilent": "Bridge belum menjawab. Atur alamatnya untuk mulai membaca angka langsung.",
   "mineSetBridge": "Atur alamat bridge",
   "mineTapWorkers": "[ TAP UNTUK WORKER ]",

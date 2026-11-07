@@ -114,7 +114,7 @@ class MiningScreen extends StatelessWidget {
   }
 }
 
-/// Light card: identity, hashrate, difficulty, live status.
+/// Light card: worker identity and the live readings as coloured chips.
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     required this.readout,
@@ -140,9 +140,11 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Identity on the left, live status on the right. The worker name is
-          // clamped to one line so a long name cannot shove the status pill.
+          // Worker identity on the left; the live numbers form a column of
+          // coloured chips on the right. The name clamps to one line so a long
+          // name cannot shove the chips off the card.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 40,
@@ -181,42 +183,17 @@ class _SummaryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: Palette.sm),
-              LiveStatus(
-                label: readout.active ? l10n.mineMiningActive : l10n.statusIdle,
-                active: readout.active,
-                tint: Palette.greenDim,
-                idleColor: Palette.creamInkDim,
-              ),
-            ],
-          ),
-          const SizedBox(height: Palette.lg),
-          // Hashrate stays small: a machine reading, not a title. The unit in
-          // the value is self-describing, so it carries no label above it.
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                readout.hashrateGhs == null
-                    ? '—'
-                    : formatHashrate(readout.hashrateGhs!),
-                style: TypeScale.mono(context, size: 20)
-                    .copyWith(
-                      color: Palette.creamInk,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              // Difficulty belongs next to the hashrate, and only when the
-              // bridge actually reported one.
-              if (readout.difficulty != null) ...[
-                const SizedBox(width: Palette.sm),
-                Text(
-                  'DIFF ${readout.difficulty!.toStringAsFixed(2)}',
-                  style: TypeScale.mono(
-                    context,
-                    size: 10,
-                  ).copyWith(color: Palette.creamInkDim),
+              // Connected: hashrate, bridge "connect", and difficulty as a
+              // stack. Not connected: the idle pill, exactly as before.
+              if (connected)
+                _ReadingChips(readout: readout)
+              else
+                LiveStatus(
+                  label: l10n.statusIdle,
+                  active: false,
+                  tint: Palette.greenDim,
+                  idleColor: Palette.creamInkDim,
                 ),
-              ],
             ],
           ),
           if (!connected) ...[
@@ -238,6 +215,84 @@ class _SummaryCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The live numbers as a right-aligned column of chips against the worker
+/// name. Yellow is the hashrate, blue says the bridge is connected, and the
+/// share difficulty — a separate pool target, not a unit of hashrate — earns
+/// its own neutral grey chip.
+class _ReadingChips extends StatelessWidget {
+  const _ReadingChips({required this.readout});
+
+  final MiningReadout readout;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Hashrate first: it sits on the same line as the worker name.
+        _MetricChip(
+          label: readout.hashrateGhs == null
+              ? '—'
+              : formatHashrate(readout.hashrateGhs!),
+          fill: Palette.amber,
+          style: TypeScale.mono(context, size: 11).copyWith(
+            color: Palette.amberInk,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: Palette.xs),
+        _MetricChip(
+          label: l10n.mineConnected,
+          fill: Palette.goldDim,
+          style: TypeScale.caption(context).copyWith(
+            color: Palette.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (readout.difficulty != null) ...[
+          const SizedBox(height: Palette.xs),
+          _MetricChip(
+            label: 'DIFF ${readout.difficulty!.toStringAsFixed(2)}',
+            fill: Palette.slateSoft,
+            style: TypeScale.mono(context, size: 10).copyWith(
+              color: Palette.creamInkDim,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// One machine reading as a small filled pill. The caller picks the fill and
+/// text style, so the three chips share a shape without sharing a meaning.
+class _MetricChip extends StatelessWidget {
+  const _MetricChip({
+    required this.label,
+    required this.fill,
+    required this.style,
+  });
+
+  final String label;
+  final Color fill;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: Palette.md, vertical: 5),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(Palette.pill),
+      ),
+      child: Text(label, style: style),
     );
   }
 }

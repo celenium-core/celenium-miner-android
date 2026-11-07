@@ -236,11 +236,11 @@ abstract class AppLocalizations {
   /// **'Hash rate'**
   String get mineHashRate;
 
-  /// No description provided for @mineMiningActive.
+  /// No description provided for @mineConnected.
   ///
   /// In en, this message translates to:
-  /// **'MINING ACTIVE'**
-  String get mineMiningActive;
+  /// **'connect'**
+  String get mineConnected;
 
   /// No description provided for @mineBridgeSilent.
   ///

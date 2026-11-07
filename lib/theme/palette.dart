@@ -43,6 +43,13 @@ class Palette {
   static const Color creamInk = Color(0xFF0B1220);
   static const Color creamInkDim = Color(0xFF475569);
 
+  // Mining summary chips on the cream card: hashrate in warm yellow, the
+  // bridge "connect" notif in the blue accent, share difficulty in neutral
+  // grey — three fills that never compete for the eye.
+  static const Color amber = Color(0xFFFBBF24);
+  static const Color amberInk = Color(0xFF78350F);
+  static const Color slateSoft = Color(0xFFE2E8F0);
+
   // State
   static const Color green = Color(0xFF22C55E);
   static const Color greenDim = Color(0xFF16A34A);

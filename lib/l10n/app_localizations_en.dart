@@ -79,7 +79,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineHashRate => 'Hash rate';
 
   @override
-  String get mineMiningActive => 'MINING ACTIVE';
+  String get mineConnected => 'connect';
 
   @override
   String get mineBridgeSilent =>

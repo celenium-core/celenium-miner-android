@@ -416,7 +416,9 @@ void main() {
 
       expect(find.text('1.42 GH/s'), findsOneWidget);
       expect(find.text('asic-1'), findsOneWidget);
-      expect(find.text('MINING ACTIVE'), findsOneWidget);
+      // The live-status label now reads "connect": the bridge is connected,
+      // not a generic "mining active" banner.
+      expect(find.text('connect'), findsOneWidget);
     });
 
     testWidgets('says so when the bridge has not answered', (tester) async {
@@ -443,17 +445,17 @@ void main() {
       expect(find.textContaining(r'$'), findsNothing);
     });
 
-    testWidgets('difficulty sits inline with the hashrate when reported', (
+    testWidgets('difficulty shows as its own neutral chip when reported', (
       tester,
     ) async {
       await tester.pumpWidget(host(snapshotWith()));
 
-      // The card keeps difficulty small and beside the hashrate, only when the
-      // bridge reported one, rather than as a badge next to the number.
+      // Difficulty is a separate pool target from the hashrate, so it gets its
+      // own chip rather than riding beside the GH/s figure.
       expect(find.text('DIFF 8.00'), findsOneWidget);
     });
 
-    testWidgets('no difficulty line when the bridge has not answered', (
+    testWidgets('no difficulty chip when the bridge has not answered', (
       tester,
     ) async {
       await tester.pumpWidget(host(const MinerSnapshot()));

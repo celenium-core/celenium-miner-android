@@ -79,7 +79,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get mineHashRate => 'Laju hash';
 
   @override
-  String get mineMiningActive => 'SEDANG MENAMBANG';
+  String get mineConnected => 'connect';
 
   @override
   String get mineBridgeSilent =>
