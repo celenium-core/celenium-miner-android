@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import 'cen_wallet.dart';
-import 'keystore.dart';
+import 'device_identity.dart';
 import 'mining_isolate.dart';
 import 'mining_readout.dart';
 import 'mining_service.dart';
@@ -27,7 +27,7 @@ import 'mining_service.dart';
 /// session survives route changes. It is a [ChangeNotifier] so the owning state
 /// rebuilds on every mutation without a callback.
 class MiningEngine extends ChangeNotifier {
-  MiningEngine({required Keystore keys}) : _keys = keys {
+  MiningEngine() {
     FlutterForegroundTask.addTaskDataCallback(_onTaskData);
   }
 
@@ -54,8 +54,6 @@ class MiningEngine extends ChangeNotifier {
   /// of a block reward. With a nominal network difficulty near 1 in early
   /// Era-0, one diff-1 share ≈ one block-equivalent of work.
   static const double _cenPerShareAtDiff1 = _cenPerBlock;
-
-  final Keystore _keys;
 
   bool _mining = false; // user intent (toggle state)
   bool _running = false; // a service worker is actually spawned/hashing
@@ -131,44 +129,29 @@ class MiningEngine extends ChangeNotifier {
     }
   }
 
-  /// Resolves the payout address from the locally stored recovery phrase
-  /// without starting anything, so the wallet tab can show it before the
-  /// first mining session. Best-effort: a missing or invalid phrase leaves
-  /// [address] null and the wallet tab falls back to its empty state.
+  /// Derives the payout address from the device identity (Android ID, or IP on
+  /// desktop/dev) without starting anything, so the wallet tab shows it before
+  /// the first mining session. Nothing to restore: the same device always
+  /// yields the same address.
   Future<void> resolveAddress() async {
     if (address != null) return;
-    final phrase = await _keys.readPhrase();
-    if (phrase == null || phrase.trim().isEmpty) return;
+    final seed = await deviceIdentitySeed();
     try {
-      final wallet = CenWallet.fromMnemonic(
-        Mnemonic.fromPhrase(phrase.trim()),
-        CenNetwork.mainnet,
-      );
+      final wallet = deriveDeviceWallet(seed, CenNetwork.mainnet);
       address = wallet.address;
       notifyListeners();
     } on Object {
-      // Invalid phrase: leave address null, the wallet tab shows the empty
-      // state instead of crashing on derivation.
+      // Leave [address] null; the wallet tab falls back to its empty state.
     }
   }
 
   Future<void> _start() async {
     _mining = true;
 
-    final phrase = await _keys.readPhrase();
-    if (phrase == null || phrase.trim().isEmpty) {
-      _mining = false;
-      status = MinerStatus.needsWallet;
-      notifyListeners();
-      return;
-    }
-
+    final seed = await deviceIdentitySeed();
     CenWallet wallet;
     try {
-      wallet = CenWallet.fromMnemonic(
-        Mnemonic.fromPhrase(phrase.trim()),
-        CenNetwork.mainnet,
-      );
+      wallet = deriveDeviceWallet(seed, CenNetwork.mainnet);
     } on Object {
       _mining = false;
       status = MinerStatus.error;

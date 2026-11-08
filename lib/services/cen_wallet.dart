@@ -379,3 +379,30 @@ BigInt seedToPrivateKey(Uint8List seed) {
   final result = hmac.process(seed);
   return _bytesToBigInt(result.sublist(0, 32));
 }
+
+/// Derives a key from a device identity string.
+///
+/// HMAC-SHA256 keyed with a fixed domain tag; the 32-byte digest is the
+/// scalar. Deterministic per device and isolated from the BIP39 path, so a
+/// device address can never collide with a recovery-phrase address.
+BigInt deviceIdentityToPrivateKey(String seed) {
+  const domainTag = 'celenium-device-v1';
+  final hmac = HMac(SHA256Digest(), 64);
+  hmac.init(KeyParameter(Uint8List.fromList(domainTag.codeUnits)));
+  return _bytesToBigInt(hmac.process(Uint8List.fromList(seed.codeUnits)));
+}
+
+/// A wallet from a device identity, with the key kept inside the curve range.
+///
+/// The HMAC output lands outside [1, n-1] with probability ~2^-128; the counter
+/// bump recovers on the next pass. It effectively settles on the first try.
+CenWallet deriveDeviceWallet(String seed, CenNetwork network) {
+  var counter = 0;
+  while (true) {
+    final key = deviceIdentityToPrivateKey('$seed:$counter');
+    if (key > BigInt.zero && key < _curveOrder) {
+      return CenWallet(privateKey: key, network: network);
+    }
+    counter++;
+  }
+}

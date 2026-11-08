@@ -21,7 +21,6 @@ import 'services/ad_units.dart';
 import 'services/bridge_api.dart';
 import 'services/cen_wallet.dart';
 import 'services/crash_log.dart';
-import 'services/keystore.dart';
 import 'services/mining_engine.dart';
 import 'services/settings_store.dart';
 import 'theme/app_theme.dart';
@@ -202,7 +201,7 @@ class _MinerHomeState extends State<MinerHome> {
 
   /// The local mining engine. Owned by the shell so the session — and the
   /// user's 24-hour window — survives tab and route changes.
-  final MiningEngine _engine = MiningEngine(keys: Keystore());
+  final MiningEngine _engine = MiningEngine();
 
   /// The BIP39 wordlist, loaded once at startup and handed to the recovery
   /// screen. Loading it in the screen itself made every open re-read the
