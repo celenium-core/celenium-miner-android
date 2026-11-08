@@ -124,7 +124,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                   ),
                   Text(
-                    '≈ ${formatCenAsPradha(widget.estimatedCen!, locale: Localizations.localeOf(context).toString())} pradha',
+                    '≈ ${formatCoin(widget.estimatedCen!, locale: Localizations.localeOf(context).toString())}',
                     style: TypeScale.pixel(context, size: 16)
                         .copyWith(color: Palette.goldLight),
                   ),
@@ -267,8 +267,10 @@ class _BalanceCardState extends State<_BalanceCard> {
             children: [
               Eyebrow(l10n.walletTotalBalance, color: Palette.creamInkDim),
               const Spacer(),
-              const Pill(
-                label: 'CEN',
+              Pill(
+                label: balance == null
+                    ? 'CEN'
+                    : coinUnit(balance.pradha).toUpperCase(),
                 background: Palette.gold,
                 foreground: Palette.white,
                 dense: true,
@@ -287,7 +289,12 @@ class _BalanceCardState extends State<_BalanceCard> {
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
-                balance?.formattedCen ?? '—',
+                balance == null
+                    ? '—'
+                    : formatPradhaNumber(
+                        balance.pradha,
+                        locale: Localizations.localeOf(context).toString(),
+                      ),
                 maxLines: 1,
                 style: (balance == null
                         ? TypeScale.hero(context)

@@ -345,7 +345,7 @@ class _DialCaption extends StatelessWidget {
         if (readout.estimatedCen != null) ...[
           const SizedBox(height: 4),
           Text(
-            '≈ ${formatCenAsPradha(readout.estimatedCen!, locale: Localizations.localeOf(context).toString())} pradha',
+            '≈ ${formatCoin(readout.estimatedCen!, locale: Localizations.localeOf(context).toString())}',
             style: TypeScale.mono(
               context,
               size: 12,

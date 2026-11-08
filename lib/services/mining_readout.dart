@@ -167,18 +167,40 @@ int _sumIntWorkers(List<WorkerInfo> workers, int Function(WorkerInfo) pick) {
   return total;
 }
 
-/// 1 CEN = 1e8 pradha (the coin's smallest unit).
+/// Pradha per CEN — the coin's smallest unit. 1 CEN = 1e8 pradha, the same
+/// split every balance and reward is ultimately counted in.
+const int kPradhaPerCen = 100000000;
+
+/// Adaptive coin display: pradha below 1 CEN, CEN at or above.
 ///
-/// An accepted difficulty-1 share pays ~0.0136656 CEN. Rendered at the screen's
-/// 6-decimal precision that reads `0.013666` — and only once the first share
-/// lands, which a phone miner can wait hours for (low hashrate, and a diff-1
-/// share is ~2^32 hashes). In pradha the same share is `1.366.560 pradha`, a
-/// whole number that is legible the moment it appears. The estimate is shown in
-/// pradha so a real device never stares at `0.000000 CEN`.
-String formatCenAsPradha(double cen, {String? locale}) {
-  final pradha = (cen * 1e8).round();
+/// An accepted difficulty-1 share pays ~0.0136656 CEN, which a phone miner only
+/// lands after hours of hashing (low hashrate, and a diff-1 share is ~2^32
+/// hashes). At 6-decimal CEN precision that reads `0.013666 CEN` — tiny enough
+/// to look like nothing happened. Below 1 CEN the same amount renders as a
+/// whole `1.366.560 pradha`; the unit flips to CEN only once the amount reaches
+/// a whole CEN. Feed the integer pradha count (or a CEN double via
+/// `formatCoin`) so a large balance never round-trips through a `double`.
+String formatPradha(int pradha, {String? locale}) =>
+    '${formatPradhaNumber(pradha, locale: locale)} ${coinUnit(pradha)}';
+
+/// Same display, but fed a CEN `double` (the mining-reward estimate).
+String formatCoin(double cen, {String? locale}) =>
+    formatPradha((cen * 1e8).round(), locale: locale);
+
+/// The number only, without the unit suffix — used under a labelled badge.
+String formatPradhaNumber(int pradha, {String? locale}) {
+  if (pradha >= kPradhaPerCen) {
+    final whole = pradha ~/ kPradhaPerCen;
+    final frac = pradha % kPradhaPerCen;
+    var text = '$whole.${frac.toString().padLeft(8, '0')}';
+    text = text.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    return text;
+  }
   return intl.NumberFormat.decimalPattern(locale).format(pradha);
 }
+
+/// `CEN` once the amount reaches a whole CEN, `pradha` below it.
+String coinUnit(int pradha) => pradha >= kPradhaPerCen ? 'CEN' : 'pradha';
 
 /// Formats a GH/s reading into the unit that keeps the number readable.
 ///
