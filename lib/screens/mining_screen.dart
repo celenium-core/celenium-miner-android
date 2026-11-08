@@ -343,15 +343,22 @@ class _DialCaption extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         if (readout.estimatedCen != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: Palette.md),
+          Text(
+            l10n.walletMiningReward.toUpperCase(),
+            style: TypeScale.monoMuted(context, size: 9).copyWith(
+              letterSpacing: 1.4,
+            ),
+          ),
+          const SizedBox(height: 2),
           Text(
             '≈ ${formatCoin(readout.estimatedCen!, locale: Localizations.localeOf(context).toString())}',
             style: TypeScale.mono(
               context,
-              size: 12,
+              size: 14,
             ).copyWith(
               color: Palette.goldLight,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
             ),
             textAlign: TextAlign.center,
           ),

@@ -253,6 +253,10 @@ class _BalanceCardState extends State<_BalanceCard> {
     final l10n = l10nOf(context);
     final balance = _balance;
     final needsNote = balance == null;
+    // Whole CEN is the "real money" state the miner works toward, so only it
+    // earns the solid blue badge. Sub-CEN amounts stay the dimmed navy fill —
+    // pradha reads as still accumulating, CEN as having arrived.
+    final isWholeCen = balance != null && balance.pradha >= kPradhaPerCen;
 
     // The cream balance card from the concept: the light mass carries the
     // dark figure, which is the opposite of every other panel here and is
@@ -271,7 +275,7 @@ class _BalanceCardState extends State<_BalanceCard> {
                 label: balance == null
                     ? 'CEN'
                     : coinUnit(balance.pradha).toUpperCase(),
-                background: Palette.gold,
+                background: isWholeCen ? Palette.gold : Palette.goldPale,
                 foreground: Palette.white,
                 dense: true,
               ),
