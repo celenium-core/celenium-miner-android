@@ -17,11 +17,12 @@ import 'screens/mining_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/wallet_screen.dart';
-import 'screens/workers_screen.dart';
 import 'services/ad_units.dart';
 import 'services/bridge_api.dart';
 import 'services/cen_wallet.dart';
 import 'services/crash_log.dart';
+import 'services/keystore.dart';
+import 'services/mining_engine.dart';
 import 'services/settings_store.dart';
 import 'theme/app_theme.dart';
 import 'theme/layout.dart';
@@ -124,7 +125,7 @@ String _tabLabel(AppLocalizations l10n, _Tab tab) => switch (tab) {
 };
 
 /// Secondary screens, reached from the profile settings list.
-enum _Route { bridge, workers, activity, backup, about }
+enum _Route { bridge, activity, backup, about }
 
 class MinerHome extends StatefulWidget {
   const MinerHome({
@@ -195,6 +196,10 @@ class _MinerHomeState extends State<MinerHome> {
   _Route? _route;
   bool _adDismissed = false;
 
+  /// The local mining engine. Owned by the shell so the session — and the
+  /// user's 24-hour window — survives tab and route changes.
+  final MiningEngine _engine = MiningEngine(keys: Keystore());
+
   /// The BIP39 wordlist, loaded once at startup and handed to the recovery
   /// screen. Loading it in the screen itself made every open re-read the
   /// asset and left the widget untestable without a bundle.
@@ -223,14 +228,20 @@ class _MinerHomeState extends State<MinerHome> {
   @override
   void initState() {
     super.initState();
+    _engine.addListener(_onEngineChanged);
     _loadSettings();
   }
 
   @override
   void dispose() {
+    _engine.dispose();
     _pollTimer?.cancel();
     _banner?.dispose();
     super.dispose();
+  }
+
+  void _onEngineChanged() {
+    if (mounted) setState(() {});
   }
 
   void _finishBoot() {
@@ -438,43 +449,6 @@ class _MinerHomeState extends State<MinerHome> {
     }
   }
 
-  /// Flips the bridge's runtime mining switch and reflects the state the bridge
-  /// actually applied, so the dial and its glow match reality rather than the
-  /// caller's wish. Any drift is reconciled by the next scheduled poll.
-  Future<void> _setMining(bool enabled) async {
-    final api = _api;
-    if (api == null) return;
-    try {
-      final control = await api.setMining(enabled);
-      if (!mounted) return;
-      setState(() {
-        _snapshot = _snapshot?.withMiningEnabled(control.enabled);
-        _pushLog([
-          LogEntry(
-            time: _clock,
-            message: control.enabled
-                ? l10nOf(context).logMinerStarted
-                : l10nOf(context).logMinerStopped,
-          ),
-        ]);
-      });
-    } on Object {
-      // The toggle did not stick. Say so in the log instead of failing
-      // silently — otherwise a stale bridge (or a 404 on /api/mining) looks
-      // like a dead button with no explanation.
-      if (!mounted) return;
-      setState(() {
-        _pushLog([
-          LogEntry(
-            time: _clock,
-            message: l10nOf(context).logMinerToggleFailed,
-            isError: true,
-          ),
-        ]);
-      });
-    }
-  }
-
   void _pushLog(List<LogEntry> entries) {
     if (entries.isEmpty) return;
     _log.insertAll(0, entries);
@@ -647,12 +621,11 @@ class _MinerHomeState extends State<MinerHome> {
     switch (_tab) {
       case _Tab.mine:
         return MiningScreen(
-          snapshot: snapshot,
-          nodeAddress: snapshot.status?.celeniumdAddress,
-          onOpenWorkers: () => _open(_Route.workers),
+          readout: _engine.readout,
+          nodeAddress: '${MiningEngine.host}:${MiningEngine.port}',
           onOpenActivity: () => _open(_Route.activity),
           onConnectNode: () => _open(_Route.bridge),
-          onSetMining: _setMining,
+          onSetMining: _engine.setMining,
         );
       case _Tab.wallet:
         return WalletScreen(
@@ -667,7 +640,6 @@ class _MinerHomeState extends State<MinerHome> {
           language: widget.language,
           onLanguageChanged: widget.onLanguageChanged,
           onOpenBridge: () => _open(_Route.bridge),
-          onOpenWorkers: () => _open(_Route.workers),
           onOpenActivity: () => _open(_Route.activity),
           onOpenBackup: () => _open(_Route.backup),
           onOpenAbout: () => _open(_Route.about),
@@ -680,8 +652,6 @@ class _MinerHomeState extends State<MinerHome> {
     switch (route) {
       case _Route.bridge:
         return BridgeScreen(settings: _settings, snapshot: snapshot);
-      case _Route.workers:
-        return WorkersScreen(snapshot: snapshot);
       case _Route.activity:
         // Caught errors ride on top of the poll log, so a failure the user
         // felt shows up where they look for what the app has been doing.

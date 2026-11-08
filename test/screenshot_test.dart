@@ -3,6 +3,7 @@
 // on demand with --update-goldens and read back via vision_analyze.
 import 'package:celenium_miner/models/bridge.dart';
 import 'package:celenium_miner/screens/mining_screen.dart';
+import 'package:celenium_miner/services/mining_readout.dart';
 import 'package:celenium_miner/theme/app_theme.dart';
 import 'package:celenium_miner/theme/palette.dart';
 import 'package:celenium_miner/theme/typography.dart';
@@ -152,9 +153,8 @@ class _Shell extends StatelessWidget {
           Expanded(
             child: SafeArea(
               child: MiningScreen(
-                snapshot: snapshot,
+                readout: MiningReadout.from(snapshot),
                 nodeAddress: '127.0.0.1:26510',
-                onOpenWorkers: () {},
                 onOpenActivity: () {},
                 onConnectNode: () {},
               ),

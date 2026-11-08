@@ -135,6 +135,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineAcceptedLabel => 'accepted';
 
   @override
+  String get mineRejectedLabel => 'rejected';
+
+  @override
+  String get mineConnecting => 'CONNECTING';
+
+  @override
+  String get mineNeedsWallet => 'SET WALLET FIRST';
+
+  @override
+  String get mineLimitReached => '24H LIMIT REACHED';
+
+  @override
+  String get mineError => 'MINER ERROR';
+
+  @override
+  String mineAcceptedCount(int count) {
+    return 'ACCEPTED $count';
+  }
+
+  @override
   String get mineNoBlock => 'no block accepted yet';
 
   @override

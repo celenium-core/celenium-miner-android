@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
-import '../models/bridge.dart';
 import '../services/block_time.dart';
 import '../services/mining_readout.dart';
 import '../theme/layout.dart';
@@ -20,41 +19,38 @@ import '../widgets/mining_dial.dart';
 class MiningScreen extends StatelessWidget {
   const MiningScreen({
     super.key,
-    required this.snapshot,
+    required this.readout,
     required this.nodeAddress,
-    required this.onOpenWorkers,
     required this.onOpenActivity,
-    required this.onConnectNode,
+    this.onConnectNode,
     this.onSetMining,
   });
 
-  final MinerSnapshot snapshot;
+  final MiningReadout readout;
   final String? nodeAddress;
-  final VoidCallback onOpenWorkers;
   final VoidCallback onOpenActivity;
-  final VoidCallback onConnectNode;
+  final VoidCallback? onConnectNode;
 
-  /// Starts or stops mining. Null disables the control (an external ASIC
-  /// bridge has no internal miner to start or stop).
+  /// Starts or stops the local miner. The dial's inner disc calls this with
+  /// the new switch position; the engine does the hashing.
   final ValueChanged<bool>? onSetMining;
 
   @override
   Widget build(BuildContext context) {
-    final readout = MiningReadout.from(snapshot);
+    final readout = this.readout;
     final layout = CenLayout.of(context);
 
     final summary = _SummaryCard(
       readout: readout,
       nodeAddress: nodeAddress,
-      onConnectNode: onConnectNode,
     );
     final dial = _DialBlock(
       readout: readout,
-      onTap: onOpenWorkers,
+      onTap: onOpenActivity,
       onSetMining: onSetMining,
     );
     final stats = _StatsStrip(readout: readout);
-    // A hex stream that runs only while the bridge reports hashing: the
+    // A hex stream that runs only while the engine reports hashing: the
     // motion is the app saying data is arriving right now.
     final hex = HexTicker(active: readout.active);
     final latest = _LatestLine(readout: readout, onTap: onOpenActivity);
@@ -124,22 +120,31 @@ class MiningScreen extends StatelessWidget {
   }
 }
 
-/// Light card: worker identity and the live readings as coloured chips.
+/// Light card: the payout address and the live readings as coloured chips, or
+/// a labelled status pill when the engine is not hashing.
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     required this.readout,
     required this.nodeAddress,
-    required this.onConnectNode,
   });
 
   final MiningReadout readout;
   final String? nodeAddress;
-  final VoidCallback onConnectNode;
 
   @override
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
-    final connected = readout.hashrateGhs != null || readout.workerName != null;
+    final status = readout.status ?? MinerStatus.idle;
+    final streaming =
+        status == MinerStatus.mining || status == MinerStatus.connecting;
+    final statusLabel = switch (status) {
+      MinerStatus.mining => l10n.mineMiningOn,
+      MinerStatus.connecting => l10n.mineConnecting,
+      MinerStatus.needsWallet => l10n.mineNeedsWallet,
+      MinerStatus.limitReached => l10n.mineLimitReached,
+      MinerStatus.error => l10n.mineError,
+      _ => l10n.statusIdle,
+    };
 
     return Container(
       padding: const EdgeInsets.all(Palette.lg),
@@ -147,82 +152,57 @@ class _SummaryCard extends StatelessWidget {
         color: Palette.cream,
         borderRadius: BorderRadius.circular(Palette.cardRadius),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Worker identity on the left; the live numbers form a column of
-          // coloured chips on the right. The name clamps to one line so a long
-          // name cannot shove the chips off the card.
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: Palette.field,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(child: BrandMark(size: 22, onDark: true)),
-              ),
-              const SizedBox(width: Palette.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      readout.workerName ?? l10n.commonNoWorker,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TypeScale.title(context).copyWith(
-                        color: Palette.creamInk,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      nodeAddress ?? l10n.mineNodeNotSet,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TypeScale.mono(
-                        context,
-                        size: 10,
-                      ).copyWith(color: Palette.creamInkDim),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: Palette.sm),
-              // Connected: hashrate, bridge "connect", and difficulty as a
-              // stack. Not connected: the idle pill, exactly as before.
-              if (connected)
-                _ReadingChips(readout: readout)
-              else
-                LiveStatus(
-                  label: l10n.statusIdle,
-                  active: false,
-                  tint: Palette.greenDim,
-                  idleColor: Palette.creamInkDim,
-                ),
-            ],
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Palette.field,
+              shape: BoxShape.circle,
+            ),
+            child: Center(child: BrandMark(size: 22, onDark: true)),
           ),
-          if (!connected) ...[
-            const SizedBox(height: Palette.lg),
-            Text(
-              l10n.mineBridgeSilent,
-              style: TypeScale.caption(context).copyWith(color: Palette.creamInkDim),
+          const SizedBox(width: Palette.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  readout.workerName ?? l10n.commonNoWorker,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TypeScale.title(context).copyWith(
+                    color: Palette.creamInk,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  nodeAddress ?? l10n.mineNodeNotSet,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TypeScale.mono(
+                    context,
+                    size: 10,
+                  ).copyWith(color: Palette.creamInkDim),
+                ),
+              ],
             ),
-            const SizedBox(height: Palette.sm),
-            TextButton(
-              onPressed: onConnectNode,
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text(l10n.mineSetBridge),
+          ),
+          const SizedBox(width: Palette.sm),
+          // Hashing (or connecting): hashrate, link and difficulty as a stack.
+          // Any other state: a pill that names it (idle, wallet, limit, error).
+          if (streaming)
+            _ReadingChips(readout: readout)
+          else
+            LiveStatus(
+              label: statusLabel,
+              active: false,
+              tint: Palette.greenDim,
+              idleColor: Palette.creamInkDim,
             ),
-          ],
         ],
       ),
     );
@@ -230,7 +210,7 @@ class _SummaryCard extends StatelessWidget {
 }
 
 /// The live numbers as a right-aligned column of chips against the worker
-/// name. Yellow is the hashrate, blue says the bridge is connected, and the
+/// name. Yellow is the hashrate, blue says the pool link is live, and the
 /// share difficulty — a separate pool target, not a unit of hashrate — earns
 /// its own neutral grey chip.
 class _ReadingChips extends StatelessWidget {
@@ -245,7 +225,7 @@ class _ReadingChips extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Hashrate first: it sits on the same line as the worker name.
+        // Hashrate first: it sits on the same line as the address.
         _MetricChip(
           label: readout.hashrateGhs == null
               ? '—'
@@ -307,8 +287,8 @@ class _MetricChip extends StatelessWidget {
   }
 }
 
-/// A centred readout line under the dial: the session uptime and the last
-/// accepted share, in the concept's shell-prompt style.
+/// A centred readout line under the dial: the engine phase, the session uptime
+/// and the accepted-share count, in the concept's shell-prompt style.
 class _DialCaption extends StatelessWidget {
   const _DialCaption({required this.readout, required this.onTap});
 
@@ -318,17 +298,21 @@ class _DialCaption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
-    final latest = readout.latestBlockHash;
+    final status = readout.status ?? MinerStatus.idle;
+    final statusLine = switch (status) {
+      MinerStatus.mining => l10n.mineMiningOn,
+      MinerStatus.connecting => l10n.mineConnecting,
+      MinerStatus.needsWallet => l10n.mineNeedsWallet,
+      MinerStatus.limitReached => l10n.mineLimitReached,
+      MinerStatus.error => l10n.mineError,
+      _ => l10n.mineMiningOff,
+    };
     return Column(
       children: [
-        // The dial centre is now the start/stop control, so the caption states
-        // the switch position. Where no internal miner runs (no mining address
-        // configured — the common pre-release state), say so plainly instead
-        // of steering the reader to the worker list.
+        // The dial centre is the start/stop control, so this line states the
+        // engine's current phase (connecting, hashing, 24 h limit reached…).
         Text(
-          readout.miningAvailable
-              ? (readout.miningEnabled ? l10n.mineMiningOn : l10n.mineMiningOff)
-              : l10n.mineNoInternalMiner,
+          statusLine,
           style: TypeScale.monoMuted(
             context,
             size: 10,
@@ -336,7 +320,7 @@ class _DialCaption extends StatelessWidget {
         ),
         const SizedBox(height: Palette.sm),
         Text(
-          'UPTIME ${_uptime(readout.bridgeUptime)}',
+          'UPTIME ${_uptime(readout.sessionUptime)}',
           style: TypeScale.mono(
             context,
             size: 11,
@@ -344,10 +328,9 @@ class _DialCaption extends StatelessWidget {
         ),
         const SizedBox(height: Palette.sm),
         Text(
-          latest == null
+          readout.shares == null
               ? l10n.mineWaitingShare
-              : '${l10n.mineShareAccepted(shortHash(latest, head: 8, tail: 6))}'
-                    '${readout.difficulty == null ? '' : ' diff-${readout.difficulty!.toStringAsFixed(2)}'}',
+              : l10n.mineAcceptedCount(readout.shares!),
           style: TypeScale.mono(
             context,
             size: 10,
@@ -361,7 +344,7 @@ class _DialCaption extends StatelessWidget {
 }
 
 /// Formats seconds as HH:MM:SS, the concept's uptime shape. Returns 00:00:00
-/// when the bridge has not reported an uptime.
+/// when no session uptime has been reported.
 String _uptime(int? seconds) {
   if (seconds == null) return '00:00:00';
   final d = Duration(seconds: seconds);
@@ -433,8 +416,8 @@ class _DialBlock extends StatelessWidget {
 ///
 /// A white neon halo lifts the disc off the dial while mining is on, so the
 /// switch position is legible at a glance; off is flat and slightly dimmed.
-/// When no internal miner exists (an external ASIC) the disc shrinks, dims,
-/// and stops responding — the ring still opens the worker list.
+/// The local engine always exposes a start/stop control, so `available` only
+/// needs [onSetMining] to be non-null for the disc to respond.
 class _MiningToggle extends StatelessWidget {
   const _MiningToggle({
     required this.size,
@@ -512,9 +495,9 @@ class _MiningToggle extends StatelessWidget {
   }
 }
 
-/// Three real counts, each with its unit on its own line as in the concept.
-///
-/// No price: CEN is not listed anywhere, so a price here would be invented.
+/// Three session counts for a local phone miner: accepted shares, rejected
+/// shares and the live hashrate. No block count — a phone submits shares, it
+/// does not find blocks — and no price, because CEN is not listed anywhere.
 class _StatsStrip extends StatelessWidget {
   const _StatsStrip({required this.readout});
 
@@ -528,26 +511,27 @@ class _StatsStrip extends StatelessWidget {
         children: [
           Expanded(
             child: StatCell(
-              value: readout.sessionBlocks?.toString() ?? '—',
-              unit: 'CEN',
-              label: l10n.mineSessionLabel,
+              value: readout.shares?.toString() ?? '—',
+              unit: l10n.mineSharesUnit,
+              label: l10n.mineAcceptedLabel,
               color: Palette.goldLight,
             ),
           ),
           const StatDivider(),
           Expanded(
             child: StatCell(
-              value: readout.totalBlocks?.toString() ?? '—',
-              unit: 'CEN',
-              label: l10n.mineTotalLabel,
+              value: readout.stale?.toString() ?? '—',
+              unit: l10n.mineSharesUnit,
+              label: l10n.mineRejectedLabel,
             ),
           ),
           const StatDivider(),
           Expanded(
             child: StatCell(
-              value: readout.shares?.toString() ?? '—',
-              unit: l10n.mineSharesUnit,
-              label: l10n.mineAcceptedLabel,
+              value: readout.hashrateGhs == null
+                  ? '—'
+                  : formatHashrate(readout.hashrateGhs!),
+              label: l10n.mineHashRate,
             ),
           ),
         ],

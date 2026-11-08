@@ -1,9 +1,10 @@
 // Preview entrypoint: renders the mining screen with a hard-coded fixture so
 // the visual result can be captured in a real browser (correct variable-font
-// rendering) without a live bridge. Build with:
+// rendering) without a live pool. Build with:
 //   flutter build web -t lib/preview_main.dart --release
 import 'package:celenium_miner/models/bridge.dart';
 import 'package:celenium_miner/screens/mining_screen.dart';
+import 'package:celenium_miner/services/mining_readout.dart';
 import 'package:celenium_miner/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -70,11 +71,9 @@ void main() {
       theme: buildCenTheme(),
       home: Scaffold(
         body: MiningScreen(
-          snapshot: _fixture(),
+          readout: MiningReadout.from(_fixture()),
           nodeAddress: '127.0.0.1:26510',
-          onOpenWorkers: () {},
           onOpenActivity: () {},
-          onConnectNode: () {},
         ),
       ),
     ),

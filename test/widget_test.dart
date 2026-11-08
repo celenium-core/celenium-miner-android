@@ -398,9 +398,8 @@ void main() {
           theme: buildCenTheme(),
           home: Scaffold(
             body: MiningScreen(
-              snapshot: snapshot,
+              readout: MiningReadout.from(snapshot),
               nodeAddress: '127.0.0.1:26510',
-              onOpenWorkers: () {},
               onOpenActivity: () {},
               onConnectNode: () {},
             ),
@@ -540,9 +539,8 @@ void main() {
           theme: buildCenTheme(),
           home: Scaffold(
             body: MiningScreen(
-              snapshot: snapshotWith(),
+              readout: MiningReadout.from(snapshotWith()),
               nodeAddress: '127.0.0.1:26510',
-              onOpenWorkers: () {},
               onOpenActivity: () {},
               onConnectNode: () {},
             ),
@@ -990,7 +988,6 @@ void main() {
               snapshot: snapshotWith(),
               onLanguageChanged: (choice) => picked = choice,
               onOpenBridge: () {},
-              onOpenWorkers: () {},
               onOpenActivity: () {},
               onOpenBackup: () {},
               onOpenAbout: () {},

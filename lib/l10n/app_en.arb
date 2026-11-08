@@ -56,6 +56,20 @@
   "mineTotalLabel": "total",
   "mineSharesUnit": "shares",
   "mineAcceptedLabel": "accepted",
+  "mineRejectedLabel": "rejected",
+  "mineConnecting": "CONNECTING",
+  "mineNeedsWallet": "SET WALLET FIRST",
+  "mineLimitReached": "24H LIMIT REACHED",
+  "mineError": "MINER ERROR",
+  "mineAcceptedCount": "ACCEPTED {count}",
+  "@mineAcceptedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "7"
+      }
+    }
+  },
   "mineNoBlock": "no block accepted yet",
   "mineBlockAccepted": "block accepted {hash}",
   "@mineBlockAccepted": {

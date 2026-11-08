@@ -22,7 +22,6 @@ class ProfileScreen extends StatelessWidget {
     this.language = AppLanguage.system,
     this.onLanguageChanged,
     required this.onOpenBridge,
-    required this.onOpenWorkers,
     required this.onOpenActivity,
     required this.onOpenBackup,
     required this.onOpenAbout,
@@ -36,7 +35,6 @@ class ProfileScreen extends StatelessWidget {
   final ValueChanged<AppLanguage>? onLanguageChanged;
 
   final VoidCallback onOpenBridge;
-  final VoidCallback onOpenWorkers;
   final VoidCallback onOpenActivity;
   final VoidCallback onOpenBackup;
   final VoidCallback onOpenAbout;
@@ -46,7 +44,6 @@ class ProfileScreen extends StatelessWidget {
     final l10n = l10nOf(context);
     final readout = MiningReadout.from(snapshot);
     final stats = snapshot.stats;
-    final workers = stats?.workers.length ?? 0;
     final address = stats?.internalCpu?.wallet;
     final nodeAddress = snapshot.status?.celeniumdAddress;
 
@@ -84,9 +81,9 @@ class ProfileScreen extends StatelessWidget {
             active: readout.active,
           ),
           const SizedBox(height: Palette.md),
-          // Four cells, matching the concept's strip. All four come from the
-          // bridge: the concept's referrals, days, and rank have no source here,
-          // so they are replaced by counts that do.
+          // Three cells, matching what the bridge reports (blocks, shares and
+          // hash rate): the concept's referrals, days, and rank have no source
+          // here, so they are replaced by counts that do.
           //
           // Every column is value over label, with no unit line anywhere. One
           // column carrying a unit made the row four lines deep on the right and
@@ -111,13 +108,6 @@ class ProfileScreen extends StatelessWidget {
                   child: StatCell(
                     value: readout.shares?.toString() ?? '—',
                     label: l10n.profileShares,
-                  ),
-                ),
-                const StatDivider(),
-                Expanded(
-                  child: StatCell(
-                    value: workers > 0 ? workers.toString() : '—',
-                    label: l10n.profileWorkers,
                   ),
                 ),
                 const StatDivider(),
@@ -153,15 +143,6 @@ class ProfileScreen extends StatelessWidget {
                     style: TypeScale.monoMuted(context, size: 10),
                   ),
                   onTap: onOpenBridge,
-                ),
-                SettingRow(
-                  flat: true,
-                  icon: Icons.dns_outlined,
-                  label: l10n.profileWorkersRow,
-                  trailing: workers > 0
-                      ? Pill(label: '$workers', dense: true)
-                      : null,
-                  onTap: onOpenWorkers,
                 ),
                 SettingRow(
                   flat: true,

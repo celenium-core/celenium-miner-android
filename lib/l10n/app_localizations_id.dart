@@ -135,6 +135,26 @@ class AppLocalizationsId extends AppLocalizations {
   String get mineAcceptedLabel => 'diterima';
 
   @override
+  String get mineRejectedLabel => 'ditolak';
+
+  @override
+  String get mineConnecting => 'MENGHUBUNGKAN';
+
+  @override
+  String get mineNeedsWallet => 'ISI WALLET DULU';
+
+  @override
+  String get mineLimitReached => 'BATAS 24 JAM';
+
+  @override
+  String get mineError => 'MINER GALAT';
+
+  @override
+  String mineAcceptedCount(int count) {
+    return 'DITERIMA $count';
+  }
+
+  @override
   String get mineNoBlock => 'belum ada blok diterima';
 
   @override

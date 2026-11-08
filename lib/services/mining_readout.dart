@@ -1,5 +1,18 @@
 import '../models/bridge.dart';
 
+/// Canonical mining-session states shared by the engine, the isolate and the
+/// screen. The isolated worker reports the first four; the engine adds
+/// [`idle`, `needsWallet`, `limitReached`] around them before any isolate runs.
+abstract final class MinerStatus {
+  static const String idle = 'idle';
+  static const String connecting = 'connecting';
+  static const String mining = 'mining';
+  static const String stopped = 'stopped';
+  static const String error = 'error';
+  static const String needsWallet = 'needs_wallet';
+  static const String limitReached = 'limit_reached';
+}
+
 /// Display values for the mining screen, derived from a bridge snapshot.
 ///
 /// Everything here comes from the bridge. Nothing is estimated: when the
@@ -21,6 +34,8 @@ class MiningReadout {
     this.active = false,
     this.miningEnabled = false,
     this.miningAvailable = false,
+    this.status,
+    this.sessionUptime,
   });
 
   /// Live hashrate in GH/s.
@@ -57,13 +72,24 @@ class MiningReadout {
   /// Whether the bridge exposes a start/stop control at all.
   final bool miningAvailable;
 
+  /// Which mining-session state this readout reflects, or null when the value
+  /// came from a legacy bridge snapshot (no local engine lifecycle).
+  final String? status;
+
+  /// How long the current mining session has run, in seconds. Distinct from
+  /// [bridgeUptime], which is the pool bridge's own uptime.
+  final int? sessionUptime;
+
   static const MiningReadout empty = MiningReadout(active: false);
 
   /// Share acceptance rate in 0..1, or null when no shares have been
   /// submitted. This is what the dial shows: the fraction of submitted work
   /// the network counted.
   double? get acceptanceRate {
-    final accepted = sessionBlocks ?? 0;
+    // The local engine reports accepted shares in `shares` (a phone worker has
+    // no pool-level block count); a bridge snapshot reports them in
+    // `sessionBlocks`. Either source fills the same slot.
+    final accepted = sessionBlocks ?? shares ?? 0;
     final rejected = (stale ?? 0) + (invalid ?? 0);
     final total = accepted + rejected;
     if (total == 0) return null;
@@ -132,9 +158,12 @@ int _sumIntWorkers(List<WorkerInfo> workers, int Function(WorkerInfo) pick) {
 /// Formats a GH/s reading into the unit that keeps the number readable.
 ///
 /// A small rig hashes in MH/s; showing 0.0042 GH/s wastes the reader's
-/// attention on zeros. The unit is always stated, never implied.
+/// attention on zeros. The local Android worker hashes in kH/s, so the scale
+/// reaches down to H/s. The unit is always stated, never implied.
 String formatHashrate(double ghs) {
   if (ghs <= 0) return '0 H/s';
+  if (ghs < 1e-6) return '${(ghs * 1e9).round()} H/s';
+  if (ghs < 1e-3) return '${(ghs * 1e6).toStringAsFixed(1)} kH/s';
   if (ghs < 1) return '${(ghs * 1000).toStringAsFixed(1)} MH/s';
   if (ghs < 1000) return '${ghs.toStringAsFixed(2)} GH/s';
   return '${(ghs / 1000).toStringAsFixed(2)} TH/s';

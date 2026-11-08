@@ -23,6 +23,10 @@ dependencies:
   pointycastle: ^3.9.1
   bech32: ^0.2.2
   flutter_secure_storage: ^9.2.2
+
+  # FFI bindings to the precompiled Celenium hashing core
+  # (android/app/src/main/jniLibs/*/libcelenium_miner.so).
+  ffi: ^2.2.0
   google_mobile_ads: ^9.2.0
 
 dev_dependencies:

@@ -338,6 +338,42 @@ abstract class AppLocalizations {
   /// **'accepted'**
   String get mineAcceptedLabel;
 
+  /// No description provided for @mineRejectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'rejected'**
+  String get mineRejectedLabel;
+
+  /// No description provided for @mineConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'CONNECTING'**
+  String get mineConnecting;
+
+  /// No description provided for @mineNeedsWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'SET WALLET FIRST'**
+  String get mineNeedsWallet;
+
+  /// No description provided for @mineLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'24H LIMIT REACHED'**
+  String get mineLimitReached;
+
+  /// No description provided for @mineError.
+  ///
+  /// In en, this message translates to:
+  /// **'MINER ERROR'**
+  String get mineError;
+
+  /// No description provided for @mineAcceptedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'ACCEPTED {count}'**
+  String mineAcceptedCount(int count);
+
   /// No description provided for @mineNoBlock.
   ///
   /// In en, this message translates to:

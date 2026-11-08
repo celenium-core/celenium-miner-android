@@ -56,6 +56,20 @@
   "mineTotalLabel": "total",
   "mineSharesUnit": "share",
   "mineAcceptedLabel": "diterima",
+  "mineRejectedLabel": "ditolak",
+  "mineConnecting": "MENGHUBUNGKAN",
+  "mineNeedsWallet": "ISI WALLET DULU",
+  "mineLimitReached": "BATAS 24 JAM",
+  "mineError": "MINER GALAT",
+  "mineAcceptedCount": "DITERIMA {count}",
+  "@mineAcceptedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "7"
+      }
+    }
+  },
   "mineNoBlock": "belum ada blok diterima",
   "mineBlockAccepted": "blok diterima {hash}",
   "@mineBlockAccepted": {
