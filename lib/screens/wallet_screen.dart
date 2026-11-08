@@ -124,7 +124,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                   ),
                   Text(
-                    '≈ ${widget.estimatedCen!.toStringAsFixed(6)} CEN',
+                    '≈ ${formatCenAsPradha(widget.estimatedCen!, locale: Localizations.localeOf(context).toString())} pradha',
                     style: TypeScale.pixel(context, size: 16)
                         .copyWith(color: Palette.goldLight),
                   ),

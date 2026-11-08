@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart' as intl;
+
 import '../models/bridge.dart';
 
 /// Canonical mining-session states shared by the engine, the isolate and the
@@ -163,6 +165,19 @@ int _sumIntWorkers(List<WorkerInfo> workers, int Function(WorkerInfo) pick) {
     total += pick(w);
   }
   return total;
+}
+
+/// 1 CEN = 1e8 pradha (the coin's smallest unit).
+///
+/// An accepted difficulty-1 share pays ~0.0136656 CEN. Rendered at the screen's
+/// 6-decimal precision that reads `0.013666` — and only once the first share
+/// lands, which a phone miner can wait hours for (low hashrate, and a diff-1
+/// share is ~2^32 hashes). In pradha the same share is `1.366.560 pradha`, a
+/// whole number that is legible the moment it appears. The estimate is shown in
+/// pradha so a real device never stares at `0.000000 CEN`.
+String formatCenAsPradha(double cen, {String? locale}) {
+  final pradha = (cen * 1e8).round();
+  return intl.NumberFormat.decimalPattern(locale).format(pradha);
 }
 
 /// Formats a GH/s reading into the unit that keeps the number readable.
