@@ -542,7 +542,7 @@ void main() {
               readout: const MiningReadout(
                 status: MinerStatus.mining,
                 active: true,
-                estimatedCen: 0.5,
+                estimatedCen: 1.5,
               ),
               nodeAddress: '127.0.0.1:26510',
               onOpenActivity: () {},

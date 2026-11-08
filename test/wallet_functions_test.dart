@@ -96,8 +96,9 @@ void main() {
     await tester.pumpWidget(_host(localAddress: _local, estimatedCen: 0.123456));
     await _settle(tester);
 
-    // Bug #1 fix: the earned-coins estimate renders.
-    expect(find.text('≈ 0.123456 CEN'), findsOneWidget);
+    // Bug #1 fix: the earned-coins estimate renders (adaptive unit: whole
+    // pradha below 1 CEN; 0.123456 CEN = 12,345,600 pradha).
+    expect(find.text('≈ 12.345.600 pradha'), findsOneWidget);
 
     // Bug #1 fix: the phone's own mainnet address is shown (default = revealed),
     // sourced from `localAddress`, not the null `internalCpu.wallet`.

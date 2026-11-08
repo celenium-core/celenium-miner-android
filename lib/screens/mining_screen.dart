@@ -8,7 +8,6 @@ import '../theme/palette.dart';
 import '../theme/typography.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/cen_ui.dart';
-import '../widgets/hacker_fx.dart';
 import '../widgets/mining_dial.dart';
 
 /// Mining console.
@@ -50,9 +49,6 @@ class MiningScreen extends StatelessWidget {
       onSetMining: onSetMining,
     );
     final stats = _StatsStrip(readout: readout);
-    // A hex stream that runs only while the engine reports hashing: the
-    // motion is the app saying data is arriving right now.
-    final hex = HexTicker(active: readout.active);
     final latest = _LatestLine(readout: readout, onTap: onOpenActivity);
 
     // Phone: one column, top to bottom, exactly as designed.
@@ -68,8 +64,6 @@ class MiningScreen extends StatelessWidget {
             dial,
             const SizedBox(height: Palette.xl),
             stats,
-            const SizedBox(height: Palette.lg),
-            hex,
             const SizedBox(height: Palette.lg),
             latest,
             const SizedBox(height: Palette.xxl),
@@ -106,8 +100,6 @@ class MiningScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   stats,
-                  const SizedBox(height: Palette.lg),
-                  hex,
                   const SizedBox(height: Palette.lg),
                   latest,
                 ],
@@ -329,18 +321,6 @@ class _DialCaption extends StatelessWidget {
             context,
             size: 11,
           ).copyWith(color: Palette.creamDim),
-        ),
-        const SizedBox(height: Palette.sm),
-        Text(
-          readout.shares == null
-              ? l10n.mineWaitingShare
-              : l10n.mineAcceptedCount(readout.shares!),
-          style: TypeScale.mono(
-            context,
-            size: 10,
-          ).copyWith(color: Palette.greenDim),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
         ),
         if (readout.estimatedCen != null) ...[
           const SizedBox(height: Palette.md),
