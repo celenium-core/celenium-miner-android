@@ -152,14 +152,64 @@ Future<void> _mine(StartCommand cmd, SendPort report, bool Function() stopped) a
     return;
   }
 
+  // Accepted/rejected are cumulative across reconnects so the acceptance rate
+  // stays honest over a long solo-chain session full of idle-timeout drops.
+  var submitted = 0;
+  var rejected = 0;
+  var backoff = const Duration(seconds: 3);
+
+  while (!stopped()) {
+    final result =
+        await _runSession(cmd, native, report, stopped, submitted, rejected);
+    submitted = result.submitted;
+    rejected = result.rejected;
+
+    if (stopped()) break;
+
+    // The pool socket dropped (idle timeout on a solo chain with no new
+    // blocks, an expiring NAT entry, or a transient network blip). Reconnect
+    // rather than erroring out: a dropped socket would otherwise leave the
+    // toggle stuck at ERROR while the foreground service keeps running idle.
+    send(MinerEvent(state: 'connecting', shares: submitted, rejected: rejected));
+    await Future<void>.delayed(backoff);
+    if (backoff < const Duration(seconds: 15)) {
+      backoff += const Duration(seconds: 3);
+    }
+  }
+
+  send(MinerEvent(state: 'stopped', shares: submitted, rejected: rejected));
+}
+
+/// The result of one connect→subscribe→mine cycle: the accepted/rejected
+/// totals so far, carried into the next reconnect attempt.
+class _SessionResult {
+  _SessionResult(this.submitted, this.rejected);
+  final int submitted;
+  final int rejected;
+}
+
+/// Opens one stratum connection, performs the handshake, and scans until the
+/// socket closes or the user stops. Returns on either — the caller decides
+/// whether to reconnect. A failed connect is treated exactly like a dropped
+/// connection and returned the same way, so transient outages recover instead
+/// of surfacing as a fatal `error`.
+Future<_SessionResult> _runSession(
+  StartCommand cmd,
+  MinerNative native,
+  SendPort report,
+  bool Function() stopped,
+  int submitted,
+  int rejected,
+) async {
+  void send(MinerEvent event) => report.send(event);
+
   final Socket socket;
   try {
     socket =
         await Socket.connect(cmd.host, cmd.port, timeout: const Duration(seconds: 15));
     socket.setOption(SocketOption.tcpNoDelay, true);
-  } on Object catch (e) {
-    send(MinerEvent(state: 'error', error: 'connect: $e'));
-    return;
+  } on Object {
+    return _SessionResult(submitted, rejected);
   }
 
   final worker = '${cmd.address}.${cmd.workerName}';
@@ -174,14 +224,12 @@ Future<void> _mine(StartCommand cmd, SendPort report, bool Function() stopped) a
     'params': [worker, 'x'],
   }) + '\n'));
 
-  // Shared, mutation-visible state. The socket listener and the scan loop run
-  // on the same isolate, so these are safe to touch from both.
+  // Per-connection, mutation-visible state. The socket listener and the scan
+  // loop run on the same isolate, so these are safe to touch from both.
   var extranonce = 0; // high 16 bits of the nonce
   var diff = 1.0;
   var revision = 0;
   _Job? job;
-  var submitted = 0; // accepted shares
-  var rejected = 0;
   var socketClosed = false;
   String pending = '';
 
@@ -314,12 +362,7 @@ Future<void> _mine(StartCommand cmd, SendPort report, bool Function() stopped) a
     socket.destroy();
   }
 
-  send(MinerEvent(
-    state: socketClosed && !stopped() ? 'error' : 'stopped',
-    shares: submitted,
-    rejected: rejected,
-    error: socketClosed && !stopped() ? 'connection lost' : null,
-  ));
+  return _SessionResult(submitted, rejected);
 }
 
 void _writeU64Le(ByteData bd, int offset, BigInt value) {
