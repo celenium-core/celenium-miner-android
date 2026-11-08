@@ -413,34 +413,34 @@ void main() {
     ) async {
       await tester.pumpWidget(host(snapshotWith()));
 
-      expect(find.text('1.42 GH/s'), findsOneWidget);
+      // The hashrate renders in the summary chips and again in the stats
+      // strip, so it is present more than once rather than exactly once.
+      expect(find.text('1.42 GH/s'), findsWidgets);
       expect(find.text('asic-1'), findsOneWidget);
       // The live-status label now reads "connect": the bridge is connected,
       // not a generic "mining active" banner.
       expect(find.text('connect'), findsOneWidget);
     });
 
-    testWidgets('says so when the bridge has not answered', (tester) async {
+    testWidgets('shows an honest idle state when the bridge has not answered', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(const MinerSnapshot()));
 
+      // No invented numbers — just dashes and an IDLE pill.
       expect(find.text('—'), findsWidgets);
       expect(find.text('IDLE'), findsOneWidget);
-      expect(
-        find.textContaining('The bridge has not answered'),
-        findsOneWidget,
-      );
     });
 
-    testWidgets('shows real block and share counts, not a price', (
+    testWidgets('shows session shares and hashrate, never a price', (
       tester,
     ) async {
       await tester.pumpWidget(host(snapshotWith()));
 
-      // The concept mock carried a $ price. CEN is not listed anywhere, so a
-      // price here would be invented: the third cell is shares instead.
-      expect(find.text('2'), findsOneWidget);
-      expect(find.text('3'), findsOneWidget);
+      // A phone worker submits shares, never blocks, so the strip is accepted
+      // / rejected / hashrate. No block count and no invented $ price.
       expect(find.text('1204'), findsOneWidget);
+      expect(find.text('1.42 GH/s'), findsWidgets);
       expect(find.textContaining(r'$'), findsNothing);
     });
 
@@ -539,7 +539,11 @@ void main() {
           theme: buildCenTheme(),
           home: Scaffold(
             body: MiningScreen(
-              readout: MiningReadout.from(snapshotWith()),
+              readout: const MiningReadout(
+                status: MinerStatus.mining,
+                active: true,
+                estimatedCen: 0.5,
+              ),
               nodeAddress: '127.0.0.1:26510',
               onOpenActivity: () {},
               onConnectNode: () {},
@@ -549,7 +553,8 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('CEN'), findsWidgets);
+      // The only CEN text on the mining screen is the session estimate line.
+      expect(find.textContaining('CEN'), findsWidgets);
       expect(find.text('CEL'), findsNothing);
     });
   });

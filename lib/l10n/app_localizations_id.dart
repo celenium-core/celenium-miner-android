@@ -227,6 +227,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get walletMiningReward => 'Imbalan mining';
 
   @override
+  String get walletEstimatedEarned => 'Estimasi sesi ini';
+
+  @override
   String get walletSendTitle => 'Kirim CEN';
 
   @override

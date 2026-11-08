@@ -123,7 +123,7 @@ class _BackupScreenState extends State<BackupScreen> {
     });
 
     try {
-      final wallet = CenWallet.fromMnemonic(mnemonic, CenNetwork.simnet);
+      final wallet = CenWallet.fromMnemonic(mnemonic, CenNetwork.mainnet);
       await _keystore.savePhrase(mnemonic.phrase);
       await _keystore.setBackedUp(true);
       if (!mounted) return;

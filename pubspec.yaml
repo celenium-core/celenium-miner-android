@@ -29,6 +29,10 @@ dependencies:
   ffi: ^2.2.0
   google_mobile_ads: ^9.2.0
 
+  # Keeps the miner hashing in a foreground service so mining survives the app
+  # being swiped away or the activity being destroyed in the background.
+  flutter_foreground_task: ^11.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

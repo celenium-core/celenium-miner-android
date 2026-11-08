@@ -30,7 +30,9 @@ class WalletScreen extends StatefulWidget {
     required this.onOpenActivity,
     this.api,
     this.keystore,
-    this.network = CenNetwork.simnet,
+    this.network = CenNetwork.mainnet,
+    this.localAddress,
+    this.estimatedCen,
   });
 
   final MinerSnapshot snapshot;
@@ -45,6 +47,15 @@ class WalletScreen extends StatefulWidget {
 
   /// Which network the local key belongs to (the UI reads it from settings).
   final CenNetwork network;
+
+  /// The phone's own mainnet address derived from the locally stored recovery
+  /// phrase. Shown in full; the bridge snapshot's `internalCpu.wallet` is only
+  /// a fallback for when the bridge itself is the miner.
+  final String? localAddress;
+
+  /// Estimated CEN earned this mining session (accepted shares × block
+  /// reward), computed locally. Null while not mining.
+  final double? estimatedCen;
 
   /// Opens the backup flow for the locally generated key.
   final VoidCallback onBackup;
@@ -63,6 +74,8 @@ class _WalletScreenState extends State<WalletScreen> {
   /// empty string is treated as "no address": the bridge reports an empty
   /// wallet slot until its first accepted block.
   String? get _address {
+    final local = widget.localAddress;
+    if (local != null && local.isNotEmpty) return local;
     final wallet = widget.snapshot.stats?.internalCpu?.wallet;
     return (wallet == null || wallet.isEmpty) ? null : wallet;
   }
@@ -93,6 +106,31 @@ class _WalletScreenState extends State<WalletScreen> {
           const SizedBox(height: Palette.lg),
           if (address != null) ...[
             _AddressCard(address: address),
+            const SizedBox(height: Palette.lg),
+          ],
+          if (widget.estimatedCen != null) ...[
+            CenCard(
+              padding: const EdgeInsets.all(Palette.md),
+              color: Palette.goldLight.withValues(alpha: 0.06),
+              border: BorderSide(
+                color: Palette.goldLight.withValues(alpha: 0.22),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Eyebrow(
+                      l10n.walletEstimatedEarned,
+                      color: Palette.creamInkDim,
+                    ),
+                  ),
+                  Text(
+                    '≈ ${widget.estimatedCen!.toStringAsFixed(6)} CEN',
+                    style: TypeScale.pixel(context, size: 16)
+                        .copyWith(color: Palette.goldLight),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: Palette.lg),
           ],
           _Actions(

@@ -100,6 +100,7 @@
   "walletSwapBody": "CEN isn't listed on any exchange yet, so there's nothing to swap with.",
   "walletReceiveNote": "Anyone with this address can send coins to it. It is safe to share.",
   "walletMiningReward": "Mining reward",
+  "walletEstimatedEarned": "Estimated this session",
   "walletSendTitle": "Send CEN",
   "walletSendRecipient": "Recipient address",
   "walletSendAmount": "Amount",

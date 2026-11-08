@@ -227,6 +227,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletMiningReward => 'Mining reward';
 
   @override
+  String get walletEstimatedEarned => 'Estimated this session';
+
+  @override
   String get walletSendTitle => 'Send CEN';
 
   @override

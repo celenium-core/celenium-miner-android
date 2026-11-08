@@ -5,6 +5,13 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- The ad SDK checks connectivity before requesting a fill. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Foreground mining: wakelock keeps the CPU hashing, the service stays
+         alive when the activity is swiped away, and Android 13+ needs a
+         runtime request to show the persistent notification. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Celenium Miner"
         android:name="${applicationName}"
@@ -44,6 +51,14 @@
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-5168743842779308~5416336913"/>
+        <!-- Runs the miner in the background so hashing survives the app being
+             closed. The class lives in the flutter_foreground_task AAR; only
+             its declaration belongs here. dataSync keeps it alive on Android
+             14+ with the matching permission above. -->
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

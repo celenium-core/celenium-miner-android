@@ -506,6 +506,12 @@ abstract class AppLocalizations {
   /// **'Mining reward'**
   String get walletMiningReward;
 
+  /// No description provided for @walletEstimatedEarned.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated this session'**
+  String get walletEstimatedEarned;
+
   /// No description provided for @walletSendTitle.
   ///
   /// In en, this message translates to:

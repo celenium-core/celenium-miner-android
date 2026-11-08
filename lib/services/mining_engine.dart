@@ -1,14 +1,16 @@
 import 'dart:async';
-import 'dart:isolate';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import 'cen_wallet.dart';
 import 'keystore.dart';
 import 'mining_isolate.dart';
 import 'mining_readout.dart';
+import 'mining_service.dart';
 
-/// The local mining engine: owns the background isolate that runs the native
+/// The local mining engine: drives the foreground service that runs the native
 /// `celenium_scan` worker, tracks share counts and session state, and enforces
 /// the 24-hour session hard-stop.
 ///
@@ -16,15 +18,21 @@ import 'mining_readout.dart';
 /// (`POST /api/mining`) that the screen used to drive: the phone hashes against
 /// the VPS pool at `5.178.98.100:5556` and submits shares directly.
 ///
-/// The engine lives in [_MinerHomeState] (one instance for the app's lifetime)
-/// so the session survives route changes. The screen reads [readout] to render
-/// and flips [setMining] to start/stop. It is a [ChangeNotifier] so the owning
-/// state rebuilds on every status/hashrate/share mutation without a callback.
+/// The hashing itself runs in [MiningTaskHandler] inside an Android foreground
+/// service, so mining keeps running when the app is swiped away. This engine is
+/// only the app-side controller: it starts/stops the service, receives worker
+/// events back over the plugin channel, and derives the display estimate.
+///
+/// One instance lives in [_MinerHomeState] for the app's lifetime so the
+/// session survives route changes. It is a [ChangeNotifier] so the owning state
+/// rebuilds on every mutation without a callback.
 class MiningEngine extends ChangeNotifier {
-  MiningEngine({required Keystore keys}) : _keys = keys;
+  MiningEngine({required Keystore keys}) : _keys = keys {
+    FlutterForegroundTask.addTaskDataCallback(_onTaskData);
+  }
 
-  /// The pool the phone submits shares to. Hard-coded on purpose: exposure of
-  /// this address is a configuration detail the user should not have to set.
+  /// The pool the phone submits shares to. Hard-coded on purpose: this address
+  /// is a configuration detail the user should not have to set.\n
   static const String host = '5.178.98.100';
   static const int port = 5556;
 
@@ -32,18 +40,26 @@ class MiningEngine extends ChangeNotifier {
   /// reconnect reuses the same worker slot.
   static const String workerName = 'phone';
 
-  /// The session hard-stop. After this the isolate is stopped and the toggle
+  /// The session hard-stop. After this the service is stopped and the toggle
   /// returns to OFF; the user must tap again to open a fresh session.
   static const Duration sessionLimit = Duration(hours: 24);
 
+  /// Post-Era0 mainnet block reward, in CEN per block, per the whitepaper's
+  /// emission schedule. Used only to translate accepted shares into a rough
+  /// "you have earned ~X CEN" figure on the mining screen.
+  static const double _cenPerBlock = 0.0136656;
+
+  /// CEN credited per accepted difficulty-1 share. Derived: a share worth
+  /// `difficulty` diff-1 units earns `difficulty / (total_diff_per_block)`
+  /// of a block reward. With a nominal network difficulty near 1 in early
+  /// Era-0, one diff-1 share ≈ one block-equivalent of work.
+  static const double _cenPerShareAtDiff1 = _cenPerBlock;
+
   final Keystore _keys;
 
-  Isolate? _isolate;
-  ReceivePort? _report;
-  SendPort? _toMiner;
-
   bool _mining = false; // user intent (toggle state)
-  bool _running = false; // an isolate is actually spawned/hashing
+  bool _running = false; // a service worker is actually spawned/hashing
+  bool _serviceInit = false; // `initMiningService` has run once
 
   String status = MinerStatus.idle;
   double? hashrate; // H/s
@@ -53,6 +69,7 @@ class MiningEngine extends ChangeNotifier {
   String? jobId;
   double? difficulty;
   String? address; // "cen69:…" payout address
+  double? estimatedCen; // Σ shares × difficulty × per-share reward
 
   int? _sessionStartMillis;
   Timer? _limitTimer;
@@ -64,6 +81,8 @@ class MiningEngine extends ChangeNotifier {
       hashrateGhs: hashrate == null ? null : hashrate! / 1e9,
       difficulty: difficulty,
       workerName: _shortAddress,
+      address: address,
+      estimatedCen: estimatedCen,
       shares: accepted,
       // The local worker reports rejected shares; the readout's `stale` slot
       // feeds the acceptance-rate denominator, matching bridge semantics.
@@ -90,6 +109,46 @@ class MiningEngine extends ChangeNotifier {
       await _start();
     } else {
       await _stop();
+    }
+  }
+
+  /// Re-attaches UI state when the app is reopened while the service is still
+  /// hashing in the background. Best-effort: if the service is running the
+  /// toggle flips back to ON and shows "mining" until the next worker event
+  /// reports fresh numbers.
+  Future<void> resume() async {
+    try {
+      if (await FlutterForegroundTask.isRunningService) {
+        _mining = true;
+        _running = true;
+        if (status != MinerStatus.mining && status != MinerStatus.connecting) {
+          status = MinerStatus.mining;
+        }
+        notifyListeners();
+      }
+    } on Object {
+      // Service check unavailable (e.g. early init). Stay idle.
+    }
+  }
+
+  /// Resolves the payout address from the locally stored recovery phrase
+  /// without starting anything, so the wallet tab can show it before the
+  /// first mining session. Best-effort: a missing or invalid phrase leaves
+  /// [address] null and the wallet tab falls back to its empty state.
+  Future<void> resolveAddress() async {
+    if (address != null) return;
+    final phrase = await _keys.readPhrase();
+    if (phrase == null || phrase.trim().isEmpty) return;
+    try {
+      final wallet = CenWallet.fromMnemonic(
+        Mnemonic.fromPhrase(phrase.trim()),
+        CenNetwork.mainnet,
+      );
+      address = wallet.address;
+      notifyListeners();
+    } on Object {
+      // Invalid phrase: leave address null, the wallet tab shows the empty
+      // state instead of crashing on derivation.
     }
   }
 
@@ -126,15 +185,17 @@ class MiningEngine extends ChangeNotifier {
     status = MinerStatus.connecting;
     _sessionStartMillis = DateTime.now().millisecondsSinceEpoch;
     _armLimitTimer();
-    await _spawn(wallet.address);
+    await _beginService(wallet.address);
     notifyListeners();
   }
 
   Future<void> _stop() async {
     _mining = false;
-    if (!_running) return;
-    status = MinerStatus.stopped;
-    await _teardown();
+    _running = false;
+    final wasService = await _stopService();
+    if (wasService) {
+      status = MinerStatus.stopped;
+    }
     notifyListeners();
   }
 
@@ -142,30 +203,99 @@ class MiningEngine extends ChangeNotifier {
     if (!_running) return;
     _mining = false;
     status = MinerStatus.limitReached;
-    _teardown();
+    _stopService();
     notifyListeners();
   }
 
-  Future<void> _spawn(String addr) async {
-    _running = true;
-    final report = ReceivePort();
-    final controlCompleter = Completer<SendPort>();
-    report.listen((message) {
-      if (message is SendPort) {
-        controlCompleter.complete(message);
-      } else if (message is MinerEvent) {
-        _onEvent(message);
+  // --- foreground service plumbing ---------------------------------------
+
+  Future<void> _ensureService() async {
+    if (_serviceInit) return;
+    initMiningService();
+    _serviceInit = true;
+    try {
+      final req = await FlutterForegroundTask.requestNotificationPermission();
+      if (req != NotificationPermission.granted) {
+        // Android 13+ may deny the drawer entry; the service still runs, just
+        // with a hidden notification for this session.\n
       }
-    });
-    _report = report;
-    _isolate = await Isolate.spawn(minerIsolateEntry, report.sendPort);
-    final toMiner = await controlCompleter.future;
-    _toMiner = toMiner;
-    toMiner.send(StartCommand(
-      address: addr,
-      host: host,
-      port: port,
-      workerName: workerName,
+    } on Object {
+      // Permission flow is best-effort; the service starts regardless.
+    }
+  }
+
+  Future<void> _beginService(String addr) async {
+    await _ensureService();
+    await FlutterForegroundTask.saveData(
+      key: kMiningConfigKey,
+      value: jsonEncode(<String, dynamic>{
+        'address': addr,
+        'host': host,
+        'port': port,
+        'worker': workerName,
+      }),
+    );
+
+    ServiceRequestResult result;
+    if (await FlutterForegroundTask.isRunningService) {
+      result = await FlutterForegroundTask.restartService();
+    } else {
+      result = await FlutterForegroundTask.startService(
+        serviceId: 1,
+        notificationTitle: 'Celenium Miner',
+        notificationText: 'Mining CEN in the background',
+        callback: miningStartCallback,
+      );
+    }
+
+    if (result is ServiceRequestFailure) {
+      _mining = false;
+      _running = false;
+      status = MinerStatus.error;
+      error = 'service: ${result.error}';
+      return;
+    }
+    _running = true;
+  }
+
+  Future<bool> _stopService() async {
+    _limitTimer?.cancel();
+    _limitTimer = null;
+    _sessionStartMillis = null;
+    hashrate = null;
+    estimatedCen = null;
+    try {
+      if (await FlutterForegroundTask.isRunningService) {
+        FlutterForegroundTask.sendDataToTask(const JsonEncoder().convert(<String, dynamic>{'cmd': 'stop'}));
+        await FlutterForegroundTask.stopService();
+        return true;
+      }
+    } on Object {
+      // Service may already be gone; nothing to clean up.
+    }
+    return false;
+  }
+
+  // --- event handling -----------------------------------------------------
+
+  void _onTaskData(Object data) {
+    if (data is! String) return;
+    Map<String, dynamic>? map;
+    try {
+      map = jsonDecode(data) as Map<String, dynamic>;
+    } on Object {
+      return;
+    }
+    final state = map['state'];
+    if (state is! String) return;
+    _onEvent(MinerEvent(
+      state: state,
+      hashrate: _asDouble(map['hashrate']),
+      shares: _asInt(map['shares']),
+      rejected: _asInt(map['rejected']),
+      error: map['error'] as String?,
+      jobId: map['jobId'] as String?,
+      difficulty: _asDouble(map['difficulty']),
     ));
   }
 
@@ -181,6 +311,7 @@ class MiningEngine extends ChangeNotifier {
         rejected = ev.rejected ?? rejected;
         jobId = ev.jobId ?? jobId;
         difficulty = ev.difficulty ?? difficulty;
+        _updateEstimate();
         break;
       case 'error':
         status = MinerStatus.error;
@@ -190,7 +321,6 @@ class MiningEngine extends ChangeNotifier {
         rejected = ev.rejected;
         _mining = false;
         _running = false;
-        _releaseIsolate();
         break;
       case 'stopped':
         if (_running) {
@@ -206,51 +336,17 @@ class MiningEngine extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _teardown() async {
-    _running = false;
-    _limitTimer?.cancel();
-    _limitTimer = null;
-    _sessionStartMillis = null;
-    hashrate = null;
-    final toMiner = _toMiner;
-    final isolate = _isolate;
-    final report = _report;
-    _toMiner = null;
-    _isolate = null;
-    _report = null;
-
-    if (toMiner != null) {
-      try {
-        toMiner.send(const StopCommand());
-      } on Object {
-        // The isolate may already be gone; the hard kill below covers it.
-      }
-    }
-    if (isolate != null) {
-      // Give the worker a beat to release its native memory on the message,
-      // then hard-kill so no isolate lingers past the toggle.
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      isolate.kill(priority: Isolate.immediate);
-    }
-    report?.close();
+  void _updateEstimate() {
+    final acc = accepted;
+    final diff = difficulty;
+    if (acc == null || diff == null) return;
+    estimatedCen = acc * diff * _cenPerShareAtDiff1;
   }
 
-  /// Drops the isolate handles after a self-terminating event (an error), so a
-  /// fresh toggle spawns clean state. The report port is closed a microtask
-  /// later: closing it synchronously from inside its own listener would cut
-  /// the current dispatch short.
-  void _releaseIsolate() {
-    _limitTimer?.cancel();
-    _limitTimer = null;
-    _sessionStartMillis = null;
-    final report = _report;
-    final isolate = _isolate;
-    _report = null;
-    _isolate = null;
-    _toMiner = null;
-    isolate?.kill(priority: Isolate.immediate);
-    if (report != null) scheduleMicrotask(report.close);
-  }
+  static double? _asDouble(Object? v) => v is num ? v.toDouble() : (v == null ? null : double.tryParse(v.toString()));
+  static int? _asInt(Object? v) => v is num ? v.toInt() : (v == null ? null : int.tryParse(v.toString()));
+
+  // --- stop === helpers ---------------------------------------------------
 
   void _armLimitTimer() {
     _limitTimer?.cancel();
@@ -270,26 +366,13 @@ class MiningEngine extends ChangeNotifier {
     return '${addr.substring(0, 14)}…${addr.substring(addr.length - 8)}';
   }
 
-  /// Synchronous teardown for app shutdown: kill immediately (no 500 ms grace —
-  /// nothing else uses the isolate), close the report port so no late event
-  /// notifies a disposed listener, then hand back to [ChangeNotifier.dispose].
+  /// On app shutdown the service is deliberately left running — that is the
+  /// whole point of the foreground model. We only stop listening for events.
   @override
   void dispose() {
     _limitTimer?.cancel();
     _limitTimer = null;
-    final toMiner = _toMiner;
-    final isolate = _isolate;
-    final report = _report;
-    _toMiner = null;
-    _isolate = null;
-    _report = null;
-    try {
-      toMiner?.send(const StopCommand());
-    } on Object {
-      // The isolate may already be gone; the kill below is the backstop.
-    }
-    isolate?.kill(priority: Isolate.immediate);
-    report?.close();
+    FlutterForegroundTask.removeTaskDataCallback(_onTaskData);
     super.dispose();
   }
 }

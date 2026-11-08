@@ -32,9 +32,13 @@ import 'widgets/ad_banner.dart';
 import 'widgets/hacker_fx.dart';
 import 'widgets/brand_mark.dart';
 import 'widgets/cen_ui.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Open the plugin's communication port before runApp so the foreground
+  // service can push worker events back to whichever app process is alive.
+  FlutterForegroundTask.initCommunicationPort();
   // No ad SDK call happens before the first frame: its init talks to Play
   // Services, and an unhandled failure there kills the process on launch.
   // The banner warms the SDK lazily, where every failure is contained.
@@ -229,6 +233,10 @@ class _MinerHomeState extends State<MinerHome> {
   void initState() {
     super.initState();
     _engine.addListener(_onEngineChanged);
+    _engine.resume();
+    // Resolve the local mainnet address up front so the wallet tab (and the
+    // Send flow's key check) work even before the first mining session.
+    _engine.resolveAddress();
     _loadSettings();
   }
 
@@ -633,6 +641,8 @@ class _MinerHomeState extends State<MinerHome> {
           api: _api,
           onBackup: () => _open(_Route.backup),
           onOpenActivity: () => _open(_Route.activity),
+          localAddress: _engine.address,
+          estimatedCen: _engine.estimatedCen,
         );
       case _Tab.profile:
         return ProfileScreen(

@@ -135,8 +135,12 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
     final status = readout.status ?? MinerStatus.idle;
-    final streaming =
-        status == MinerStatus.mining || status == MinerStatus.connecting;
+    // A bridge snapshot has no engine lifecycle (`status` is null) yet still
+    // reports hashing through `active`, so that flag also drives the streaming
+    // chips instead of a false "idle" pill.
+    final streaming = readout.active ||
+        status == MinerStatus.mining ||
+        status == MinerStatus.connecting;
     final statusLabel = switch (status) {
       MinerStatus.mining => l10n.mineMiningOn,
       MinerStatus.connecting => l10n.mineConnecting,
@@ -170,8 +174,8 @@ class _SummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  readout.workerName ?? l10n.commonNoWorker,
-                  maxLines: 1,
+                  readout.address ?? readout.workerName ?? l10n.commonNoWorker,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TypeScale.title(context).copyWith(
                     color: Palette.creamInk,
@@ -338,6 +342,20 @@ class _DialCaption extends StatelessWidget {
           textAlign: TextAlign.center,
           overflow: TextOverflow.ellipsis,
         ),
+        if (readout.estimatedCen != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            '≈ ${readout.estimatedCen!.toStringAsFixed(6)} CEN',
+            style: TypeScale.mono(
+              context,
+              size: 12,
+            ).copyWith(
+              color: Palette.goldLight,
+              fontWeight: FontWeight.w700,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ],
     );
   }

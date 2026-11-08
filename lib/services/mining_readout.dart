@@ -23,6 +23,8 @@ class MiningReadout {
     this.hashrateGhs,
     this.difficulty,
     this.workerName,
+    this.address,
+    this.estimatedCen,
     this.shares,
     this.stale,
     this.invalid,
@@ -46,6 +48,14 @@ class MiningReadout {
 
   /// Worker name reported by the bridge.
   final String? workerName;
+
+  /// Full payout address (`cen69:…`) derived from the wallet by the local
+  /// engine. Distinct from [workerName], which is the shortened pool label.
+  final String? address;
+
+  /// Estimated CEN mined this session from the engine's share math. A display
+  /// estimate only — never a settlement amount.
+  final double? estimatedCen;
 
   final int? shares;
   final int? stale;
