@@ -156,7 +156,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get mineConnecting => 'MENGHUBUNGKAN';
 
   @override
-  String get mineNeedsWallet => 'ISI WALLET DULU';
+  String get mineNeedsWallet => 'RESTART UNTUK BUAT DOMPET';
 
   @override
   String get mineLimitReached => 'BATAS 24 JAM';

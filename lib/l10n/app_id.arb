@@ -63,7 +63,7 @@
   "mineActiveTime": "Waktu aktif",
   "mineStatus": "Status",
   "mineConnecting": "MENGHUBUNGKAN",
-  "mineNeedsWallet": "ISI WALLET DULU",
+  "mineNeedsWallet": "RESTART UNTUK BUAT DOMPET",
   "mineLimitReached": "BATAS 24 JAM",
   "mineError": "MINER GALAT",
   "mineAcceptedCount": "DITERIMA {count}",

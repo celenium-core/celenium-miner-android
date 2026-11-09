@@ -63,7 +63,7 @@
   "mineActiveTime": "Active time",
   "mineStatus": "Status",
   "mineConnecting": "CONNECTING",
-  "mineNeedsWallet": "SET WALLET FIRST",
+  "mineNeedsWallet": "RESTART TO CREATE WALLET",
   "mineLimitReached": "24H LIMIT REACHED",
   "mineError": "MINER ERROR",
   "mineAcceptedCount": "ACCEPTED {count}",

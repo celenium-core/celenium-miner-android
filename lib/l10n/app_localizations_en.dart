@@ -156,7 +156,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineConnecting => 'CONNECTING';
 
   @override
-  String get mineNeedsWallet => 'SET WALLET FIRST';
+  String get mineNeedsWallet => 'RESTART TO CREATE WALLET';
 
   @override
   String get mineLimitReached => '24H LIMIT REACHED';

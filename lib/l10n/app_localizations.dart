@@ -383,7 +383,7 @@ abstract class AppLocalizations {
   /// No description provided for @mineNeedsWallet.
   ///
   /// In en, this message translates to:
-  /// **'SET WALLET FIRST'**
+  /// **'RESTART TO CREATE WALLET'**
   String get mineNeedsWallet;
 
   /// No description provided for @mineLimitReached.
