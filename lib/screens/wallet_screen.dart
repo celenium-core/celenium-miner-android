@@ -218,6 +218,14 @@ class _BalanceCardState extends State<_BalanceCard> {
   AccountBalance? _balance;
   bool _revealed = true;
 
+  // DSEG14 draws the `1` segment against the right wall of its cell, so a
+  // left-aligned figure reads as indented under the eyebrow. The leading void
+  // is ~0.54× the face size; pull the figure left by that em fraction so the
+  // flush tracks the type size instead of a fixed pixel count that would drift
+  // if the face size ever changes.
+  static const double _balanceFaceSize = 26.0;
+  static const double _leftBearingEm = 14.0 / 26.0;
+
   @override
   void initState() {
     super.initState();
@@ -257,6 +265,28 @@ class _BalanceCardState extends State<_BalanceCard> {
     // pradha reads as still accumulating, CEN as having arrived.
     final isWholeCen = balance != null && balance.pradha >= kPradhaPerCen;
 
+    // The figure this card draws: full precision when revealed, a masked
+    // X.XXXX when hidden, and an em-dash while the bridge is still resolving.
+    final String figure = balance == null
+        ? '—'
+        : (_revealed
+              ? formatPradhaNumber(
+                  balance.pradha,
+                  locale: Localizations.localeOf(context).toString(),
+                )
+              : 'X.XXXX');
+    final TextStyle figureStyle = balance == null
+        ? TypeScale.hero(context).copyWith(color: Palette.creamInk)
+        : TypeScale.digital(
+            context,
+            size: 26,
+            color: Palette.creamInk,
+            weight: FontWeight.w700,
+          );
+    final double leadingInset = balance == null
+        ? 0.0
+        : _leftBearingEm * _balanceFaceSize;
+
     // The cream balance card from the concept: the light mass carries the
     // dark figure, which is the opposite of every other panel here and is
     // what makes the balance the first thing the eye lands on.
@@ -294,36 +324,15 @@ class _BalanceCardState extends State<_BalanceCard> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
+                // Shift by the glyph's bearing (em-relative) so the first lit
+                // segment lands flush on the eyebrow's `S`; FittedBox still
+                // guards a long figure from overflowing.
                 child: Transform.translate(
-                  // DSEG14's `1` carries a wide left side-bearing that reads
-                  // as an indent against the eyebrow's `S`; drag the figure
-                  // back so the first lit segment sits on the label instead of
-                  // floating a half-digit to the right of it.
-                  offset: const Offset(-14, 0),
+                  offset: Offset(-leadingInset, 0),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      balance == null
-                          ? '—'
-                          : (_revealed
-                                ? formatPradhaNumber(
-                                    balance.pradha,
-                                    locale: Localizations.localeOf(context)
-                                        .toString(),
-                                  )
-                                : 'X.XXXX'),
-                      maxLines: 1,
-                      style: balance == null
-                          ? TypeScale.hero(context)
-                                .copyWith(color: Palette.creamInk)
-                          : TypeScale.digital(
-                              context,
-                              size: 26,
-                              color: Palette.creamInk,
-                              weight: FontWeight.w700,
-                            ),
-                    ),
+                    child: Text(figure, maxLines: 1, style: figureStyle),
                   ),
                 ),
               ),
