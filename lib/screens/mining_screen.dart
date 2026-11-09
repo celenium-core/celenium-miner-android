@@ -33,6 +33,16 @@ class MiningScreen extends StatelessWidget {
   /// the new switch position; the engine does the hashing.
   final ValueChanged<bool>? onSetMining;
 
+  /// Headroom above the dial stage. The design review at 1.0.3 read the dial,
+  /// its tap-to-start caption and the clock card as crammed against the top
+  /// card on phones; this gap drops the whole composition into the viewport's
+  /// visual midline instead of hugging the summary card.
+  static const double _stageGap = 96;
+
+  /// Breathing room between the dial and the session card, mirroring the
+  /// stage so the trio settles into the lower half instead of the top.
+  static const double _tailGap = 64;
+
   @override
   Widget build(BuildContext context) {
     final readout = this.readout;
@@ -53,11 +63,13 @@ class MiningScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(height: Palette.sm),
+            // The lower opening also drops the top card's brand mark: the
+            // design review wanted the whole reading lower on the page.
+            SizedBox(height: Palette.xl),
             summary,
-            const SizedBox(height: Palette.xl),
+            const SizedBox(height: _stageGap),
             dial,
-            const SizedBox(height: Palette.xl),
+            const SizedBox(height: _tailGap),
             stats,
             const SizedBox(height: Palette.xxl),
           ],

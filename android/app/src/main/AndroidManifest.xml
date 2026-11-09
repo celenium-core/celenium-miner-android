@@ -17,7 +17,14 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:localeConfig="@xml/locales_config"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:allowBackup="false">
+        <!-- allowBackup=false keeps the app out of Auto Backup: after a
+             reinstall the Keystore master key is never restored (it cannot
+             be), so a backed-up EncryptedSharedPreferences blob only ever
+             decrypts to BadPaddingException — the boot-time crash we fixed
+             in Keystore. The recovery phrase exists as written-down words,
+             not as a transportable blob. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

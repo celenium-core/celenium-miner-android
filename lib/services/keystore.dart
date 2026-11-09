@@ -20,9 +20,34 @@ class Keystore {
   static const _keyBackedUp = 'cen_recovery_backed_up';
 
   Future<String?> readPhrase() async {
-    final value = await _storage.read(key: _keyPhrase);
+    final value = await _safeRead(_keyPhrase);
     if (value == null || value.trim().isEmpty) return null;
     return value.trim();
+  }
+
+  /// Reads one entry, treating an undecryptable one as absent.
+  ///
+  /// Android's Auto Backup restores this app's encrypted blob after a
+  /// reinstall while the Keystore master key stays behind, so every read
+  /// then dies with BadPaddingException (BAD_DECRYPT) forever — the miner
+  /// can never start and the wallet can never unlock. Instead of crashing,
+  /// drop the dead ciphertext and report absence: the engine regenerates a
+  /// fresh wallet, and a user who still has the words re-imports them on
+  /// the backup screen.
+  Future<String?> _safeRead(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } on Exception {
+      // The unreadable entry must go, or writes land next to it and the
+      // screen keeps failing on every future boot. Best effort: absence is
+      // the honest answer even when the delete itself is refused.
+      try {
+        await _storage.delete(key: key);
+      } on Exception {
+        // Fall through: a stuck entry degrades to "prompt re-import".
+      }
+      return null;
+    }
   }
 
   Future<void> savePhrase(String phrase) async {
@@ -35,7 +60,7 @@ class Keystore {
   }
 
   Future<bool> hasBackedUp() async {
-    return await _storage.read(key: _keyBackedUp) == 'true';
+    return await _safeRead(_keyBackedUp) == 'true';
   }
 
   Future<void> setBackedUp(bool value) async {
