@@ -39,10 +39,7 @@ class MiningScreen extends StatelessWidget {
     final readout = this.readout;
     final layout = CenLayout.of(context);
 
-    final summary = _SummaryCard(
-      readout: readout,
-      nodeAddress: nodeAddress,
-    );
+    final summary = _SummaryCard(readout: readout, nodeAddress: nodeAddress);
     final dial = _DialBlock(
       readout: readout,
       onTap: onOpenActivity,
@@ -115,10 +112,7 @@ class MiningScreen extends StatelessWidget {
 /// Light card: the worker label and the live readings as coloured chips, or
 /// a labelled status pill when the engine is not hashing.
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.readout,
-    required this.nodeAddress,
-  });
+  const _SummaryCard({required this.readout, required this.nodeAddress});
 
   final MiningReadout readout;
   final String? nodeAddress;
@@ -130,7 +124,8 @@ class _SummaryCard extends StatelessWidget {
     // A bridge snapshot has no engine lifecycle (`status` is null) yet still
     // reports hashing through `active`, so that flag also drives the streaming
     // chips instead of a false "idle" pill.
-    final streaming = readout.active ||
+    final streaming =
+        readout.active ||
         status == MinerStatus.mining ||
         status == MinerStatus.connecting;
     final statusLabel = switch (status) {
@@ -227,29 +222,27 @@ class _ReadingChips extends StatelessWidget {
               ? '—'
               : formatHashrate(readout.hashrateGhs!),
           fill: Palette.amber,
-          style: TypeScale.mono(context, size: 11).copyWith(
-            color: Palette.amberInk,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TypeScale.mono(
+            context,
+            size: 11,
+          ).copyWith(color: Palette.amberInk, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: Palette.xs),
         _MetricChip(
           label: l10n.mineConnected,
           fill: Palette.goldDim,
-          style: TypeScale.caption(context).copyWith(
-            color: Palette.white,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TypeScale.caption(context)
+              .copyWith(color: Palette.white, fontWeight: FontWeight.w700),
         ),
         if (readout.difficulty != null) ...[
           const SizedBox(height: Palette.xs),
           _MetricChip(
             label: 'DIFF ${readout.difficulty!.toStringAsFixed(2)}',
             fill: Palette.slateSoft,
-            style: TypeScale.mono(context, size: 10).copyWith(
-              color: Palette.creamInkDim,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TypeScale.mono(
+              context,
+              size: 10,
+            ).copyWith(color: Palette.creamInkDim, fontWeight: FontWeight.w600),
           ),
         ],
       ],
@@ -283,22 +276,22 @@ class _MetricChip extends StatelessWidget {
   }
 }
 
-/// A centred readout under the dial: the engine phase and the session uptime as
-/// slim cards, then the reward estimate in the concept's shell-prompt style.
+/// A centred readout under the dial: a single action line keyed to the engine
+/// phase, then the reward estimate in the concept's shell-prompt style. The
+/// ON/OFF word and the session clock moved up into the stats card header, so
+/// this caption only answers "what do I do now?" and "what is this worth?".
 class _DialCaption extends StatelessWidget {
-  const _DialCaption({required this.readout, required this.onTap});
+  const _DialCaption({required this.readout});
 
   final MiningReadout readout;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
     final status = readout.status ?? MinerStatus.idle;
-    final mining = status == MinerStatus.mining;
 
-    // One line that answers "what do I do now?", keyed to the phase. The state
-    // bar above names the phase (MINING ON, 24H LIMIT REACHED…); this line
+    // One line that answers "what do I do now?", keyed to the phase. The
+    // header above names the phase (MINING ON, 24H LIMIT REACHED…); this line
     // names the action. It is suppressed for connecting / needs-wallet / error,
     // where the next move is not the logo.
     final String? hint = switch (status) {
@@ -313,41 +306,25 @@ class _DialCaption extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _StateBar(status: status),
-        // The session clock only means something while hashing, so it gets its
-        // own card and only appears then.
-        if (mining) ...[
-          const SizedBox(height: Palette.sm),
-          _ReadoutChip(
-            child: Text(
-              'UPTIME ${_uptime(readout.sessionUptime)}',
-              textAlign: TextAlign.center,
-              style: TypeScale.mono(context, size: 11).copyWith(
-                color: Palette.creamDim,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-        ],
         if (hint != null) ...[
-          const SizedBox(height: Palette.sm),
           Text(
             hint,
             textAlign: TextAlign.center,
-            style: TypeScale.monoMuted(context, size: 10).copyWith(
-              color: Palette.creamDim,
-              letterSpacing: 0.4,
-            ),
+            style: TypeScale.monoMuted(
+              context,
+              size: 10,
+            ).copyWith(color: Palette.creamDim, letterSpacing: 0.4),
           ),
+          if (readout.estimatedCen != null) const SizedBox(height: Palette.md),
         ],
         if (readout.estimatedCen != null) ...[
-          const SizedBox(height: Palette.md),
           Text(
             l10n.walletMiningReward.toUpperCase(),
             textAlign: TextAlign.center,
-            style: TypeScale.monoMuted(context, size: 9).copyWith(
-              letterSpacing: 1.4,
-            ),
+            style: TypeScale.monoMuted(
+              context,
+              size: 9,
+            ).copyWith(letterSpacing: 1.4),
           ),
           const SizedBox(height: 2),
           Text(
@@ -356,10 +333,7 @@ class _DialCaption extends StatelessWidget {
             style: TypeScale.mono(
               context,
               size: 14,
-            ).copyWith(
-              color: Palette.goldLight,
-              fontWeight: FontWeight.w800,
-            ),
+            ).copyWith(color: Palette.goldLight, fontWeight: FontWeight.w800),
           ),
         ],
       ],
@@ -367,19 +341,21 @@ class _DialCaption extends StatelessWidget {
   }
 }
 
-/// A single translucent bar under the dial that pairs a status dot with the
-/// engine phase. While mining it tints green and carries a green border, so
-/// ON/OFF reads at a glance and not only through the word. The instruction line
-/// below tells the user how to continue when the bar shows a limit or an error.
-class _StateBar extends StatelessWidget {
-  const _StateBar({required this.status});
+/// The engine phase and the session clock, printed in the LED face above the
+/// hashrate strip. Time sits on the left and the ON/OFF word at the far right,
+/// so the two read as one paired status — a stopped (kept-zero) clock while
+/// idle, a running one in green while hashing.
+class _StatusHeader extends StatelessWidget {
+  const _StatusHeader({required this.readout});
 
-  final String status;
+  final MiningReadout readout;
 
   @override
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
+    final status = readout.status ?? MinerStatus.idle;
     final mining = status == MinerStatus.mining;
+
     final String statusLine = switch (status) {
       MinerStatus.mining => l10n.mineMiningOn,
       MinerStatus.connecting => l10n.mineConnecting,
@@ -389,57 +365,36 @@ class _StateBar extends StatelessWidget {
       _ => l10n.mineMiningOff,
     };
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 12),
-      decoration: BoxDecoration(
-        color: mining
-            ? Palette.green.withValues(alpha: 0.10)
-            : Palette.surfaceHigh.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(Palette.rowRadius),
-        border: Border.all(
-          color: mining
-              ? Palette.green.withValues(alpha: 0.45)
-              : const Color(0x1AFFFFFF),
+    // On: LED green. Off/idle: the desaturated slate that reads as "inactive"
+    // without dropping below the AA contrast floor of the card.
+    final Color tint = mining ? Palette.green : Palette.slateLight;
+
+    return Row(
+      children: [
+        Text(
+          _uptime(readout.sessionUptime),
+          style: TypeScale.digital(
+            context,
+            size: 20,
+            color: tint,
+            weight: FontWeight.w700,
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          StateDot(active: true, color: mining ? Palette.green : Palette.slate),
-          const SizedBox(width: Palette.sm),
-          Text(
-            statusLine,
-            style: TypeScale.mono(context, size: 12).copyWith(
-              color: mining ? Palette.green : Palette.creamDim,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.6,
+        const SizedBox(width: Palette.sm),
+        const Spacer(),
+        StateDot(active: true, color: mining ? Palette.green : Palette.slate),
+        const SizedBox(width: Palette.sm),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              statusLine,
+              style: TypeScale.digital(context, size: 14, color: tint),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A slim, translucent card shared by the engine-phase and uptime readouts so
-/// the two lines sit as one family beneath the dial instead of floating bare.
-class _ReadoutChip extends StatelessWidget {
-  const _ReadoutChip({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 10),
-      decoration: BoxDecoration(
-        color: Palette.surfaceHigh.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(Palette.rowRadius),
-        border: Border.all(color: const Color(0x1AFFFFFF)),
-      ),
-      child: child,
+        ),
+      ],
     );
   }
 }
@@ -482,7 +437,11 @@ class _DialBlock extends StatelessWidget {
               InkWell(
                 onTap: onTap,
                 customBorder: const CircleBorder(),
-                child: MiningDial(rate: rate, active: readout.active, size: 232),
+                child: MiningDial(
+                  rate: rate,
+                  active: readout.active,
+                  size: 232,
+                ),
               ),
               _MiningToggle(
                 size: 232,
@@ -507,7 +466,7 @@ class _DialBlock extends StatelessWidget {
             ).copyWith(color: Palette.goldLight, letterSpacing: 1.4),
           ),
         const SizedBox(height: Palette.md),
-        _DialCaption(readout: readout, onTap: onTap),
+        _DialCaption(readout: readout),
       ],
     );
   }
@@ -573,7 +532,11 @@ class _MiningToggle extends StatelessWidget {
                   ),
                 ]
               : const [
-                  BoxShadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 3),
+                  BoxShadow(
+                    color: Colors.black26,
+                    offset: Offset(0, 1),
+                    blurRadius: 3,
+                  ),
                 ],
         ),
         child: Material(
@@ -599,6 +562,8 @@ class _MiningToggle extends StatelessWidget {
 /// Three session counts for a local phone miner: accepted shares, rejected
 /// shares and the live hashrate. No block count — a phone submits shares, it
 /// does not find blocks — and no price, because CEN is not listed anywhere.
+/// The ON/OFF + clock header sits directly above the counts, so the user reads
+/// "is it hashing, for how long" before "how well".
 class _StatsStrip extends StatelessWidget {
   const _StatsStrip({required this.readout});
 
@@ -608,32 +573,40 @@ class _StatsStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
     return CenCard(
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: StatCell(
-              value: readout.shares?.toString() ?? '—',
-              unit: l10n.mineSharesUnit,
-              label: l10n.mineAcceptedLabel,
-              color: Palette.goldLight,
-            ),
-          ),
-          const StatDivider(),
-          Expanded(
-            child: StatCell(
-              value: readout.stale?.toString() ?? '—',
-              unit: l10n.mineSharesUnit,
-              label: l10n.mineRejectedLabel,
-            ),
-          ),
-          const StatDivider(),
-          Expanded(
-            child: StatCell(
-              value: readout.hashrateGhs == null
-                  ? '—'
-                  : formatHashrate(readout.hashrateGhs!),
-              label: l10n.mineHashRate,
-            ),
+          _StatusHeader(readout: readout),
+          const SizedBox(height: Palette.md),
+          Container(height: 1, color: const Color(0x1AFFFFFF)),
+          const SizedBox(height: Palette.md),
+          Row(
+            children: [
+              Expanded(
+                child: StatCell(
+                  value: readout.shares?.toString() ?? '—',
+                  unit: l10n.mineSharesUnit,
+                  label: l10n.mineAcceptedLabel,
+                  color: Palette.goldLight,
+                ),
+              ),
+              const StatDivider(),
+              Expanded(
+                child: StatCell(
+                  value: readout.stale?.toString() ?? '—',
+                  unit: l10n.mineSharesUnit,
+                  label: l10n.mineRejectedLabel,
+                ),
+              ),
+              const StatDivider(),
+              Expanded(
+                child: StatCell(
+                  value: readout.hashrateGhs == null
+                      ? '—'
+                      : formatHashrate(readout.hashrateGhs!),
+                  label: l10n.mineHashRate,
+                ),
+              ),
+            ],
           ),
         ],
       ),

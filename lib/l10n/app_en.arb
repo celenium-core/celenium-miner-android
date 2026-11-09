@@ -94,6 +94,8 @@
   "walletCopyAddress": "Copy address",
   "walletShowAddress": "Show address",
   "walletHideAddress": "Hide address",
+  "walletShowBalance": "Show balance",
+  "walletHideBalance": "Hide balance",
   "walletSend": "Send",
   "walletReceive": "Receive",
   "walletSwap": "Swap",

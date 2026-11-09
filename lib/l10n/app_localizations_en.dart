@@ -207,6 +207,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHideAddress => 'Hide address';
 
   @override
+  String get walletShowBalance => 'Show balance';
+
+  @override
+  String get walletHideBalance => 'Hide balance';
+
+  @override
   String get walletSend => 'Send';
 
   @override

@@ -470,6 +470,18 @@ abstract class AppLocalizations {
   /// **'Hide address'**
   String get walletHideAddress;
 
+  /// No description provided for @walletShowBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Show balance'**
+  String get walletShowBalance;
+
+  /// No description provided for @walletHideBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide balance'**
+  String get walletHideBalance;
+
   /// No description provided for @walletSend.
   ///
   /// In en, this message translates to:

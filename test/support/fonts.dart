@@ -39,11 +39,14 @@ Future<void> loadCenFonts() async {
     'test/support/fonts/JetBrainsMono-Bold.ttf',
   ]);
   await _loadFonts('Press Start 2P', ['assets/fonts/PressStart2P-Regular.ttf']);
+  await _loadFonts('DSEG14', [
+    'assets/fonts/DSEG14Classic-Regular.ttf',
+    'assets/fonts/DSEG14Classic-Bold.ttf',
+  ]);
   await _loadFonts('MaterialIcons', [
     '/home/dx401/flutter-install/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
   ]);
 }
-
 
 /// The logo mark ships as PNG assets, and the test asset bundle resolves them
 /// asynchronously — inside `testWidgets`' FakeAsync zone that decode never

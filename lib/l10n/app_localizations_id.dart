@@ -207,6 +207,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get walletHideAddress => 'Sembunyikan alamat';
 
   @override
+  String get walletShowBalance => 'Tampilkan saldo';
+
+  @override
+  String get walletHideBalance => 'Sembunyikan saldo';
+
+  @override
   String get walletSend => 'Kirim';
 
   @override

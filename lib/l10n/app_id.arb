@@ -94,6 +94,8 @@
   "walletCopyAddress": "Salin alamat",
   "walletShowAddress": "Tampilkan alamat",
   "walletHideAddress": "Sembunyikan alamat",
+  "walletShowBalance": "Tampilkan saldo",
+  "walletHideBalance": "Sembunyikan saldo",
   "walletSend": "Kirim",
   "walletReceive": "Terima",
   "walletSwap": "Tukar",

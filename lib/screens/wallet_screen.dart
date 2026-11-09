@@ -94,9 +94,7 @@ class _WalletScreenState extends State<WalletScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: Palette.sm),
-          _Header(
-            connected: widget.snapshot.stats != null,
-          ),
+          _Header(connected: widget.snapshot.stats != null),
           const SizedBox(height: Palette.lg),
           _BalanceCard(
             key: ValueKey('balance-$_balanceEpoch'),
@@ -125,8 +123,10 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                   Text(
                     '≈ ${formatCoin(widget.estimatedCen!, locale: Localizations.localeOf(context).toString())}',
-                    style: TypeScale.pixel(context, size: 16)
-                        .copyWith(color: Palette.goldLight),
+                    style: TypeScale.pixel(
+                      context,
+                      size: 16,
+                    ).copyWith(color: Palette.goldLight),
                   ),
                 ],
               ),
@@ -187,10 +187,8 @@ class _Header extends StatelessWidget {
         Expanded(
           child: Text(
             l10n.walletTitle.toUpperCase(),
-            style: TypeScale.caption(context).copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-            ),
+            style: TypeScale.caption(context)
+                .copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.8),
           ),
         ),
         LiveStatus(
@@ -218,6 +216,7 @@ class _BalanceCard extends StatefulWidget {
 
 class _BalanceCardState extends State<_BalanceCard> {
   AccountBalance? _balance;
+  bool _revealed = true;
 
   @override
   void initState() {
@@ -279,14 +278,25 @@ class _BalanceCardState extends State<_BalanceCard> {
                 foreground: Palette.white,
                 dense: true,
               ),
+              if (balance != null) ...[
+                const SizedBox(width: Palette.sm),
+                _RevealButton(
+                  revealed: _revealed,
+                  onTap: () => setState(() => _revealed = !_revealed),
+                  showLabel: l10n.walletShowBalance,
+                  hideLabel: l10n.walletHideBalance,
+                  onLight: true,
+                ),
+              ],
             ],
           ),
           const SizedBox(height: Palette.sm),
-          // The page's one big number, in an arcade pixel face. Press Start
-          // 2P has no em-dash glyph, so the "unknown" dash keeps the display
-          // face; the pixel face takes over only for a real figure. A
-          // FittedBox lets a long balance scale instead of overflowing the
-          // cream card.
+          // The page's one big number, now in the 14-segment LED face so it
+          // reads like a calculator figure next to the mining clock. DSEG14 has
+          // no em-dash glyph, so the "unknown" dash keeps the display face. The
+          // eye above blanks a real figure into X.XXXX — the unit stays, the
+          // magnitude is hidden. A FittedBox lets a long balance scale instead
+          // of overflowing the cream card.
           Align(
             alignment: Alignment.centerLeft,
             child: FittedBox(
@@ -295,15 +305,22 @@ class _BalanceCardState extends State<_BalanceCard> {
               child: Text(
                 balance == null
                     ? '—'
-                    : formatPradhaNumber(
-                        balance.pradha,
-                        locale: Localizations.localeOf(context).toString(),
-                      ),
+                    : (_revealed
+                          ? formatPradhaNumber(
+                              balance.pradha,
+                              locale: Localizations.localeOf(context)
+                                  .toString(),
+                            )
+                          : 'X.XXXX'),
                 maxLines: 1,
-                style: (balance == null
-                        ? TypeScale.hero(context)
-                        : TypeScale.pixel(context, size: 28))
-                    .copyWith(color: Palette.creamInk),
+                style: balance == null
+                    ? TypeScale.hero(context).copyWith(color: Palette.creamInk)
+                    : TypeScale.digital(
+                        context,
+                        size: 26,
+                        color: Palette.creamInk,
+                        weight: FontWeight.w700,
+                      ),
               ),
             ),
           ),
@@ -311,9 +328,8 @@ class _BalanceCardState extends State<_BalanceCard> {
             const SizedBox(height: Palette.sm),
             Text(
               l10n.walletNoBalanceNote,
-              style: TypeScale.caption(
-                context,
-              ).copyWith(color: Palette.creamInkDim),
+              style: TypeScale.caption(context)
+                  .copyWith(color: Palette.creamInkDim),
             ),
           ],
         ],
@@ -398,20 +414,35 @@ class _AddressCardState extends State<_AddressCard> {
   }
 }
 
-/// The eye that toggles address privacy: a soft gold disc when the address is
-/// readable, a flat one when it is blurred, with the classic eye / eye-off
-/// glyph. It is deliberately outside the veil, so hiding never locks the user
-/// out. 44px keeps the touch target above the accessibility minimum.
+/// The eye that toggles a private reading: the wallet address by default, or a
+/// coin figure when [showLabel]/[hideLabel] are supplied. A soft disc when the
+/// value is readable, a flat one when it is hidden, with the classic eye /
+/// eye-off glyph. It is deliberately outside any veil, so hiding never locks
+/// the user out; 44px keeps the touch target above the accessibility minimum.
+///
+/// [onLight] tunes the disc and glyph for the cream balance card, where the
+/// gold/surface-high palette of a dark card would wash out.
 class _RevealButton extends StatelessWidget {
-  const _RevealButton({required this.revealed, required this.onTap});
+  const _RevealButton({
+    required this.revealed,
+    required this.onTap,
+    this.showLabel,
+    this.hideLabel,
+    this.onLight = false,
+  });
 
   final bool revealed;
   final VoidCallback onTap;
+  final String? showLabel;
+  final String? hideLabel;
+  final bool onLight;
 
   @override
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
-    final label = revealed ? l10n.walletHideAddress : l10n.walletShowAddress;
+    final label = revealed
+        ? (hideLabel ?? l10n.walletHideAddress)
+        : (showLabel ?? l10n.walletShowAddress);
     return Semantics(
       button: true,
       toggled: revealed,
@@ -419,8 +450,12 @@ class _RevealButton extends StatelessWidget {
         message: label,
         child: Material(
           color: revealed
-              ? Palette.gold.withValues(alpha: 0.12)
-              : Palette.surfaceHigh,
+              ? (onLight
+                    ? Palette.creamInk.withValues(alpha: 0.08)
+                    : Palette.gold.withValues(alpha: 0.12))
+              : (onLight
+                    ? Palette.creamInk.withValues(alpha: 0.10)
+                    : Palette.surfaceHigh),
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
@@ -433,7 +468,9 @@ class _RevealButton extends StatelessWidget {
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
                 size: 20,
-                color: revealed ? Palette.goldLight : Palette.slate,
+                color: revealed
+                    ? (onLight ? Palette.creamInk : Palette.goldLight)
+                    : (onLight ? Palette.creamInkDim : Palette.slate),
               ),
             ),
           ),
@@ -636,18 +673,18 @@ class _ActionButton extends StatelessWidget {
     final Color background = filled
         ? Palette.gold
         : (soon || disabled)
-            ? Palette.field
-            : Palette.surfaceHigh;
+        ? Palette.field
+        : Palette.surfaceHigh;
     final Color foreground = filled
         ? Palette.white
         : (soon || disabled)
-            ? Palette.slate
-            : Palette.cream;
+        ? Palette.slate
+        : Palette.cream;
     final Color iconColor = filled
         ? Palette.white
         : (soon || disabled)
-            ? Palette.slate
-            : Palette.green;
+        ? Palette.slate
+        : Palette.green;
 
     final Widget pill = Opacity(
       opacity: disabled ? 0.55 : 1,
@@ -679,10 +716,8 @@ class _ActionButton extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TypeScale.title(context).copyWith(
-                      color: foreground,
-                      letterSpacing: 0.4,
-                    ),
+                    style: TypeScale.title(context)
+                        .copyWith(color: foreground, letterSpacing: 0.4),
                   ),
                 ),
               ],
@@ -929,9 +964,7 @@ class _SendSheetState extends State<_SendSheet> {
       hintText: hint,
       suffixText: suffix,
       filled: true,
-      fillColor: green
-          ? Palette.green.withValues(alpha: 0.06)
-          : Palette.field,
+      fillColor: green ? Palette.green.withValues(alpha: 0.06) : Palette.field,
       hintStyle: TypeScale.monoMuted(context, size: 12),
       suffixStyle: TypeScale.monoMuted(context, size: 12),
       enabledBorder: OutlineInputBorder(
@@ -997,9 +1030,10 @@ class _SendSheetState extends State<_SendSheet> {
             autocorrect: false,
             enableSuggestions: false,
             textInputAction: TextInputAction.next,
-            style: TypeScale.mono(context, size: 13).copyWith(
-              color: Palette.cream,
-            ),
+            style: TypeScale.mono(
+              context,
+              size: 13,
+            ).copyWith(color: Palette.cream),
             decoration: _field(
               context,
               hint: '${widget.network.prefix}:…',
@@ -1070,7 +1104,10 @@ class _SendSheetState extends State<_SendSheet> {
                   ),
                 ),
                 const SizedBox(height: Palette.md),
-                Text(l10n.walletSendSuccess, style: TypeScale.screenTitle(context)),
+                Text(
+                  l10n.walletSendSuccess,
+                  style: TypeScale.screenTitle(context),
+                ),
                 const SizedBox(height: Palette.sm),
                 Text(
                   l10n.walletSendSuccessBody,
@@ -1159,10 +1196,7 @@ class _ReceiveSheet extends StatelessWidget {
               },
             ),
             const SizedBox(height: Palette.sm),
-            Text(
-              l10n.walletReceiveNote,
-              style: TypeScale.caption(context),
-            ),
+            Text(l10n.walletReceiveNote, style: TypeScale.caption(context)),
           ],
         ),
       ),
@@ -1225,7 +1259,10 @@ class _BlockRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.walletMiningReward, style: TypeScale.title(context)),
+                  Text(
+                    l10n.walletMiningReward,
+                    style: TypeScale.title(context),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     '${_friendlyTime(l10n, block.timestamp)} · ${shortHash(block.hash, head: 8, tail: 6)}',
@@ -1264,7 +1301,7 @@ class _BlockRow extends StatelessWidget {
 /// routed through the shared parser rather than `DateTime.tryParse` here —
 /// a raw epoch parses to nothing and would otherwise leak through verbatim.
 String _friendlyTime(AppLocalizations l10n, String raw) => friendlyBlockTime(
-      raw,
-      todayLabel: l10n.commonToday,
-      yesterdayLabel: l10n.commonYesterday,
-    );
+  raw,
+  todayLabel: l10n.commonToday,
+  yesterdayLabel: l10n.commonYesterday,
+);

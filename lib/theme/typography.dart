@@ -20,6 +20,7 @@ class TypeScale {
   static const String bodyFamily = 'Manrope';
   static const String monoFamily = 'JetBrains Mono';
   static const String pixelFamily = 'Press Start 2P';
+  static const String digitalFamily = 'DSEG14';
 
   /// Wide tracking for the display face, so CELENIUM reads as engraved.
   static const double displayTracking = 4.0;
@@ -113,11 +114,33 @@ class TypeScale {
   /// score. Glyphs are square and wide, so the size is kept modest; callers
   /// that show a variable-length value wrap this in a FittedBox so a long
   /// balance scales instead of overflowing.
-  static TextStyle pixel(BuildContext context, {double size = 24, Color? color}) =>
-      TextStyle(
-        fontFamily: pixelFamily,
-        fontSize: size,
-        color: color ?? Palette.cream,
-        height: 1.35,
-      );
+  static TextStyle pixel(
+    BuildContext context, {
+    double size = 24,
+    Color? color,
+  }) => TextStyle(
+    fontFamily: pixelFamily,
+    fontSize: size,
+    color: color ?? Palette.cream,
+    height: 1.35,
+  );
+
+  /// The machine's own voice: a 14-segment LED face (DSEG14) that spells every
+  /// glyph as lit bars, like a digital clock or a calculator display. It has
+  /// full alphanumerics plus the colon, so the mining ON/OFF word, the session
+  /// clock and the coin figure share one face. [weight] picks the Regular or
+  /// Bold cut; the face is drawn, not synthesised, so weights map to real
+  /// files rather than a fake-bold skew.
+  static TextStyle digital(
+    BuildContext context, {
+    double size = 16,
+    Color? color,
+    FontWeight weight = FontWeight.w400,
+  }) => TextStyle(
+    fontFamily: digitalFamily,
+    fontSize: size,
+    fontWeight: weight,
+    color: color ?? Palette.cream,
+    height: 1.2,
+  );
 }

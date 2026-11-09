@@ -15,7 +15,8 @@ import 'package:http/testing.dart';
 
 import 'support/fonts.dart';
 
-const _wallet = 'cen69sim:qp82mvgr5t2nw9q3x7c4v6b8m1k5h2j7f9d3s6a0g4l8p1o5i7u9y2e6r4t8w0q';
+const _wallet =
+    'cen69sim:qp82mvgr5t2nw9q3x7c4v6b8m1k5h2j7f9d3s6a0g4l8p1o5i7u9y2e6r4t8w0q';
 
 /// The mock bridge's answer for the balance query, so the sheet has a filled,
 /// realistic balance above the actions rather than an "unknown" dash.
@@ -91,10 +92,7 @@ MinerSnapshot _snapshot() {
 
 Widget _host() {
   final snapshot = _snapshot();
-  final api = BridgeApi(
-    baseUrl: 'http://127.0.0.1:3030',
-    client: _bridge(),
-  );
+  final api = BridgeApi(baseUrl: 'http://127.0.0.1:3030', client: _bridge());
   return MaterialApp(
     title: 'Celenium Miner',
     debugShowCheckedModeBanner: false,
@@ -121,7 +119,9 @@ Future<void> _settle(WidgetTester tester, {int frames = 16}) async {
 }
 
 void main() {
-  testWidgets('capture the send sheet with green address cards', (tester) async {
+  testWidgets('capture the send sheet with green address cards', (
+    tester,
+  ) async {
     await loadCenFonts();
     tester.view.physicalSize = const Size(1080, 2200);
     tester.view.devicePixelRatio = 3.0;
@@ -155,8 +155,10 @@ void main() {
       matchesGoldenFile('goldens/wallet_revealed.png'),
     );
 
-    // Blur the card with the eye, then capture the same frame hidden.
-    await tester.tap(find.byIcon(Icons.visibility_outlined));
+    // Blur the card with the eye, then capture the same frame hidden. The
+    // balance card above it now carries its own eye, so tap the address
+    // card's — the last eye in traversal order.
+    await tester.tap(find.byIcon(Icons.visibility_outlined).last);
     await _settle(tester);
 
     await expectLater(
@@ -180,6 +182,26 @@ void main() {
     await expectLater(
       find.byType(Overlay).first,
       matchesGoldenFile('goldens/wallet_swap_soon.png'),
+    );
+  });
+
+  testWidgets('capture the balance card censored by the eye', (tester) async {
+    await loadCenFonts();
+    tester.view.physicalSize = const Size(1080, 2200);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_host());
+    await _settle(tester);
+
+    // Tap the balance card's own eye — the first one in traversal order —
+    // which blanks the figure into X.XXXX while the address card stays sharp.
+    await tester.tap(find.byIcon(Icons.visibility_outlined).first);
+    await _settle(tester);
+
+    await expectLater(
+      find.byType(WalletScreen),
+      matchesGoldenFile('goldens/wallet_balance_censored.png'),
     );
   });
 }
