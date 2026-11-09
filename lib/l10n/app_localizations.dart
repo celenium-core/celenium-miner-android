@@ -236,6 +236,12 @@ abstract class AppLocalizations {
   /// **'node not set'**
   String get mineNodeNotSet;
 
+  /// No description provided for @mineCardLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Celenium Miner'**
+  String get mineCardLabel;
+
   /// No description provided for @mineHashRate.
   ///
   /// In en, this message translates to:

@@ -408,7 +408,7 @@ void main() {
       );
     }
 
-    testWidgets('shows the real hashrate and worker from the bridge', (
+    testWidgets('shows the real hashrate from the bridge and a fixed miner label', (
       tester,
     ) async {
       await tester.pumpWidget(host(snapshotWith()));
@@ -416,7 +416,8 @@ void main() {
       // The hashrate renders in the summary chips and again in the stats
       // strip, so it is present more than once rather than exactly once.
       expect(find.text('1.42 GH/s'), findsWidgets);
-      expect(find.text('asic-1'), findsOneWidget);
+      // The card shows a fixed label, never a crypto address.
+      expect(find.text('Celenium Miner'), findsOneWidget);
       // The live-status label now reads "connect": the bridge is connected,
       // not a generic "mining active" banner.
       expect(find.text('connect'), findsOneWidget);

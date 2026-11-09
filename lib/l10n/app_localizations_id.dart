@@ -79,6 +79,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get mineNodeNotSet => 'node belum diatur';
 
   @override
+  String get mineCardLabel => 'Celenium Miner';
+
+  @override
   String get mineHashRate => 'Laju hash';
 
   @override

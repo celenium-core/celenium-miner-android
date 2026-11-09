@@ -23,6 +23,7 @@
   "splashEnterSemantics": "Masuk ke konsol mining",
   "splashEnter": "MASUK",
   "mineNodeNotSet": "node belum diatur",
+  "mineCardLabel": "Celenium Miner",
   "mineHashRate": "Laju hash",
   "mineConnected": "connect",
   "mineBridgeSilent": "Bridge belum menjawab. Atur alamatnya untuk mulai membaca angka langsung.",

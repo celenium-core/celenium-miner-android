@@ -23,6 +23,7 @@
   "splashEnterSemantics": "Enter the mining console",
   "splashEnter": "ENTER",
   "mineNodeNotSet": "node not set",
+  "mineCardLabel": "Celenium Miner",
   "mineHashRate": "Hash rate",
   "mineConnected": "connect",
   "mineBridgeSilent": "The bridge has not answered. Set its address to start reading live figures.",

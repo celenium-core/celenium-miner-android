@@ -112,7 +112,7 @@ class MiningScreen extends StatelessWidget {
   }
 }
 
-/// Light card: the payout address and the live readings as coloured chips, or
+/// Light card: the worker label and the live readings as coloured chips, or
 /// a labelled status pill when the engine is not hashing.
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
@@ -166,7 +166,7 @@ class _SummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  readout.address ?? readout.workerName ?? l10n.commonNoWorker,
+                  l10n.mineCardLabel,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TypeScale.title(context).copyWith(
