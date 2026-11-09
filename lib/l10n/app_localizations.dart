@@ -362,6 +362,18 @@ abstract class AppLocalizations {
   /// **'rejected'**
   String get mineRejectedLabel;
 
+  /// No description provided for @mineActiveTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Active time'**
+  String get mineActiveTime;
+
+  /// No description provided for @mineStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get mineStatus;
+
   /// No description provided for @mineConnecting.
   ///
   /// In en, this message translates to:
@@ -425,7 +437,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletNoTxReason.
   ///
   /// In en, this message translates to:
-  /// **'No transactions yet. Blocks your workers mine appear here as they land.'**
+  /// **'No transactions yet. Coins you receive or send will appear here.'**
   String get walletNoTxReason;
 
   /// No description provided for @walletTotalBalance.
@@ -535,6 +547,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mining reward'**
   String get walletMiningReward;
+
+  /// No description provided for @walletCoinIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Coin received'**
+  String get walletCoinIn;
+
+  /// No description provided for @walletCoinOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Coin sent'**
+  String get walletCoinOut;
 
   /// No description provided for @walletEstimatedEarned.
   ///

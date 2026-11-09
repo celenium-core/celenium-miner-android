@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
-import '../services/block_time.dart';
 import '../services/mining_readout.dart';
 import '../theme/layout.dart';
 import '../theme/palette.dart';
@@ -46,7 +45,6 @@ class MiningScreen extends StatelessWidget {
       onSetMining: onSetMining,
     );
     final stats = _StatsStrip(readout: readout);
-    final latest = _LatestLine(readout: readout, onTap: onOpenActivity);
 
     // Phone: one column, top to bottom, exactly as designed.
     if (!layout.isExpanded) {
@@ -61,8 +59,6 @@ class MiningScreen extends StatelessWidget {
             dial,
             const SizedBox(height: Palette.xl),
             stats,
-            const SizedBox(height: Palette.lg),
-            latest,
             const SizedBox(height: Palette.xxl),
           ],
         ),
@@ -95,11 +91,7 @@ class MiningScreen extends StatelessWidget {
               flex: 44,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  stats,
-                  const SizedBox(height: Palette.lg),
-                  latest,
-                ],
+                children: [stats],
               ),
             ),
           ],
@@ -342,11 +334,11 @@ class _DialCaption extends StatelessWidget {
 }
 
 /// The engine phase and the session clock, printed in the LED face above the
-/// hashrate strip. Time sits on the left and the ON/OFF word at the far right,
-/// so the two read as one paired status — a stopped (kept-zero) clock while
-/// idle, a running one in green while hashing.
-class _StatusHeader extends StatelessWidget {
-  const _StatusHeader({required this.readout});
+/// Elapsed active-mining clock. Small and muted in the LED face so it reads as
+/// a supporting figure beside the hashrate, not a headline: green only while
+/// actually hashing, desaturated otherwise.
+class _ActiveTimeCell extends StatelessWidget {
+  const _ActiveTimeCell({required this.readout});
 
   final MiningReadout readout;
 
@@ -355,45 +347,55 @@ class _StatusHeader extends StatelessWidget {
     final l10n = l10nOf(context);
     final status = readout.status ?? MinerStatus.idle;
     final mining = status == MinerStatus.mining;
-
-    final String statusLine = switch (status) {
-      MinerStatus.mining => l10n.mineMiningOn,
-      MinerStatus.connecting => l10n.mineConnecting,
-      MinerStatus.needsWallet => l10n.mineNeedsWallet,
-      MinerStatus.limitReached => l10n.mineLimitReached,
-      MinerStatus.error => l10n.mineError,
-      _ => l10n.mineMiningOff,
-    };
-
-    // On: LED green. Off/idle: the desaturated slate that reads as "inactive"
-    // without dropping below the AA contrast floor of the card.
-    final Color tint = mining ? Palette.green : Palette.slateLight;
-
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          _uptime(readout.sessionUptime),
-          style: TypeScale.digital(
-            context,
-            size: 20,
-            color: tint,
-            weight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(width: Palette.sm),
-        const Spacer(),
-        StateDot(active: true, color: mining ? Palette.green : Palette.slate),
-        const SizedBox(width: Palette.sm),
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
-            child: Text(
-              statusLine,
-              style: TypeScale.digital(context, size: 14, color: tint),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            _uptime(readout.sessionUptime),
+            maxLines: 1,
+            style: TypeScale.digital(
+              context,
+              size: 15,
+              color: mining ? Palette.greenDim : Palette.slateLight,
             ),
           ),
         ),
+        const SizedBox(height: 3),
+        Eyebrow(l10n.mineActiveTime, color: Palette.slate),
+      ],
+    );
+  }
+}
+
+/// ON/OFF in the same LED face as the clock, so the two read as one paired
+/// status. Green ON, desaturated OFF; the detailed phase still lives in the
+/// summary card above.
+class _MiningStatusCell extends StatelessWidget {
+  const _MiningStatusCell({required this.readout});
+
+  final MiningReadout readout;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
+    final status = readout.status ?? MinerStatus.idle;
+    final mining = status == MinerStatus.mining;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          mining ? 'ON' : 'OFF',
+          style: TypeScale.digital(
+            context,
+            size: 15,
+            color: mining ? Palette.green : Palette.slateLight,
+            weight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Eyebrow(l10n.mineStatus, color: Palette.slate),
       ],
     );
   }
@@ -559,11 +561,11 @@ class _MiningToggle extends StatelessWidget {
   }
 }
 
-/// Three session counts for a local phone miner: accepted shares, rejected
-/// shares and the live hashrate. No block count — a phone submits shares, it
-/// does not find blocks — and no price, because CEN is not listed anywhere.
-/// The ON/OFF + clock header sits directly above the counts, so the user reads
-/// "is it hashing, for how long" before "how well".
+/// Three session readings, side by side: the elapsed active-mining clock, the
+/// ON/OFF state, and the live hashrate. No shares or block count — a phone
+/// submits shares but does not find blocks, and the count belongs to the
+/// worker page headed by the employer. The clock and the switch share one LED
+/// face so the user reads "how long, is it on" before "how well".
 class _StatsStrip extends StatelessWidget {
   const _StatsStrip({required this.readout});
 
@@ -573,94 +575,22 @@ class _StatsStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
     return CenCard(
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _StatusHeader(readout: readout),
-          const SizedBox(height: Palette.md),
-          Container(height: 1, color: const Color(0x1AFFFFFF)),
-          const SizedBox(height: Palette.md),
-          Row(
-            children: [
-              Expanded(
-                child: StatCell(
-                  value: readout.shares?.toString() ?? '—',
-                  unit: l10n.mineSharesUnit,
-                  label: l10n.mineAcceptedLabel,
-                  color: Palette.goldLight,
-                ),
-              ),
-              const StatDivider(),
-              Expanded(
-                child: StatCell(
-                  value: readout.stale?.toString() ?? '—',
-                  unit: l10n.mineSharesUnit,
-                  label: l10n.mineRejectedLabel,
-                ),
-              ),
-              const StatDivider(),
-              Expanded(
-                child: StatCell(
-                  value: readout.hashrateGhs == null
-                      ? '—'
-                      : formatHashrate(readout.hashrateGhs!),
-                  label: l10n.mineHashRate,
-                ),
-              ),
-            ],
+          Expanded(child: _ActiveTimeCell(readout: readout)),
+          const StatDivider(),
+          Expanded(child: _MiningStatusCell(readout: readout)),
+          const StatDivider(),
+          Expanded(
+            child: StatCell(
+              value: readout.hashrateGhs == null
+                  ? '—'
+                  : formatHashrate(readout.hashrateGhs!),
+              label: l10n.mineHashRate,
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Last accepted block, straight from the bridge.
-class _LatestLine extends StatelessWidget {
-  const _LatestLine({required this.readout, required this.onTap});
-
-  final MiningReadout readout;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = l10nOf(context);
-    final hash = readout.latestBlockHash;
-    final rawTime = readout.latestBlockTime;
-    final timeLabel = rawTime == null
-        ? ''
-        : ' · ${friendlyBlockTime(rawTime, todayLabel: l10n.commonToday, yesterdayLabel: l10n.commonYesterday)}';
-
-    return Material(
-      color: Palette.surface,
-      borderRadius: BorderRadius.circular(Palette.rowRadius),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Palette.rowRadius),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Palette.lg,
-            vertical: 14,
-          ),
-          child: Row(
-            children: [
-              Text('>', style: TypeScale.monoGold(context, size: 13)),
-              const SizedBox(width: Palette.sm),
-              Expanded(
-                child: Text(
-                  hash == null
-                      ? l10n.mineNoBlock
-                      : '${l10n.mineBlockAccepted(shortHash(hash))}$timeLabel',
-                  style: TypeScale.mono(
-                    context,
-                    size: 11,
-                  ).copyWith(color: Palette.slateLight),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const Icon(Icons.chevron_right, size: 16, color: Palette.slate),
-            ],
-          ),
-        ),
       ),
     );
   }

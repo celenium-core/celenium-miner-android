@@ -147,6 +147,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineRejectedLabel => 'rejected';
 
   @override
+  String get mineActiveTime => 'Active time';
+
+  @override
+  String get mineStatus => 'Status';
+
+  @override
   String get mineConnecting => 'CONNECTING';
 
   @override
@@ -182,7 +188,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletNoTxReason =>
-      'No transactions yet. Blocks your workers mine appear here as they land.';
+      'No transactions yet. Coins you receive or send will appear here.';
 
   @override
   String get walletTotalBalance => 'Total balance';
@@ -240,6 +246,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletMiningReward => 'Mining reward';
+
+  @override
+  String get walletCoinIn => 'Coin received';
+
+  @override
+  String get walletCoinOut => 'Coin sent';
 
   @override
   String get walletEstimatedEarned => 'Estimated this session';

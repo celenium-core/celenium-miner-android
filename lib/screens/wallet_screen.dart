@@ -260,6 +260,9 @@ class _BalanceCardState extends State<_BalanceCard> {
     // The cream balance card from the concept: the light mass carries the
     // dark figure, which is the opposite of every other panel here and is
     // what makes the balance the first thing the eye lands on.
+    // The reveal toggle sits inside the cream card at its bottom-right,
+    // tucked under the CEN badge so the balance figure keeps the left side to
+    // itself; [onLight] keeps the eye legible on the light fill.
     return CenCard.light(
       glow: Palette.gold,
       padding: const EdgeInsets.all(Palette.xl),
@@ -278,6 +281,52 @@ class _BalanceCardState extends State<_BalanceCard> {
                 foreground: Palette.white,
                 dense: true,
               ),
+            ],
+          ),
+          const SizedBox(height: Palette.sm),
+          // The page's one big number, now in the 14-segment LED face so it
+          // reads like a calculator figure next to the mining clock. DSEG14
+          // has no em-dash glyph, so the "unknown" dash keeps the display
+          // face. The toggle blanks a real figure into X.XXXX — the unit
+          // stays, the magnitude is hidden. A FittedBox lets a long balance
+          // scale instead of overflowing the cream card.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Transform.translate(
+                  // DSEG14's `1` carries a wide left side-bearing that reads
+                  // as an indent against the eyebrow's `S`; drag the figure
+                  // back so the first lit segment sits on the label instead of
+                  // floating a half-digit to the right of it.
+                  offset: const Offset(-14, 0),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      balance == null
+                          ? '—'
+                          : (_revealed
+                                ? formatPradhaNumber(
+                                    balance.pradha,
+                                    locale: Localizations.localeOf(context)
+                                        .toString(),
+                                  )
+                                : 'X.XXXX'),
+                      maxLines: 1,
+                      style: balance == null
+                          ? TypeScale.hero(context)
+                                .copyWith(color: Palette.creamInk)
+                          : TypeScale.digital(
+                              context,
+                              size: 26,
+                              color: Palette.creamInk,
+                              weight: FontWeight.w700,
+                            ),
+                    ),
+                  ),
+                ),
+              ),
               if (balance != null) ...[
                 const SizedBox(width: Palette.sm),
                 _RevealButton(
@@ -286,43 +335,10 @@ class _BalanceCardState extends State<_BalanceCard> {
                   showLabel: l10n.walletShowBalance,
                   hideLabel: l10n.walletHideBalance,
                   onLight: true,
+                  compact: true,
                 ),
               ],
             ],
-          ),
-          const SizedBox(height: Palette.sm),
-          // The page's one big number, now in the 14-segment LED face so it
-          // reads like a calculator figure next to the mining clock. DSEG14 has
-          // no em-dash glyph, so the "unknown" dash keeps the display face. The
-          // eye above blanks a real figure into X.XXXX — the unit stays, the
-          // magnitude is hidden. A FittedBox lets a long balance scale instead
-          // of overflowing the cream card.
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                balance == null
-                    ? '—'
-                    : (_revealed
-                          ? formatPradhaNumber(
-                              balance.pradha,
-                              locale: Localizations.localeOf(context)
-                                  .toString(),
-                            )
-                          : 'X.XXXX'),
-                maxLines: 1,
-                style: balance == null
-                    ? TypeScale.hero(context).copyWith(color: Palette.creamInk)
-                    : TypeScale.digital(
-                        context,
-                        size: 26,
-                        color: Palette.creamInk,
-                        weight: FontWeight.w700,
-                      ),
-              ),
-            ),
           ),
           if (needsNote) ...[
             const SizedBox(height: Palette.sm),
@@ -405,6 +421,7 @@ class _AddressCardState extends State<_AddressCard> {
               _RevealButton(
                 revealed: _revealed,
                 onTap: () => setState(() => _revealed = !_revealed),
+                compact: true,
               ),
             ],
           ),
@@ -429,6 +446,7 @@ class _RevealButton extends StatelessWidget {
     this.showLabel,
     this.hideLabel,
     this.onLight = false,
+    this.compact = false,
   });
 
   final bool revealed;
@@ -436,6 +454,7 @@ class _RevealButton extends StatelessWidget {
   final String? showLabel;
   final String? hideLabel;
   final bool onLight;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -443,6 +462,8 @@ class _RevealButton extends StatelessWidget {
     final label = revealed
         ? (hideLabel ?? l10n.walletHideAddress)
         : (showLabel ?? l10n.walletShowAddress);
+    final double dim = compact ? 32 : 44;
+    final double iconDim = compact ? 15 : 20;
     return Semantics(
       button: true,
       toggled: revealed,
@@ -451,25 +472,27 @@ class _RevealButton extends StatelessWidget {
         child: Material(
           color: revealed
               ? (onLight
-                    ? Palette.creamInk.withValues(alpha: 0.08)
-                    : Palette.gold.withValues(alpha: 0.12))
+                    ? Palette.creamInk.withValues(alpha: compact ? 0.06 : 0.08)
+                    : Palette.gold.withValues(alpha: compact ? 0.08 : 0.12))
               : (onLight
-                    ? Palette.creamInk.withValues(alpha: 0.10)
+                    ? Palette.creamInk.withValues(alpha: compact ? 0.08 : 0.10)
                     : Palette.surfaceHigh),
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: onTap,
             child: SizedBox(
-              width: 44,
-              height: 44,
+              width: dim,
+              height: dim,
               child: Icon(
                 revealed
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
-                size: 20,
+                size: iconDim,
                 color: revealed
-                    ? (onLight ? Palette.creamInk : Palette.goldLight)
+                    ? (onLight
+                          ? (compact ? Palette.creamInkDim : Palette.creamInk)
+                          : (compact ? Palette.slateLight : Palette.goldLight))
                     : (onLight ? Palette.creamInkDim : Palette.slate),
               ),
             ),
@@ -1204,23 +1227,26 @@ class _ReceiveSheet extends StatelessWidget {
   }
 }
 
-/// The block subsidy in CEN.
+/// The mined-block subsidy, kept in pradha (1 CEN = 1e8 pradha).
 ///
-/// Taken from consensus/core/src/config/bps.rs:
-/// `pre_deflationary_phase_base_subsidy() = 50000000000 / BPS` pradha, with
-/// BPS = 10, and 1 CEN = 100000000 pradha. That gives 50 CEN per block.
+/// Taken from consensus/core/src/config/params.rs:
+/// `pre_deflationary_phase_base_subsidy: 1366560` pradha (1 CEN = 100000000
+/// pradha), which is 0.0136656 CEN per block. Kept in pradha so the displayed
+/// amount never round-trips through a `double`.
 ///
 /// This is the pre-deflationary value. The subsidy halves every six months,
 /// so once the network passes its first halving this figure is stale. It is
 /// shown because a mined block genuinely pays the subsidy, not because the
 /// app needs a number to fill the row with.
-const double blockRewardCen = 50;
+const int blockRewardPradha = 1366560;
 
-/// One accepted block, laid out like the concept's transaction row: circular
-/// icon on the left, description and timestamp stacked, amount right-aligned.
+/// One incoming coin — the subsidy of a block this wallet's workers mined —
+/// laid out like a transaction row: round green badge with a down arrow
+/// (into the wallet), description and timestamp stacked left, amount
+/// right-aligned. Titled "coin masuk", matching how the user reads the flow.
 ///
-/// The amount is the block subsidy, which is the one number the consensus
-/// rules fix rather than something the app chooses. See [blockRewardCen].
+/// The amount is the block subsidy, the one number the consensus rules fix
+/// rather than something the app chooses. See [blockRewardPradha].
 class _BlockRow extends StatelessWidget {
   const _BlockRow({required this.block});
 
@@ -1249,7 +1275,7 @@ class _BlockRow extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.arrow_upward,
+                Icons.arrow_downward,
                 size: 16,
                 color: Palette.greenDim,
               ),
@@ -1259,10 +1285,7 @@ class _BlockRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l10n.walletMiningReward,
-                    style: TypeScale.title(context),
-                  ),
+                  Text(l10n.walletCoinIn, style: TypeScale.title(context)),
                   const SizedBox(height: 2),
                   Text(
                     '${_friendlyTime(l10n, block.timestamp)} · ${shortHash(block.hash, head: 8, tail: 6)}',
@@ -1277,14 +1300,17 @@ class _BlockRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '+${blockRewardCen.toStringAsFixed(2)}',
+                  '+${formatPradhaNumber(blockRewardPradha, locale: Localizations.localeOf(context).toString())}',
                   style: TypeScale.mono(context, size: 13).copyWith(
                     color: Palette.greenDim,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text('CEN', style: TypeScale.monoMuted(context, size: 9)),
+                Text(
+                  coinUnit(blockRewardPradha).toUpperCase(),
+                  style: TypeScale.monoMuted(context, size: 9),
+                ),
               ],
             ),
           ],

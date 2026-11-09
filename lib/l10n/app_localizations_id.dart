@@ -147,6 +147,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get mineRejectedLabel => 'ditolak';
 
   @override
+  String get mineActiveTime => 'Waktu aktif';
+
+  @override
+  String get mineStatus => 'Status';
+
+  @override
   String get mineConnecting => 'MENGHUBUNGKAN';
 
   @override
@@ -182,7 +188,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get walletNoTxReason =>
-      'Belum ada transaksi. Blok yang ditambang worker kamu muncul di sini begitu diterima.';
+      'Belum ada transaksi. Koin yang masuk atau terkirim akan muncul di sini.';
 
   @override
   String get walletTotalBalance => 'Saldo total';
@@ -240,6 +246,12 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get walletMiningReward => 'Imbalan mining';
+
+  @override
+  String get walletCoinIn => 'Coin masuk';
+
+  @override
+  String get walletCoinOut => 'Coin terkirim';
 
   @override
   String get walletEstimatedEarned => 'Estimasi sesi ini';

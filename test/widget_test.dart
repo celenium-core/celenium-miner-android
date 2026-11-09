@@ -408,20 +408,21 @@ void main() {
       );
     }
 
-    testWidgets('shows the real hashrate from the bridge and a fixed miner label', (
-      tester,
-    ) async {
-      await tester.pumpWidget(host(snapshotWith()));
+    testWidgets(
+      'shows the real hashrate from the bridge and a fixed miner label',
+      (tester) async {
+        await tester.pumpWidget(host(snapshotWith()));
 
-      // The hashrate renders in the summary chips and again in the stats
-      // strip, so it is present more than once rather than exactly once.
-      expect(find.text('1.42 GH/s'), findsWidgets);
-      // The card shows a fixed label, never a crypto address.
-      expect(find.text('Celenium Miner'), findsOneWidget);
-      // The live-status label now reads "connect": the bridge is connected,
-      // not a generic "mining active" banner.
-      expect(find.text('connect'), findsOneWidget);
-    });
+        // The hashrate renders in the summary chips and again in the stats
+        // strip, so it is present more than once rather than exactly once.
+        expect(find.text('1.42 GH/s'), findsWidgets);
+        // The card shows a fixed label, never a crypto address.
+        expect(find.text('Celenium Miner'), findsOneWidget);
+        // The live-status label now reads "connect": the bridge is connected,
+        // not a generic "mining active" banner.
+        expect(find.text('connect'), findsOneWidget);
+      },
+    );
 
     testWidgets('shows an honest idle state when the bridge has not answered', (
       tester,
@@ -433,15 +434,18 @@ void main() {
       expect(find.text('IDLE'), findsOneWidget);
     });
 
-    testWidgets('shows session shares and hashrate, never a price', (
+    testWidgets('shows active time, on/off and hashrate, never a price', (
       tester,
     ) async {
       await tester.pumpWidget(host(snapshotWith()));
 
-      // A phone worker submits shares, never blocks, so the strip is accepted
-      // / rejected / hashrate. No block count and no invented $ price.
-      expect(find.text('1204'), findsOneWidget);
+      // A phone worker reports the essentials: how long it has hashed, its
+      // on/off state and the live hashrate. Shares are a worker-page detail,
+      // not shown here, and no $ price is ever invented.
+      expect(find.text('00:00:00'), findsOneWidget);
+      expect(find.text('OFF'), findsOneWidget);
       expect(find.text('1.42 GH/s'), findsWidgets);
+      expect(find.text('1204'), findsNothing);
       expect(find.textContaining(r'$'), findsNothing);
     });
 
@@ -578,14 +582,14 @@ void main() {
       );
     }
 
-    testWidgets('shows the mining address and mined blocks', (tester) async {
+    testWidgets('shows the mining address and incoming coins', (tester) async {
       await tester.pumpWidget(host(snapshotWith()));
 
       expect(find.text('cen69sim:qabc'), findsWidgets);
-      // The row reads as a transaction, as in the concept.
-      expect(find.text('Mining reward'), findsOneWidget);
-      expect(find.text('+50.00'), findsOneWidget);
-      expect(find.text('CEN'), findsWidgets);
+      // The row reads as a coin-in transaction, as in the concept.
+      expect(find.text('Coin received'), findsOneWidget);
+      expect(find.text('+1,366,560'), findsOneWidget);
+      expect(find.text('PRADHA'), findsWidgets);
     });
 
     testWidgets('does not invent a balance', (tester) async {
