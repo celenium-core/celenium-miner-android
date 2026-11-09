@@ -104,6 +104,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineMiningOff => 'MINING OFF';
 
   @override
+  String get mineTapToStart => 'Tap the logo to start';
+
+  @override
+  String get mineTapToStop => 'Tap the logo to stop';
+
+  @override
+  String get mineRestartHint => 'Tap the logo for a new session';
+
+  @override
   String get mineToggleSemantics => 'Start or stop mining';
 
   @override
@@ -116,9 +125,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mineAcceptanceSemantics => 'Share acceptance. Open workers.';
-
-  @override
-  String get mineAcceptanceNoShares => 'ACCEPTANCE\nno shares yet';
 
   @override
   String mineAcceptanceRate(String rate) {

@@ -31,6 +31,9 @@
   "mineNoInternalMiner": "MINER INTERNAL TIDAK TERSEDIA",
   "mineMiningOn": "MINING AKTIF",
   "mineMiningOff": "MINING BERHENTI",
+  "mineTapToStart": "Ketuk logo untuk mulai",
+  "mineTapToStop": "Ketuk logo untuk berhenti",
+  "mineRestartHint": "Ketuk logo untuk mulai sesi baru",
   "mineToggleSemantics": "Mulai atau hentikan mining",
   "mineWaitingShare": "> menunggu share pertama",
   "mineShareAccepted": "> share diterima {hash}",
@@ -43,7 +46,6 @@
     }
   },
   "mineAcceptanceSemantics": "Rasio share diterima. Buka worker.",
-  "mineAcceptanceNoShares": "PENERIMAAN\nbelum ada share",
   "mineAcceptanceRate": "PENERIMAAN\n{rate}%",
   "@mineAcceptanceRate": {
     "placeholders": {

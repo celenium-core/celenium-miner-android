@@ -295,57 +295,48 @@ class _DialCaption extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
     final status = readout.status ?? MinerStatus.idle;
-    final statusLine = switch (status) {
-      MinerStatus.mining => l10n.mineMiningOn,
-      MinerStatus.connecting => l10n.mineConnecting,
-      MinerStatus.needsWallet => l10n.mineNeedsWallet,
-      MinerStatus.limitReached => l10n.mineLimitReached,
-      MinerStatus.error => l10n.mineError,
-      _ => l10n.mineMiningOff,
-    };
     final mining = status == MinerStatus.mining;
+
+    // One line that answers "what do I do now?", keyed to the phase. The state
+    // bar above names the phase (MINING ON, 24H LIMIT REACHED…); this line
+    // names the action. It is suppressed for connecting / needs-wallet / error,
+    // where the next move is not the logo.
+    final String? hint = switch (status) {
+      MinerStatus.mining => l10n.mineTapToStop,
+      MinerStatus.limitReached => l10n.mineRestartHint,
+      MinerStatus.connecting ||
+      MinerStatus.needsWallet ||
+      MinerStatus.error => null,
+      _ => l10n.mineTapToStart,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // The dial centre is the start/stop control, so this card states the
-        // engine's current phase (connecting, hashing, 24 h limit reached…).
-        _ReadoutChip(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              StateDot(
-                active: true,
-                color: mining ? Palette.green : Palette.slate,
-              ),
-              const SizedBox(width: Palette.sm),
-              Text(
-                statusLine,
-                style: TypeScale.mono(context, size: 11).copyWith(
-                  color: mining ? Palette.green : Palette.creamDim,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.6,
-                ),
-              ),
-            ],
-          ),
-        ),
+        _StateBar(status: status),
         // The session clock only means something while hashing, so it gets its
         // own card and only appears then.
         if (mining) ...[
           const SizedBox(height: Palette.sm),
           _ReadoutChip(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'UPTIME ${_uptime(readout.sessionUptime)}',
-                  style: TypeScale.mono(context, size: 11).copyWith(
-                    color: Palette.creamDim,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
+            child: Text(
+              'UPTIME ${_uptime(readout.sessionUptime)}',
+              textAlign: TextAlign.center,
+              style: TypeScale.mono(context, size: 11).copyWith(
+                color: Palette.creamDim,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ],
+        if (hint != null) ...[
+          const SizedBox(height: Palette.sm),
+          Text(
+            hint,
+            textAlign: TextAlign.center,
+            style: TypeScale.monoMuted(context, size: 10).copyWith(
+              color: Palette.creamDim,
+              letterSpacing: 0.4,
             ),
           ),
         ],
@@ -372,6 +363,61 @@ class _DialCaption extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// A single translucent bar under the dial that pairs a status dot with the
+/// engine phase. While mining it tints green and carries a green border, so
+/// ON/OFF reads at a glance and not only through the word. The instruction line
+/// below tells the user how to continue when the bar shows a limit or an error.
+class _StateBar extends StatelessWidget {
+  const _StateBar({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
+    final mining = status == MinerStatus.mining;
+    final String statusLine = switch (status) {
+      MinerStatus.mining => l10n.mineMiningOn,
+      MinerStatus.connecting => l10n.mineConnecting,
+      MinerStatus.needsWallet => l10n.mineNeedsWallet,
+      MinerStatus.limitReached => l10n.mineLimitReached,
+      MinerStatus.error => l10n.mineError,
+      _ => l10n.mineMiningOff,
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 12),
+      decoration: BoxDecoration(
+        color: mining
+            ? Palette.green.withValues(alpha: 0.10)
+            : Palette.surfaceHigh.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(Palette.rowRadius),
+        border: Border.all(
+          color: mining
+              ? Palette.green.withValues(alpha: 0.45)
+              : const Color(0x1AFFFFFF),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          StateDot(active: true, color: mining ? Palette.green : Palette.slate),
+          const SizedBox(width: Palette.sm),
+          Text(
+            statusLine,
+            style: TypeScale.mono(context, size: 12).copyWith(
+              color: mining ? Palette.green : Palette.creamDim,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.6,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -448,18 +494,18 @@ class _DialBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Palette.lg),
-        // Acceptance is what the dial shows, so it is stated once here rather
-        // than repeated in the stats strip below.
-        Text(
-          rate == null
-              ? l10n.mineAcceptanceNoShares
-              : l10n.mineAcceptanceRate((rate * 100).toStringAsFixed(0)),
-          textAlign: TextAlign.center,
-          style: TypeScale.mono(
-            context,
-            size: 12,
-          ).copyWith(color: Palette.goldLight, letterSpacing: 1.4),
-        ),
+        // Acceptance is what the ring shows, so the percentage is printed only
+        // once a share exists. Before the first share there is nothing to
+        // measure — an empty ring is the honest state, with no label at all.
+        if (rate != null)
+          Text(
+            l10n.mineAcceptanceRate((rate * 100).toStringAsFixed(0)),
+            textAlign: TextAlign.center,
+            style: TypeScale.mono(
+              context,
+              size: 12,
+            ).copyWith(color: Palette.goldLight, letterSpacing: 1.4),
+          ),
         const SizedBox(height: Palette.md),
         _DialCaption(readout: readout, onTap: onTap),
       ],

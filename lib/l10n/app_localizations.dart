@@ -284,6 +284,24 @@ abstract class AppLocalizations {
   /// **'MINING OFF'**
   String get mineMiningOff;
 
+  /// No description provided for @mineTapToStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the logo to start'**
+  String get mineTapToStart;
+
+  /// No description provided for @mineTapToStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the logo to stop'**
+  String get mineTapToStop;
+
+  /// No description provided for @mineRestartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the logo for a new session'**
+  String get mineRestartHint;
+
   /// No description provided for @mineToggleSemantics.
   ///
   /// In en, this message translates to:
@@ -307,12 +325,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share acceptance. Open workers.'**
   String get mineAcceptanceSemantics;
-
-  /// No description provided for @mineAcceptanceNoShares.
-  ///
-  /// In en, this message translates to:
-  /// **'ACCEPTANCE\nno shares yet'**
-  String get mineAcceptanceNoShares;
 
   /// No description provided for @mineAcceptanceRate.
   ///

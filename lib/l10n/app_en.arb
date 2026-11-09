@@ -31,6 +31,9 @@
   "mineNoInternalMiner": "NO INTERNAL MINER",
   "mineMiningOn": "MINING ON",
   "mineMiningOff": "MINING OFF",
+  "mineTapToStart": "Tap the logo to start",
+  "mineTapToStop": "Tap the logo to stop",
+  "mineRestartHint": "Tap the logo for a new session",
   "mineToggleSemantics": "Start or stop mining",
   "mineWaitingShare": "> waiting for first share",
   "mineShareAccepted": "> share accepted {hash}",
@@ -43,7 +46,6 @@
     }
   },
   "mineAcceptanceSemantics": "Share acceptance. Open workers.",
-  "mineAcceptanceNoShares": "ACCEPTANCE\nno shares yet",
   "mineAcceptanceRate": "ACCEPTANCE\n{rate}%",
   "@mineAcceptanceRate": {
     "placeholders": {

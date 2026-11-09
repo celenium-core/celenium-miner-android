@@ -842,10 +842,10 @@ void main() {
       await tester.tap(find.text('ENTER'));
       await pumpFrames(tester, 10);
 
-      // Mine opens first; both its dial caption and the node feed name
-      // ACCEPTANCE, so it appears more than once. It exists nowhere else, so
-      // any match proves the Mine tab is on screen.
-      expect(find.textContaining('ACCEPTANCE'), findsWidgets);
+      // The mine tab is the only screen that titles its summary card
+      // "Celenium Miner"; that text exists nowhere else, so its presence proves
+      // the Mine tab is on screen and its absence proves the switch happened.
+      expect(find.text('Celenium Miner'), findsOneWidget);
 
       await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
@@ -855,7 +855,7 @@ void main() {
       // The wallet screen is the only one that names a balance. Eyebrow
       // uppercases its label, so the rendered text is all caps.
       expect(find.text('TOTAL BALANCE'), findsOneWidget);
-      expect(find.textContaining('ACCEPTANCE'), findsNothing);
+      expect(find.text('Celenium Miner'), findsNothing);
     });
   });
 

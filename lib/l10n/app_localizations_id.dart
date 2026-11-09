@@ -104,6 +104,15 @@ class AppLocalizationsId extends AppLocalizations {
   String get mineMiningOff => 'MINING BERHENTI';
 
   @override
+  String get mineTapToStart => 'Ketuk logo untuk mulai';
+
+  @override
+  String get mineTapToStop => 'Ketuk logo untuk berhenti';
+
+  @override
+  String get mineRestartHint => 'Ketuk logo untuk mulai sesi baru';
+
+  @override
   String get mineToggleSemantics => 'Mulai atau hentikan mining';
 
   @override
@@ -116,9 +125,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get mineAcceptanceSemantics => 'Rasio share diterima. Buka worker.';
-
-  @override
-  String get mineAcceptanceNoShares => 'PENERIMAAN\nbelum ada share';
 
   @override
   String mineAcceptanceRate(String rate) {

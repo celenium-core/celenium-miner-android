@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'cen_wallet.dart';
-import 'device_identity.dart';
+import 'keystore.dart';
 import 'mining_isolate.dart';
 import 'mining_readout.dart';
 import 'mining_service.dart';
@@ -44,6 +46,11 @@ class MiningEngine extends ChangeNotifier {
   /// returns to OFF; the user must tap again to open a fresh session.
   static const Duration sessionLimit = Duration(hours: 24);
 
+  /// SharedPreferences key for the session start, so the 24-hour hard-stop
+  /// survives the app being swiped away: the timer lives in this isolate, but
+  /// the start time must outlive it for [resume] to re-enforce the limit.
+  static const String _sessionStartPref = 'mining_session_start_ms';
+
   /// Post-Era0 mainnet block reward, in CEN per block, per the whitepaper's
   /// emission schedule. Used only to translate accepted shares into a rough
   /// "you have earned ~X CEN" figure on the mining screen.
@@ -58,6 +65,12 @@ class MiningEngine extends ChangeNotifier {
   bool _mining = false; // user intent (toggle state)
   bool _running = false; // a service worker is actually spawned/hashing
   bool _serviceInit = false; // `initMiningService` has run once
+
+  final Keystore _keystore = Keystore();
+
+  // Memoized so startup address resolution and a first mining tap share one
+  // future (and one generated phrase) instead of racing two generations.
+  Future<CenWallet>? _walletFuture;
 
   String status = MinerStatus.idle;
   double? hashrate; // H/s
@@ -117,11 +130,28 @@ class MiningEngine extends ChangeNotifier {
   Future<void> resume() async {
     try {
       if (await FlutterForegroundTask.isRunningService) {
+        final start = await _readSessionStart();
+        if (start != null &&
+            DateTime.now().millisecondsSinceEpoch - start >=
+                sessionLimit.inMilliseconds) {
+          // The service outlived its 24-hour window while the app was closed.
+          // Stop it now and surface the same "limit reached" state the timer
+          // would have produced, leaving the toggle OFF for a re-tap.
+          _mining = false;
+          _running = false;
+          status = MinerStatus.limitReached;
+          await _stopService();
+          await _clearSessionStart();
+          notifyListeners();
+          return;
+        }
+        _sessionStartMillis = start ?? DateTime.now().millisecondsSinceEpoch;
         _mining = true;
         _running = true;
         if (status != MinerStatus.mining && status != MinerStatus.connecting) {
           status = MinerStatus.mining;
         }
+        _armLimitTimer();
         notifyListeners();
       }
     } on Object {
@@ -129,15 +159,14 @@ class MiningEngine extends ChangeNotifier {
     }
   }
 
-  /// Derives the payout address from the device identity (Android ID, or IP on
-  /// desktop/dev) without starting anything, so the wallet tab shows it before
-  /// the first mining session. Nothing to restore: the same device always
-  /// yields the same address.
+  /// Derives the payout address from the locally stored recovery phrase so it
+  /// always matches the wallet tab, the backup flow and the send flow. On a
+  /// first run there is no phrase yet, so one is created (and kept in the
+  /// keystore); the address is then stable and recoverable from that point on.
   Future<void> resolveAddress() async {
     if (address != null) return;
-    final seed = await deviceIdentitySeed();
     try {
-      final wallet = deriveDeviceWallet(seed, CenNetwork.mainnet);
+      final wallet = await _resolveWallet();
       address = wallet.address;
       notifyListeners();
     } on Object {
@@ -145,16 +174,55 @@ class MiningEngine extends ChangeNotifier {
     }
   }
 
+  /// The single wallet used everywhere: the recovery phrase.
+  ///
+  /// It used to be derived from the device identity (Android ID / IP), which
+  /// produced a *different* address from the phrase the user backs up — mining
+  /// paid out to an address the wallet could not spend, and the send flow's
+  /// key check failed. The phrase is generated on first use and never
+  /// regenerated, so the miner, wallet, backup and send all agree on one key.
+  Future<CenWallet> _resolveWallet() async {
+    final cached = _walletFuture;
+    if (cached != null) return cached;
+
+    final future = _resolveWalletImpl();
+    _walletFuture = future;
+    try {
+      return await future;
+    } on Object {
+      // Forget the failed future so a later retry (keystore or wordlist asset
+      // recovered) can start fresh instead of replaying the same error.
+      _walletFuture = null;
+      rethrow;
+    }
+  }
+
+  Future<CenWallet> _resolveWalletImpl() async {
+    final phrase = await _keystore.readPhrase();
+    if (phrase != null && phrase.isNotEmpty) {
+      return CenWallet.fromMnemonic(
+        Mnemonic.fromPhrase(phrase),
+        CenNetwork.mainnet,
+      );
+    }
+    // First run: create and persist a fresh phrase. The backup screen reads
+    // this same phrase from the keystore, so the words the user writes down
+    // can never diverge from the address mining pays into.
+    final wordlist = await loadBip39Wordlist(rootBundle);
+    final mnemonic = generateMnemonic(wordlist: wordlist);
+    await _keystore.savePhrase(mnemonic.phrase);
+    return CenWallet.fromMnemonic(mnemonic, CenNetwork.mainnet);
+  }
+
   Future<void> _start() async {
     _mining = true;
 
-    final seed = await deviceIdentitySeed();
     CenWallet wallet;
     try {
-      wallet = deriveDeviceWallet(seed, CenNetwork.mainnet);
+      wallet = await _resolveWallet();
     } on Object {
       _mining = false;
-      status = MinerStatus.error;
+      status = MinerStatus.needsWallet;
       error = 'wallet';
       notifyListeners();
       return;
@@ -167,6 +235,7 @@ class MiningEngine extends ChangeNotifier {
     hashrate = null;
     status = MinerStatus.connecting;
     _sessionStartMillis = DateTime.now().millisecondsSinceEpoch;
+    await _persistSessionStart(_sessionStartMillis!);
     _armLimitTimer();
     await _beginService(wallet.address);
     notifyListeners();
@@ -179,6 +248,7 @@ class MiningEngine extends ChangeNotifier {
     if (wasService) {
       status = MinerStatus.stopped;
     }
+    await _clearSessionStart();
     notifyListeners();
   }
 
@@ -186,7 +256,8 @@ class MiningEngine extends ChangeNotifier {
     if (!_running) return;
     _mining = false;
     status = MinerStatus.limitReached;
-    _stopService();
+    unawaited(_stopService());
+    unawaited(_clearSessionStart());
     notifyListeners();
   }
 
@@ -236,6 +307,10 @@ class MiningEngine extends ChangeNotifier {
       _running = false;
       status = MinerStatus.error;
       error = 'service: ${result.error}';
+      _limitTimer?.cancel();
+      _limitTimer = null;
+      _sessionStartMillis = null;
+      await _clearSessionStart();
       return;
     }
     _running = true;
@@ -333,7 +408,42 @@ class MiningEngine extends ChangeNotifier {
 
   void _armLimitTimer() {
     _limitTimer?.cancel();
-    _limitTimer = Timer(sessionLimit, _onLimit);
+    final start = _sessionStartMillis;
+    final elapsedMs =
+        start == null ? 0 : DateTime.now().millisecondsSinceEpoch - start;
+    final remaining = sessionLimit - Duration(milliseconds: elapsedMs);
+    if (remaining <= Duration.zero) {
+      _onLimit();
+      return;
+    }
+    _limitTimer = Timer(remaining, _onLimit);
+  }
+
+  Future<void> _persistSessionStart(int ms) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_sessionStartPref, ms);
+    } on Object {
+      // Best-effort: the in-memory timer still guards the current run.
+    }
+  }
+
+  Future<int?> _readSessionStart() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt(_sessionStartPref);
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<void> _clearSessionStart() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_sessionStartPref);
+    } on Object {
+      // Nothing to roll back if preferences are unavailable.
+    }
   }
 
   int? get _sessionUptimeSeconds {
