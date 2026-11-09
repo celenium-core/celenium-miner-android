@@ -283,8 +283,8 @@ class _MetricChip extends StatelessWidget {
   }
 }
 
-/// A centred readout line under the dial: the engine phase, the session uptime
-/// and the accepted-share count, in the concept's shell-prompt style.
+/// A centred readout under the dial: the engine phase and the session uptime as
+/// slim cards, then the reward estimate in the concept's shell-prompt style.
 class _DialCaption extends StatelessWidget {
   const _DialCaption({required this.readout, required this.onTap});
 
@@ -303,29 +303,57 @@ class _DialCaption extends StatelessWidget {
       MinerStatus.error => l10n.mineError,
       _ => l10n.mineMiningOff,
     };
+    final mining = status == MinerStatus.mining;
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // The dial centre is the start/stop control, so this line states the
+        // The dial centre is the start/stop control, so this card states the
         // engine's current phase (connecting, hashing, 24 h limit reached…).
-        Text(
-          statusLine,
-          style: TypeScale.monoMuted(
-            context,
-            size: 10,
-          ).copyWith(letterSpacing: 1.6),
+        _ReadoutChip(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              StateDot(
+                active: true,
+                color: mining ? Palette.green : Palette.slate,
+              ),
+              const SizedBox(width: Palette.sm),
+              Text(
+                statusLine,
+                style: TypeScale.mono(context, size: 11).copyWith(
+                  color: mining ? Palette.green : Palette.creamDim,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.6,
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: Palette.sm),
-        Text(
-          'UPTIME ${_uptime(readout.sessionUptime)}',
-          style: TypeScale.mono(
-            context,
-            size: 11,
-          ).copyWith(color: Palette.creamDim),
-        ),
+        // The session clock only means something while hashing, so it gets its
+        // own card and only appears then.
+        if (mining) ...[
+          const SizedBox(height: Palette.sm),
+          _ReadoutChip(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'UPTIME ${_uptime(readout.sessionUptime)}',
+                  style: TypeScale.mono(context, size: 11).copyWith(
+                    color: Palette.creamDim,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         if (readout.estimatedCen != null) ...[
           const SizedBox(height: Palette.md),
           Text(
             l10n.walletMiningReward.toUpperCase(),
+            textAlign: TextAlign.center,
             style: TypeScale.monoMuted(context, size: 9).copyWith(
               letterSpacing: 1.4,
             ),
@@ -333,6 +361,7 @@ class _DialCaption extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             '≈ ${formatCoin(readout.estimatedCen!, locale: Localizations.localeOf(context).toString())}',
+            textAlign: TextAlign.center,
             style: TypeScale.mono(
               context,
               size: 14,
@@ -340,10 +369,31 @@ class _DialCaption extends StatelessWidget {
               color: Palette.goldLight,
               fontWeight: FontWeight.w800,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ],
+    );
+  }
+}
+
+/// A slim, translucent card shared by the engine-phase and uptime readouts so
+/// the two lines sit as one family beneath the dial instead of floating bare.
+class _ReadoutChip extends StatelessWidget {
+  const _ReadoutChip({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: Palette.lg, vertical: 10),
+      decoration: BoxDecoration(
+        color: Palette.surfaceHigh.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(Palette.rowRadius),
+        border: Border.all(color: const Color(0x1AFFFFFF)),
+      ),
+      child: child,
     );
   }
 }
