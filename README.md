@@ -10,7 +10,7 @@ Android app --> stratum (TCP) / HTTP API bridge --> celeniumd --> blockchain CEN
 
 ## Aturan khusus Android (sesuai spesifikasi)
 
-1. Reward Android maksimal 10% dari reward desktop pada hashrate yang sama
+1. Reward Android maksimal 40% dari reward desktop pada hashrate yang sama
    (dilaksanakan di sisi bridge via penanda worker).
 2. 1 alamat IP hanya boleh memegang 1 sesi mining Android aktif
    (rate-limit di bridge; koneksi ganda dari IP sama ditolak).
@@ -79,5 +79,5 @@ dengan 3 GB build selesai ~5 menit.
 
 Koneksi app = HTTP API stratum-bridge. Di HP pakai IP LAN host bridge, contoh
 `http://192.168.1.4:3030` (bukan 127.0.0.1). Aturan khusus Android dari
-spesifikasi (reward maks 10% dan 1 IP = 1 sesi) ditegakkan di sisi bridge,
+spesifikasi (reward maks 40% dan 1 IP = 1 sesi) ditegakkan di sisi bridge,
 bukan di app.
