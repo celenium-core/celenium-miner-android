@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fonts.dart';
 
@@ -119,6 +120,8 @@ Future<void> _settle(WidgetTester tester, {int frames = 16}) async {
 }
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('capture the send sheet with green address cards', (
     tester,
   ) async {

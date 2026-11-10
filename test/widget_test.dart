@@ -118,6 +118,10 @@ Future<void> pumpFrames(WidgetTester tester, int count) async {
 }
 
 void main() {
+  // The wallet's address card now reads its reveal preference from
+  // shared_preferences, so every widget test needs a backing mock store.
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   group('normaliseBaseUrl', () {
     test('adds a scheme when missing', () {
       expect(normaliseBaseUrl('127.0.0.1:3030'), 'http://127.0.0.1:3030');
@@ -547,7 +551,7 @@ void main() {
               readout: const MiningReadout(
                 status: MinerStatus.mining,
                 active: true,
-                estimatedCen: 1.5,
+                earnedPradha: 150000000,
               ),
               nodeAddress: '127.0.0.1:26510',
               onOpenActivity: () {},

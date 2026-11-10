@@ -431,6 +431,16 @@ class _BackupScreenState extends State<BackupScreen> {
           onPressed: _revealAgain,
         ),
         const SizedBox(height: Palette.md),
+        GhostButton(
+          label: l10n.backupHaveWords,
+          icon: Icons.download_outlined,
+          onPressed: () => setState(() {
+            _importError = null;
+            _importAddress = null;
+            _stage = _Stage.import;
+          }),
+        ),
+        const SizedBox(height: Palette.md),
         TextButton(onPressed: widget.onDone, child: Text(l10n.commonDone)),
       ],
     );

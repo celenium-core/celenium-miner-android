@@ -11,6 +11,7 @@ class SettingsStore {
   static const String _keyBaseUrl = 'bridge_base_url';
   static const String _keyInterval = 'poll_interval_ms';
   static const String _keyAdDismissed = 'ad_dismissed';
+  static const String _keyAddressRevealed = 'address_revealed';
 
   /// Public so tests can seed the stored language instead of hard-coding the
   /// key, which would silently stop testing anything if the key were renamed.
@@ -51,6 +52,20 @@ class SettingsStore {
   Future<void> setAdDismissed(bool value) async {
     final prefs = await _prefs;
     await prefs.setBool(_keyAdDismissed, value);
+  }
+
+  /// Whether the mining address is shown readably in the wallet. Defaults to
+  /// revealing (privacy never surprises a first-time user), but a user who
+  /// hides it keeps it hidden until they tap the eye again — a privacy toggle
+  /// that forgets on restart is worse than none (R-26).
+  Future<bool> addressRevealed() async {
+    final prefs = await _prefs;
+    return prefs.getBool(_keyAddressRevealed) ?? true;
+  }
+
+  Future<void> setAddressRevealed(bool value) async {
+    final prefs = await _prefs;
+    await prefs.setBool(_keyAddressRevealed, value);
   }
 
   /// The chosen interface language. Unknown stored values fall back to

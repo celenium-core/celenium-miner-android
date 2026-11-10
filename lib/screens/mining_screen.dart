@@ -319,9 +319,9 @@ class _DialCaption extends StatelessWidget {
               size: 10,
             ).copyWith(color: Palette.creamDim, letterSpacing: 0.4),
           ),
-          if (readout.estimatedCen != null) const SizedBox(height: Palette.md),
+          if (readout.earnedPradha != null) const SizedBox(height: Palette.md),
         ],
-        if (readout.estimatedCen != null) ...[
+        if (readout.earnedPradha != null) ...[
           Text(
             l10n.walletMiningReward.toUpperCase(),
             textAlign: TextAlign.center,
@@ -332,7 +332,7 @@ class _DialCaption extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '≈ ${formatCoin(readout.estimatedCen!, locale: Localizations.localeOf(context).toString())}',
+            '≈ ${formatPradha(readout.earnedPradha!, locale: Localizations.localeOf(context).toString())}',
             textAlign: TextAlign.center,
             style: TypeScale.mono(
               context,

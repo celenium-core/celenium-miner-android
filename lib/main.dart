@@ -641,7 +641,7 @@ class _MinerHomeState extends State<MinerHome> {
           onBackup: () => _open(_Route.backup),
           onOpenActivity: () => _open(_Route.activity),
           localAddress: _engine.address,
-          estimatedCen: _engine.estimatedCen,
+          earnedPradha: _engine.earnedPradha,
         );
       case _Tab.profile:
         return ProfileScreen(

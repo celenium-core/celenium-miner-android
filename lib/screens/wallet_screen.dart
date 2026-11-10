@@ -10,6 +10,7 @@ import '../services/bridge_api.dart';
 import '../services/cen_wallet.dart';
 import '../services/keystore.dart';
 import '../services/mining_readout.dart';
+import '../services/settings_store.dart';
 import '../theme/layout.dart';
 import '../theme/palette.dart';
 import '../theme/typography.dart';
@@ -32,7 +33,7 @@ class WalletScreen extends StatefulWidget {
     this.keystore,
     this.network = CenNetwork.mainnet,
     this.localAddress,
-    this.estimatedCen,
+    this.earnedPradha,
   });
 
   final MinerSnapshot snapshot;
@@ -53,9 +54,9 @@ class WalletScreen extends StatefulWidget {
   /// a fallback for when the bridge itself is the miner.
   final String? localAddress;
 
-  /// Estimated CEN earned this mining session (accepted shares × block
-  /// reward), computed locally. Null while not mining.
-  final double? estimatedCen;
+  /// Pradha kredit dari share diterima sesi ini (1 pradha/share), dihitung
+  /// lokal. Null selagi belum mining.
+  final int? earnedPradha;
 
   /// Opens the backup flow for the locally generated key.
   final VoidCallback onBackup;
@@ -106,7 +107,7 @@ class _WalletScreenState extends State<WalletScreen> {
             _AddressCard(address: address),
             const SizedBox(height: Palette.lg),
           ],
-          if (widget.estimatedCen != null) ...[
+          if (widget.earnedPradha != null) ...[
             CenCard(
               padding: const EdgeInsets.all(Palette.md),
               color: Palette.goldLight.withValues(alpha: 0.06),
@@ -122,7 +123,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                   ),
                   Text(
-                    '≈ ${formatCoin(widget.estimatedCen!, locale: Localizations.localeOf(context).toString())}',
+                    '≈ ${formatPradha(widget.earnedPradha!, locale: Localizations.localeOf(context).toString())}',
                     style: TypeScale.pixel(
                       context,
                       size: 16,
@@ -379,6 +380,21 @@ class _AddressCard extends StatefulWidget {
 class _AddressCardState extends State<_AddressCard> {
   bool _revealed = true;
 
+  final SettingsStore _store = SettingsStore();
+
+  @override
+  void initState() {
+    super.initState();
+    _store.addressRevealed().then((value) {
+      if (mounted) setState(() => _revealed = value);
+    });
+  }
+
+  void _toggleReveal() {
+    setState(() => _revealed = !_revealed);
+    _store.setAddressRevealed(_revealed);
+  }
+
   /// Blurs and deactivates [child] while hidden, so the address cannot be
   /// read or long-pressed into the clipboard off the screen.
   Widget _veil(Widget child) {
@@ -429,7 +445,7 @@ class _AddressCardState extends State<_AddressCard> {
               const Spacer(),
               _RevealButton(
                 revealed: _revealed,
-                onTap: () => setState(() => _revealed = !_revealed),
+                onTap: _toggleReveal,
                 compact: true,
               ),
             ],

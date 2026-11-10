@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// A real-looking mainnet address the test treats as "the phone's own key".
 const _local = 'cen69:qz0p8x7m2v5n3w9r4t6y8u1i5o7p9a2s3d4f6g8h7j6k5l9';
@@ -63,7 +64,7 @@ http.Client _bridge() {
   });
 }
 
-Widget _host({String? localAddress, double? estimatedCen}) {
+Widget _host({String? localAddress, int? earnedPradha}) {
   final api = BridgeApi(baseUrl: 'http://127.0.0.1:3030', client: _bridge());
   return MaterialApp(
     theme: buildCenTheme(),
@@ -77,7 +78,7 @@ Widget _host({String? localAddress, double? estimatedCen}) {
         onOpenActivity: () {},
         api: api,
         localAddress: localAddress,
-        estimatedCen: estimatedCen,
+        earnedPradha: earnedPradha,
       ),
     ),
   );
@@ -91,9 +92,11 @@ Future<void> _settle(WidgetTester tester, {int frames = 16}) async {
 }
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('wallet tab shows the local mining address and session estimate',
       (tester) async {
-    await tester.pumpWidget(_host(localAddress: _local, estimatedCen: 0.123456));
+    await tester.pumpWidget(_host(localAddress: _local, earnedPradha: 12345600));
     await _settle(tester);
 
     // Bug #1 fix: the earned-coins estimate renders (adaptive unit: whole

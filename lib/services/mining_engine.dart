@@ -51,16 +51,12 @@ class MiningEngine extends ChangeNotifier {
   /// the start time must outlive it for [resume] to re-enforce the limit.
   static const String _sessionStartPref = 'mining_session_start_ms';
 
-  /// Post-Era0 mainnet block reward, in CEN per block, per the whitepaper's
-  /// emission schedule. Used only to translate accepted shares into a rough
-  /// "you have earned ~X CEN" figure on the mining screen.
-  static const double _cenPerBlock = 0.0136656;
-
-  /// CEN credited per accepted difficulty-1 share. Derived: a share worth
-  /// `difficulty` diff-1 units earns `difficulty / (total_diff_per_block)`
-  /// of a block reward. With a nominal network difficulty near 1 in early
-  /// Era-0, one diff-1 share ≈ one block-equivalent of work.
-  static const double _cenPerShareAtDiff1 = _cenPerBlock;
+  /// Pradha yang dikredit per share diterima, dalam satuan terkecil koin.
+  /// 1 share = 1 pradha, langsung dikredit tanpa ambang minimum — reward
+  /// menitik sekecil mungkin dan tidak menunggu akumulasi jutaan pradha.
+  /// Ini hanya angka estimasi sesi; payout on-chain tetap dari block subsidy
+  /// saat pool menemukan block, bukan dari nilai ini.
+  static const int _pradhaPerShare = 1;
 
   bool _mining = false; // user intent (toggle state)
   bool _running = false; // a service worker is actually spawned/hashing
@@ -80,7 +76,7 @@ class MiningEngine extends ChangeNotifier {
   String? jobId;
   double? difficulty;
   String? address; // "cen69:…" payout address
-  double? estimatedCen; // Σ shares × difficulty × per-share reward
+  int? earnedPradha; // Σ pradha dikredit dari share diterima (1 pradha/share)
 
   int? _sessionStartMillis;
   Timer? _limitTimer;
@@ -93,7 +89,7 @@ class MiningEngine extends ChangeNotifier {
       difficulty: difficulty,
       workerName: _shortAddress,
       address: address,
-      estimatedCen: estimatedCen,
+      earnedPradha: earnedPradha,
       shares: accepted,
       // The local worker reports rejected shares; the readout's `stale` slot
       // feeds the acceptance-rate denominator, matching bridge semantics.
@@ -321,7 +317,7 @@ class MiningEngine extends ChangeNotifier {
     _limitTimer = null;
     _sessionStartMillis = null;
     hashrate = null;
-    estimatedCen = null;
+    earnedPradha = null;
     try {
       if (await FlutterForegroundTask.isRunningService) {
         FlutterForegroundTask.sendDataToTask(const JsonEncoder().convert(<String, dynamic>{'cmd': 'stop'}));
@@ -396,9 +392,8 @@ class MiningEngine extends ChangeNotifier {
 
   void _updateEstimate() {
     final acc = accepted;
-    final diff = difficulty;
-    if (acc == null || diff == null) return;
-    estimatedCen = acc * diff * _cenPerShareAtDiff1;
+    if (acc == null) return;
+    earnedPradha = acc * _pradhaPerShare;
   }
 
   static double? _asDouble(Object? v) => v is num ? v.toDouble() : (v == null ? null : double.tryParse(v.toString()));

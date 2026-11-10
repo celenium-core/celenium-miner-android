@@ -26,7 +26,7 @@ class MiningReadout {
     this.difficulty,
     this.workerName,
     this.address,
-    this.estimatedCen,
+    this.earnedPradha,
     this.shares,
     this.stale,
     this.invalid,
@@ -55,9 +55,9 @@ class MiningReadout {
   /// engine. Distinct from [workerName], which is the shortened pool label.
   final String? address;
 
-  /// Estimated CEN mined this session from the engine's share math. A display
-  /// estimate only — never a settlement amount.
-  final double? estimatedCen;
+  /// Pradha kredit dari share diterima sesi ini (1 pradha/share). Hanya angka
+  /// estimasi tampilan — bukan settlement on-chain.
+  final int? earnedPradha;
 
   final int? shares;
   final int? stale;
