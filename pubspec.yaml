@@ -1,7 +1,7 @@
 name: celenium_miner
 description: "Celenium (CEN) mining control for desktop and Android."
 publish_to: 'none'
-version: 1.0.4+9004
+version: 1.0.5+9005
 
 environment:
   sdk: ^3.13.7

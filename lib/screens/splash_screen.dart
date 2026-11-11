@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/l10n.dart';
 import '../theme/palette.dart';
@@ -144,7 +145,16 @@ class _SplashScreenState extends State<SplashScreen>
                         Palette.xl,
                         Palette.lg,
                       ),
-                      child: _EnterButton(onTap: widget.onDone, fade: _entry),
+                      child: _EnterButton(
+                        onTap: () {
+                          // The one deliberate act on this screen. A silent
+                          // tap reads as a dead button, so it answers to touch
+                          // before the route change lands.
+                          HapticFeedback.mediumImpact();
+                          widget.onDone();
+                        },
+                        fade: _entry,
+                      ),
                     ),
                   ),
                 ),

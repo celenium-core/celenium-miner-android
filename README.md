@@ -77,9 +77,12 @@ Catatan mesin: `android/gradle.properties` sengaja dipasang `-Xmx3G` (bukan
 8 GB heap, R8 menukar memori ke swap dan satu build bisa makan 45 menit;
 dengan 3 GB build selesai ~5 menit.
 
-Koneksi app = HTTP API stratum-bridge. Di HP pakai IP LAN host bridge, contoh
-`http://192.168.1.4:3030` (bukan 127.0.0.1). Aturan khusus Android dari
-spesifikasi (reward maks 40% dan 1 IP = 1 sesi) ditegakkan di sisi bridge,
+Koneksi app = HTTP API stratum-bridge. Bawaan `1.0.5` sudah menunjuk bridge
+mainnet `http://5.178.98.100:3031`, jadi angka saldo dan daftar worker muncul
+tanpa disetel dulu; mau ke node lain (mis. LAN) tinggal ketik di tab Bridge.
+Menambang tidak bergantung pada alamat ini — stratum-nya hard-coded
+`5.178.98.100:5556` di `lib/services/mining_engine.dart`. Aturan khusus Android
+dari spesifikasi (reward maks 40% dan 1 IP = 1 sesi) ditegakkan di sisi bridge,
 bukan di app.
 
 ### Signing rilis — jangan ganti keystore-nya

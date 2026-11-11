@@ -394,6 +394,33 @@ void main() {
     });
   });
 
+  group('bridge default', () {
+    test('a fresh install points at the mainnet bridge', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      expect(SettingsStore.defaultBaseUrl, 'http://5.178.98.100:3031');
+      expect(await SettingsStore().baseUrl(), SettingsStore.defaultBaseUrl);
+    });
+
+    test('the old placeholder is answered with the mainnet bridge', () async {
+      // 127.0.0.1 on a phone is the phone itself, so a stored copy of the
+      // placeholder can only ever fail; it has to read as the real default.
+      SharedPreferences.setMockInitialValues({
+        'bridge_base_url': SettingsStore.legacyDefaultBaseUrl,
+      });
+
+      expect(await SettingsStore().baseUrl(), SettingsStore.defaultBaseUrl);
+    });
+
+    test('an address the user chose is left alone', () async {
+      SharedPreferences.setMockInitialValues({
+        'bridge_base_url': 'http://192.168.1.4:3031',
+      });
+
+      expect(await SettingsStore().baseUrl(), 'http://192.168.1.4:3031');
+    });
+  });
+
   group('mining screen', () {
     Widget host(MinerSnapshot snapshot) {
       return MediaQuery(
@@ -825,6 +852,151 @@ void main() {
       await tester.tap(find.byType(Checkbox));
       await tester.pump();
       expect(tester.widget<FilledButton>(cont).enabled, isTrue);
+    });
+
+    testWidgets('a phrase already on the phone offers the import path first', (
+      tester,
+    ) async {
+      final keystore = _FakeKeystore();
+      await keystore.savePhrase(
+        mnemonicFromEntropy(List.filled(16, 7), wordlist: _testWordlist).phrase,
+      );
+
+      await tester.pumpWidget(host(keystore));
+      await pumpUntil(tester, find.text('Show my words'));
+
+      // The words were generated the first time the miner ran, so they are
+      // not necessarily the user's own. Replacing them has to be reachable
+      // without revealing them first.
+      expect(find.text('I already have words'), findsOneWidget);
+      expect(find.byIcon(Icons.download_outlined), findsOneWidget);
+
+      await tester.tap(find.text('I already have words'));
+      await pumpUntil(tester, find.text('Import words'));
+      expect(find.text('Import words'), findsOneWidget);
+
+      // Backing out returns to the screen the import was entered from: the
+      // intro's "Create recovery words" would replace a phrase that already
+      // exists.
+      await tester.tap(find.text('Cancel'));
+      await pumpUntil(tester, find.text('Show my words'));
+      expect(find.text('Show my words'), findsOneWidget);
+      expect(find.text('Create recovery words'), findsNothing);
+    });
+
+    testWidgets('with no phrase yet, backing out of the import ends at the '
+        'intro', (tester) async {
+      await tester.pumpWidget(host(_FakeKeystore()));
+      await pumpUntil(tester, find.text('Create recovery words'));
+
+      // The intro is long enough to push its last button past the fold, and
+      // a lazy list does not build what is out of sight.
+      final import = find.text('I already have words');
+      await tester.dragUntilVisible(
+        import,
+        find.byType(ListView).first,
+        const Offset(0, -200),
+      );
+      await tester.pump();
+      await tester.tap(import);
+      await pumpUntil(tester, find.text('Import words'));
+
+      await tester.tap(find.text('Cancel'));
+      await pumpUntil(tester, find.text('Create recovery words'));
+
+      expect(find.text('Create recovery words'), findsOneWidget);
+    });
+  });
+
+  // Haptics leave no mark on the screen, so the only way to check them is to
+  // record what the platform channel was asked to do.
+  group('haptics', () {
+    late List<String> buzzes;
+
+    setUp(() {
+      buzzes = [];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method == 'HapticFeedback.vibrate') {
+              buzzes.add('${call.arguments}');
+            }
+            return null;
+          });
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    testWidgets('the splash entry button buzzes on the way in', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(800, 1720);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(shellApp(const MinerHome()));
+      await pumpFrames(tester, 30);
+
+      // Anything the shell vibrated while mounting is not what this test
+      // measures; only the tap counts.
+      buzzes.clear();
+      await tester.tap(find.text('ENTER'));
+      await pumpFrames(tester, 4);
+
+      expect(buzzes, contains('HapticFeedbackType.mediumImpact'));
+    });
+
+    testWidgets('the mining toggle buzzes in both directions', (tester) async {
+      final taps = <bool>[];
+      var snapshot = snapshotWith();
+      late StateSetter rebuild;
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(size: Size(400, 2600)),
+          child: MaterialApp(
+            theme: buildCenTheme(),
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) {
+                  rebuild = setState;
+                  return MiningScreen(
+                    readout: MiningReadout.from(snapshot),
+                    nodeAddress: '127.0.0.1:26510',
+                    onOpenActivity: () {},
+                    onConnectNode: () {},
+                    onSetMining: taps.add,
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // The disc is a library-private widget; tapping its centre lands on its
+      // InkWell either way.
+      final toggle = find.byWidgetPredicate(
+        (w) => w.runtimeType.toString() == '_MiningToggle',
+      );
+
+      await tester.tap(toggle);
+      await tester.pump();
+      expect(taps, [true]);
+      expect(buzzes, contains('HapticFeedbackType.mediumImpact'));
+
+      // The reverse direction has to answer too, or the switch feels dead on
+      // the way back.
+      buzzes.clear();
+      snapshot = snapshot.withMiningEnabled(true);
+      rebuild(() {});
+      await tester.pump();
+
+      await tester.tap(toggle);
+      await tester.pump();
+      expect(taps, [true, false]);
+      expect(buzzes, contains('HapticFeedbackType.lightImpact'));
     });
   });
 

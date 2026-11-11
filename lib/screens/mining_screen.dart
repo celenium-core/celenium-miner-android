@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/l10n.dart';
 import '../services/mining_readout.dart';
@@ -558,7 +559,19 @@ class _MiningToggle extends StatelessWidget {
           shape: const CircleBorder(),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: canToggle ? () => onSetMining!(!enabled) : null,
+            onTap: canToggle
+                ? () {
+                    // Two strengths, so the direction is felt and not only
+                    // seen: starting the rig is the heavier act, stopping it
+                    // the lighter one.
+                    if (enabled) {
+                      HapticFeedback.lightImpact();
+                    } else {
+                      HapticFeedback.mediumImpact();
+                    }
+                    onSetMining!(!enabled);
+                  }
+                : null,
             customBorder: const CircleBorder(),
             child: Center(
               child: Opacity(

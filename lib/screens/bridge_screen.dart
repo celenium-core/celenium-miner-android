@@ -100,7 +100,7 @@ class _BridgeScreenState extends State<BridgeScreen> {
                             size: 13,
                           ).copyWith(color: Palette.cream),
                           decoration: const InputDecoration(
-                            hintText: 'http://127.0.0.1:3030',
+                            hintText: 'http://5.178.98.100:3031',
                           ),
                         ),
                         const SizedBox(height: Palette.sm),

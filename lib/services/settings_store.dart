@@ -17,14 +17,25 @@ class SettingsStore {
   /// key, which would silently stop testing anything if the key were renamed.
   static const String languageKey = 'language_code';
 
-  static const String defaultBaseUrl = 'http://127.0.0.1:3030';
+  /// The mainnet bridge, so a fresh install shows real numbers without the
+  /// user setting anything. Read-only: the app only ever GETs from it.
+  static const String defaultBaseUrl = 'http://5.178.98.100:3031';
+
+  /// The placeholder shipped up to 1.0.4. On a phone `127.0.0.1` is the phone
+  /// itself, so a stored copy of it was never a working address; it is treated
+  /// as unset and answered with [defaultBaseUrl] instead of stranding the user
+  /// on the old placeholder.
+  static const String legacyDefaultBaseUrl = 'http://127.0.0.1:3030';
+
   static const int defaultIntervalMs = 2000;
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
 
   Future<String> baseUrl() async {
     final prefs = await _prefs;
-    return prefs.getString(_keyBaseUrl) ?? defaultBaseUrl;
+    final stored = prefs.getString(_keyBaseUrl);
+    if (stored == null || stored == legacyDefaultBaseUrl) return defaultBaseUrl;
+    return stored;
   }
 
   Future<void> setBaseUrl(String value) async {
