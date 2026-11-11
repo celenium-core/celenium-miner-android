@@ -292,6 +292,12 @@ class MiningEngine extends ChangeNotifier {
     } else {
       result = await FlutterForegroundTask.startService(
         serviceId: 1,
+        // `specialUse`, not the plugin's `dataSync` default: Android 15 caps
+        // dataSync services at six hours and then refuses to restart them
+        // until the app is foregrounded again — that cap is what ended
+        // overnight sessions. The manifest declares the matching permission
+        // and subtype property; bumping this list without those is fatal.
+        serviceTypes: const [ForegroundServiceTypes.specialUse],
         notificationTitle: 'Celenium Miner',
         notificationText: 'Mining CEN in the background',
         callback: miningStartCallback,

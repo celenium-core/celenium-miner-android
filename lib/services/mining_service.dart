@@ -30,6 +30,12 @@ void initMiningService() {
       eventAction: ForegroundTaskEventAction.nothing(),
       allowWakeLock: true,
       allowWifiLock: true,
+      // A mining session that is supposed to run for a day must come back on
+      // its own: after a device reboot or an app update the plugin's receivers
+      // restart the service with the saved config instead of waiting for the
+      // user to reopen the app.
+      autoRunOnBoot: true,
+      autoRunOnMyPackageReplaced: true,
     ),
   );
 }

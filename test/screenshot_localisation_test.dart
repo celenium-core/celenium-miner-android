@@ -30,7 +30,14 @@ Widget _host(Locale locale, {AppLanguage language = AppLanguage.system}) {
     locale: locale,
     supportedLocales: AppLocalizations.supportedLocales,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
-    home: MinerHome(language: language, onLanguageChanged: (_) {}),
+    home: MinerHome(
+      language: language,
+      onLanguageChanged: (_) {},
+      // The profile card resolves IP + Android ID asynchronously and both
+      // depend on the machine running the suite, so the goldens would drift.
+      // Pin the line the card shows instead.
+      deviceIpOverride: 'IP 192.168.1.10 · ID 0123456789abcdef',
+    ),
   );
 }
 

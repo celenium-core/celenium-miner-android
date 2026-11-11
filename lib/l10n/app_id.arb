@@ -10,9 +10,12 @@
   "commonChecking": "Memeriksa…",
   "commonCopy": "Salin",
   "commonGotIt": "Mengerti",
+  "batteryTitle": "Agar mining jalan terus",
+  "batteryBody": "Android bisa menghentikan mining saat layar mati. Kecualikan Celenium Miner dari penghemat baterai supaya sesi 24 jam tidak terputus.",
+  "batteryOpen": "Buka pengaturan",
+  "batteryLater": "Nanti saja",
   "commonToday": "HARI INI",
   "commonYesterday": "KEMARIN",
-  "commonNoWorker": "Belum ada worker",
   "statusActive": "AKTIF",
   "statusIdle": "IDLE",
   "statusOnline": "TERSAMBUNG",
@@ -109,7 +112,6 @@
   "walletMiningReward": "Imbalan mining",
   "walletCoinIn": "Coin masuk",
   "walletCoinOut": "Coin terkirim",
-  "walletEstimatedEarned": "Estimasi sesi ini",
   "walletSendTitle": "Kirim CEN",
   "walletSendRecipient": "Alamat tujuan",
   "walletSendAmount": "Jumlah",
@@ -238,10 +240,6 @@
   "logPollFailed": "Polling gagal",
   "logAdRequestFailed": "Permintaan iklan gagal",
   "profileTitle": "Profil",
-  "profileBlocks": "blok",
-  "profileShares": "share",
-  "profileWorkers": "worker",
-  "profileGhs": "gh/s",
   "profileSettings": "Pengaturan",
   "profileNotSet": "belum diatur",
   "profileBridgeRow": "Bridge",
@@ -249,16 +247,7 @@
   "profileActivityRow": "Log aktivitas",
   "profileRecoveryRow": "Kata pemulihan",
   "profileAboutRow": "Tentang",
-  "profileNoAddress": "belum ada alamat dilaporkan",
-  "profileMiningTo": "menambang ke {address}",
-  "@profileMiningTo": {
-    "placeholders": {
-      "address": {
-        "type": "String",
-        "example": "cen69sim:qabc…"
-      }
-    }
-  },
+  "profileDeviceUnknown": "IP/ID perangkat belum terbaca",
   "profileLanguage": "Bahasa",
   "profileLanguageSystem": "Ikuti sistem",
   "profileLanguageDone": "Bahasa disimpan",

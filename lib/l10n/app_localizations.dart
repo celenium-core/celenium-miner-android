@@ -158,6 +158,30 @@ abstract class AppLocalizations {
   /// **'Got it'**
   String get commonGotIt;
 
+  /// No description provided for @batteryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep mining running'**
+  String get batteryTitle;
+
+  /// No description provided for @batteryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Android can stop mining while the screen is off. Exempt Celenium Miner from battery optimisation so the 24-hour session is not cut short.'**
+  String get batteryBody;
+
+  /// No description provided for @batteryOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get batteryOpen;
+
+  /// No description provided for @batteryLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get batteryLater;
+
   /// No description provided for @commonToday.
   ///
   /// In en, this message translates to:
@@ -169,12 +193,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'YESTERDAY'**
   String get commonYesterday;
-
-  /// No description provided for @commonNoWorker.
-  ///
-  /// In en, this message translates to:
-  /// **'No worker'**
-  String get commonNoWorker;
 
   /// No description provided for @statusActive.
   ///
@@ -559,12 +577,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Coin sent'**
   String get walletCoinOut;
-
-  /// No description provided for @walletEstimatedEarned.
-  ///
-  /// In en, this message translates to:
-  /// **'Estimated this session'**
-  String get walletEstimatedEarned;
 
   /// No description provided for @walletSendTitle.
   ///
@@ -998,30 +1010,6 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get profileTitle;
 
-  /// No description provided for @profileBlocks.
-  ///
-  /// In en, this message translates to:
-  /// **'blocks'**
-  String get profileBlocks;
-
-  /// No description provided for @profileShares.
-  ///
-  /// In en, this message translates to:
-  /// **'shares'**
-  String get profileShares;
-
-  /// No description provided for @profileWorkers.
-  ///
-  /// In en, this message translates to:
-  /// **'workers'**
-  String get profileWorkers;
-
-  /// No description provided for @profileGhs.
-  ///
-  /// In en, this message translates to:
-  /// **'gh/s'**
-  String get profileGhs;
-
   /// No description provided for @profileSettings.
   ///
   /// In en, this message translates to:
@@ -1064,17 +1052,11 @@ abstract class AppLocalizations {
   /// **'About'**
   String get profileAboutRow;
 
-  /// No description provided for @profileNoAddress.
+  /// No description provided for @profileDeviceUnknown.
   ///
   /// In en, this message translates to:
-  /// **'no address reported'**
-  String get profileNoAddress;
-
-  /// No description provided for @profileMiningTo.
-  ///
-  /// In en, this message translates to:
-  /// **'mining to {address}'**
-  String profileMiningTo(String address);
+  /// **'Device IP/ID not readable yet'**
+  String get profileDeviceUnknown;
 
   /// No description provided for @profileLanguage.
   ///

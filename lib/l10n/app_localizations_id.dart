@@ -40,13 +40,23 @@ class AppLocalizationsId extends AppLocalizations {
   String get commonGotIt => 'Mengerti';
 
   @override
+  String get batteryTitle => 'Agar mining jalan terus';
+
+  @override
+  String get batteryBody =>
+      'Android bisa menghentikan mining saat layar mati. Kecualikan Celenium Miner dari penghemat baterai supaya sesi 24 jam tidak terputus.';
+
+  @override
+  String get batteryOpen => 'Buka pengaturan';
+
+  @override
+  String get batteryLater => 'Nanti saja';
+
+  @override
   String get commonToday => 'HARI INI';
 
   @override
   String get commonYesterday => 'KEMARIN';
-
-  @override
-  String get commonNoWorker => 'Belum ada worker';
 
   @override
   String get statusActive => 'AKTIF';
@@ -252,9 +262,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get walletCoinOut => 'Coin terkirim';
-
-  @override
-  String get walletEstimatedEarned => 'Estimasi sesi ini';
 
   @override
   String get walletSendTitle => 'Kirim CEN';
@@ -506,18 +513,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get profileTitle => 'Profil';
 
   @override
-  String get profileBlocks => 'blok';
-
-  @override
-  String get profileShares => 'share';
-
-  @override
-  String get profileWorkers => 'worker';
-
-  @override
-  String get profileGhs => 'gh/s';
-
-  @override
   String get profileSettings => 'Pengaturan';
 
   @override
@@ -539,12 +534,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get profileAboutRow => 'Tentang';
 
   @override
-  String get profileNoAddress => 'belum ada alamat dilaporkan';
-
-  @override
-  String profileMiningTo(String address) {
-    return 'menambang ke $address';
-  }
+  String get profileDeviceUnknown => 'IP/ID perangkat belum terbaca';
 
   @override
   String get profileLanguage => 'Bahasa';

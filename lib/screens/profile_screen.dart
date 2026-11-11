@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../models/bridge.dart';
+import '../services/device_identity.dart';
 import '../services/mining_readout.dart';
 import '../theme/layout.dart';
 import '../theme/palette.dart';
@@ -13,8 +14,9 @@ import '../widgets/cen_ui.dart';
 ///
 /// The concept version carried a rank, a referral count, a verified badge and
 /// a days-active figure. None of those exist in this build: there is no
-/// account system to rank, no referral tracking, and nothing to verify. The
-/// three stats shown here are the three the bridge actually reports.
+/// account system to rank, no referral tracking, and nothing to verify. What
+/// remains is the one card the bridge can actually fill: which device is
+/// mining — its IP and Android ID — and whether it is hashing right now.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     super.key,
@@ -25,9 +27,15 @@ class ProfileScreen extends StatelessWidget {
     required this.onOpenActivity,
     required this.onOpenBackup,
     required this.onOpenAbout,
+    this.deviceIpOverride,
   });
 
   final MinerSnapshot snapshot;
+
+  /// Pinned device label for the profile card. Production resolves it from
+  /// [deviceIdentityLabel]; screenshot tests pin it so the goldens stay
+  /// byte-stable regardless of the machine that runs them.
+  final String? deviceIpOverride;
 
   /// The interface language in force, and the way to change it. The root owns
   /// the locale, so the picker reports back rather than switching directly.
@@ -43,8 +51,9 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = l10nOf(context);
     final readout = MiningReadout.from(snapshot);
-    final stats = snapshot.stats;
-    final address = stats?.internalCpu?.wallet;
+    final deviceLabel = deviceIpOverride != null
+        ? Future<String?>.value(deviceIpOverride)
+        : deviceIdentityLabel();
     final nodeAddress = snapshot.status?.celeniumdAddress;
 
     return CenContent(
@@ -75,53 +84,7 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Palette.lg),
-          _IdentityCard(
-            workerName: readout.workerName,
-            address: address,
-            active: readout.active,
-          ),
-          const SizedBox(height: Palette.md),
-          // Three cells, matching what the bridge reports (blocks, shares and
-          // hash rate): the concept's referrals, days, and rank have no source
-          // here, so they are replaced by counts that do.
-          //
-          // Every column is value over label, with no unit line anywhere. One
-          // column carrying a unit made the row four lines deep on the right and
-          // three everywhere else, which is what read as untidy.
-          CenCard.glass(
-            glow: Palette.gold,
-            padding: const EdgeInsets.symmetric(
-              horizontal: Palette.sm,
-              vertical: Palette.lg,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: StatCell(
-                    value: readout.sessionBlocks?.toString() ?? '—',
-                    label: l10n.profileBlocks,
-                    color: Palette.goldLight,
-                  ),
-                ),
-                const StatDivider(),
-                Expanded(
-                  child: StatCell(
-                    value: readout.shares?.toString() ?? '—',
-                    label: l10n.profileShares,
-                  ),
-                ),
-                const StatDivider(),
-                Expanded(
-                  child: StatCell(
-                    value: readout.hashrateGhs == null
-                        ? '—'
-                        : formatHashrate(readout.hashrateGhs!).split(' ').first,
-                    label: l10n.profileGhs,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _IdentityCard(deviceLabel: deviceLabel, active: readout.active),
           const SizedBox(height: Palette.xl),
           Eyebrow(l10n.profileSettings),
           const SizedBox(height: Palette.sm),
@@ -190,14 +153,10 @@ class ProfileScreen extends StatelessWidget {
 }
 
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({
-    required this.workerName,
-    required this.address,
-    required this.active,
-  });
+  const _IdentityCard({required this.deviceLabel, required this.active});
 
-  final String? workerName;
-  final String? address;
+  /// Resolves to the device's IP and Android ID line; null while unknown.
+  final Future<String?> deviceLabel;
   final bool active;
 
   @override
@@ -227,7 +186,7 @@ class _IdentityCard extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        workerName ?? l10n.commonNoWorker,
+                        'Celenium Miner',
                         style: TypeScale.headline(context)
                             .copyWith(color: Palette.creamInk),
                         overflow: TextOverflow.ellipsis,
@@ -247,15 +206,19 @@ class _IdentityCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  address == null
-                      ? l10n.profileNoAddress
-                      : l10n.profileMiningTo(_shortAddress(address!)),
-                  style: TypeScale.mono(
-                    context,
-                    size: 10,
-                  ).copyWith(color: Palette.creamInkDim),
-                  overflow: TextOverflow.ellipsis,
+                // The device itself, not the wallet: the address is already on
+                // the Wallet tab, and what identifies this worker is the phone
+                // — its LAN address and the Android ID the key hangs off.
+                FutureBuilder<String?>(
+                  future: deviceLabel,
+                  builder: (context, snapshot) => Text(
+                    snapshot.data ?? l10n.profileDeviceUnknown,
+                    style: TypeScale.mono(
+                      context,
+                      size: 10,
+                    ).copyWith(color: Palette.creamInkDim),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -264,11 +227,6 @@ class _IdentityCard extends StatelessWidget {
       ),
     );
   }
-}
-
-String _shortAddress(String address) {
-  if (address.length <= 22) return address;
-  return '${address.substring(0, 12)}…${address.substring(address.length - 8)}';
 }
 
 /// Node addresses are host:port, so the port is the part worth keeping.

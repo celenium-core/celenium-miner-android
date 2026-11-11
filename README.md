@@ -81,3 +81,36 @@ Koneksi app = HTTP API stratum-bridge. Di HP pakai IP LAN host bridge, contoh
 `http://192.168.1.4:3030` (bukan 127.0.0.1). Aturan khusus Android dari
 spesifikasi (reward maks 40% dan 1 IP = 1 sesi) ditegakkan di sisi bridge,
 bukan di app.
+
+### Signing rilis — jangan ganti keystore-nya
+
+Setiap APK rilis ditandatangani `~/.android/debug.keystore` (salinan aman ada
+di brankas `E:\Coding\cenium-keys\celenium-miner-signing.keystore`). Alasannya
+bukan malas bikin keystore rilis, melainkan:
+
+- Alamat payout tiap HP diturunkan dari `android-id:<ANDROID_ID>`
+  (`lib/services/device_identity.dart`).
+- Sejak Android 8 `ANDROID_ID` di-scope ke **sertifikat penandatangan + user +
+  perangkat**. Ganti sertifikat → Android ID berubah → alamat wallet berubah →
+  saldo hasil mining di alamat lama tidak bisa dijangkau lagi dari HP.
+
+Jadi sampai ada fitur export/import kunci wallet, build berikutnya wajib
+memakai keystore yang sama.
+
+### Background 24 jam (rilis 1.0.4, 11 Nov 2026)
+
+Sesi mining pernah mati di tengah malam karena Android 15 membatasi foreground
+service bertipe `dataSync` maksimal 6 jam. Perbaikannya, semuanya harus
+konsisten satu sama lain:
+
+- `<service android:foregroundServiceType="specialUse">` + `<property
+  android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE">` di
+  `AndroidManifest.xml`, permission `FOREGROUND_SERVICE_SPECIAL_USE`.
+- `serviceTypes: [ForegroundServiceTypes.specialUse]` di
+  `lib/services/mining_engine.dart` — Android menolak tipe runtime yang tidak
+  dideklarasikan manifest, jadi dua tempat ini tidak boleh beda.
+- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` + dialog exemption
+  (`lib/services/battery_guard.dart`) supaya Doze tidak menidurkan worker.
+- `autoRunOnBoot` / `autoRunOnMyPackageReplaced` di
+  `lib/services/mining_service.dart` supaya sesi hidup lagi setelah reboot
+  atau update aplikasi.

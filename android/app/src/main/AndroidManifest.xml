@@ -10,7 +10,14 @@
          runtime request to show the persistent notification. -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <!-- specialUse, not dataSync: Android 15 caps dataSync services at six
+         hours and refuses to restart them until the app is foregrounded
+         again, which is exactly what ended overnight mining runs.
+         specialUse has no such cap. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <!-- Lets MainActivity send the user to the battery-optimisation dialog so
+         Doze stops deferring the hashing loop overnight. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Celenium Miner"
@@ -60,12 +67,19 @@
             android:value="ca-app-pub-5168743842779308~5416336913"/>
         <!-- Runs the miner in the background so hashing survives the app being
              closed. The class lives in the flutter_foreground_task AAR; only
-             its declaration belongs here. dataSync keeps it alive on Android
-             14+ with the matching permission above. -->
+             its declaration belongs here. The type must be specialUse to match
+             the serviceTypes passed from Dart (ForegroundServiceTypes.specialUse
+             in mining_engine.dart): Android refuses a runtime type the manifest
+             does not declare, and the old dataSync value is capped at six hours
+             on Android 15 — the reason overnight sessions died. -->
         <service
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false" />
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="cryptocurrency mining worker (stratum)"/>
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

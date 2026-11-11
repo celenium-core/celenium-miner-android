@@ -10,9 +10,12 @@
   "commonChecking": "Checking…",
   "commonCopy": "Copy",
   "commonGotIt": "Got it",
+  "batteryTitle": "Keep mining running",
+  "batteryBody": "Android can stop mining while the screen is off. Exempt Celenium Miner from battery optimisation so the 24-hour session is not cut short.",
+  "batteryOpen": "Open settings",
+  "batteryLater": "Not now",
   "commonToday": "TODAY",
   "commonYesterday": "YESTERDAY",
-  "commonNoWorker": "No worker",
   "statusActive": "ACTIVE",
   "statusIdle": "IDLE",
   "statusOnline": "ONLINE",
@@ -109,7 +112,6 @@
   "walletMiningReward": "Mining reward",
   "walletCoinIn": "Coin received",
   "walletCoinOut": "Coin sent",
-  "walletEstimatedEarned": "Estimated this session",
   "walletSendTitle": "Send CEN",
   "walletSendRecipient": "Recipient address",
   "walletSendAmount": "Amount",
@@ -238,10 +240,6 @@
   "logPollFailed": "Poll failed",
   "logAdRequestFailed": "Ad request failed",
   "profileTitle": "Profile",
-  "profileBlocks": "blocks",
-  "profileShares": "shares",
-  "profileWorkers": "workers",
-  "profileGhs": "gh/s",
   "profileSettings": "Settings",
   "profileNotSet": "not set",
   "profileBridgeRow": "Bridge",
@@ -249,16 +247,7 @@
   "profileActivityRow": "Activity log",
   "profileRecoveryRow": "Recovery words",
   "profileAboutRow": "About",
-  "profileNoAddress": "no address reported",
-  "profileMiningTo": "mining to {address}",
-  "@profileMiningTo": {
-    "placeholders": {
-      "address": {
-        "type": "String",
-        "example": "cen69sim:qabc…"
-      }
-    }
-  },
+  "profileDeviceUnknown": "Device IP/ID not readable yet",
   "profileLanguage": "Language",
   "profileLanguageSystem": "System default",
   "profileLanguageDone": "Language saved",

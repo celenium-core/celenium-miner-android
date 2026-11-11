@@ -33,7 +33,6 @@ class WalletScreen extends StatefulWidget {
     this.keystore,
     this.network = CenNetwork.mainnet,
     this.localAddress,
-    this.earnedPradha,
   });
 
   final MinerSnapshot snapshot;
@@ -53,10 +52,6 @@ class WalletScreen extends StatefulWidget {
   /// phrase. Shown in full; the bridge snapshot's `internalCpu.wallet` is only
   /// a fallback for when the bridge itself is the miner.
   final String? localAddress;
-
-  /// Pradha kredit dari share diterima sesi ini (1 pradha/share), dihitung
-  /// lokal. Null selagi belum mining.
-  final int? earnedPradha;
 
   /// Opens the backup flow for the locally generated key.
   final VoidCallback onBackup;
@@ -105,33 +100,6 @@ class _WalletScreenState extends State<WalletScreen> {
           const SizedBox(height: Palette.lg),
           if (address != null) ...[
             _AddressCard(address: address),
-            const SizedBox(height: Palette.lg),
-          ],
-          if (widget.earnedPradha != null) ...[
-            CenCard(
-              padding: const EdgeInsets.all(Palette.md),
-              color: Palette.goldLight.withValues(alpha: 0.06),
-              border: BorderSide(
-                color: Palette.goldLight.withValues(alpha: 0.22),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Eyebrow(
-                      l10n.walletEstimatedEarned,
-                      color: Palette.creamInkDim,
-                    ),
-                  ),
-                  Text(
-                    '≈ ${formatPradha(widget.earnedPradha!, locale: Localizations.localeOf(context).toString())}',
-                    style: TypeScale.pixel(
-                      context,
-                      size: 16,
-                    ).copyWith(color: Palette.goldLight),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: Palette.lg),
           ],
           _Actions(
@@ -225,7 +193,18 @@ class _BalanceCardState extends State<_BalanceCard> {
   // flush tracks the type size instead of a fixed pixel count that would drift
   // if the face size ever changes.
   static const double _balanceFaceSize = 26.0;
-  static const double _leftBearingEm = 14.0 / 26.0;
+
+  /// DSEG14 draws every digit inside the same 0.816 em cell, but each glyph
+  /// carries its own left side bearing: 99 units for most digits, 593 for the
+  /// narrow '1', 243 for the masked 'X'. So the figure's ink always starts
+  /// right of its text origin; shifting by the first glyph's bearing puts that
+  /// ink flush under the eyebrow's `T` instead of letting it drift.
+  static const Map<String, double> _firstGlyphBearingEm = {
+    '1': 0.593,
+    '3': 0.144,
+    'X': 0.243,
+  };
+  static const double _digitBearingEm = 0.099;
 
   @override
   void initState() {
@@ -286,7 +265,8 @@ class _BalanceCardState extends State<_BalanceCard> {
           );
     final double leadingInset = balance == null
         ? 0.0
-        : _leftBearingEm * _balanceFaceSize;
+        : (_firstGlyphBearingEm[figure.substring(0, 1)] ?? _digitBearingEm) *
+              _balanceFaceSize;
 
     // The cream balance card from the concept: the light mass carries the
     // dark figure, which is the opposite of every other panel here and is
@@ -325,8 +305,9 @@ class _BalanceCardState extends State<_BalanceCard> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                // Shift by the glyph's bearing (em-relative) so the first lit
-                // segment lands flush on the eyebrow's `S`; FittedBox still
+                // Shift by the first glyph's bearing so the lit segment lands
+                // flush on the eyebrow's first letter ("SALDO TOTAL" /
+                // "TOTAL BALANCE"); FittedBox still
                 // guards a long figure from overflowing.
                 child: Transform.translate(
                   offset: Offset(-leadingInset, 0),

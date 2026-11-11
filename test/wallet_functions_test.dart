@@ -64,7 +64,7 @@ http.Client _bridge() {
   });
 }
 
-Widget _host({String? localAddress, int? earnedPradha}) {
+Widget _host({String? localAddress}) {
   final api = BridgeApi(baseUrl: 'http://127.0.0.1:3030', client: _bridge());
   return MaterialApp(
     theme: buildCenTheme(),
@@ -78,7 +78,6 @@ Widget _host({String? localAddress, int? earnedPradha}) {
         onOpenActivity: () {},
         api: api,
         localAddress: localAddress,
-        earnedPradha: earnedPradha,
       ),
     ),
   );
@@ -94,16 +93,16 @@ Future<void> _settle(WidgetTester tester, {int frames = 16}) async {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('wallet tab shows the local mining address and session estimate',
+  testWidgets('wallet tab shows the local mining address, no estimate',
       (tester) async {
-    await tester.pumpWidget(_host(localAddress: _local, earnedPradha: 12345600));
+    await tester.pumpWidget(_host(localAddress: _local));
     await _settle(tester);
 
-    // Bug #1 fix: the earned-coins estimate renders (adaptive unit: whole
-    // pradha below 1 CEN; 0.123456 CEN = 12,345,600 pradha).
-    expect(find.text('≈ 12.345.600 pradha'), findsOneWidget);
+    // The session estimate card was removed by request: no "≈ …" figure
+    // belongs on the wallet page any more.
+    expect(find.textContaining('≈'), findsNothing);
 
-    // Bug #1 fix: the phone's own mainnet address is shown (default = revealed),
+    // The phone's own mainnet address is shown (default = revealed),
     // sourced from `localAddress`, not the null `internalCpu.wallet`.
     expect(find.textContaining('cen69:'), findsWidgets);
 

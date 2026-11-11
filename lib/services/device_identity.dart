@@ -10,12 +10,7 @@ const OptionalMethodChannel _channel = OptionalMethodChannel('celenium/device');
 /// is blocked on Android 10+, so Android ID is the closest practical stand-in.
 /// Non-loopback IPv4 addresses cover desktop/dev runs and devices with no ID.
 Future<String> deviceIdentitySeed() async {
-  String? androidId;
-  try {
-    androidId = await _channel.invokeMethod<String>('androidId');
-  } on Object {
-    androidId = null;
-  }
+  final androidId = await _androidId();
   if (androidId != null && androidId.isNotEmpty) {
     return 'android-id:$androidId';
   }
@@ -24,6 +19,26 @@ Future<String> deviceIdentitySeed() async {
     return 'ip:${ips.join(',')}';
   }
   return 'unknown-device';
+}
+
+/// One-line device label for the profile card: the LAN address first (the
+/// value a user can match against their router), then the Android ID that
+/// actually anchors the payout key — IMEI itself is off-limits to apps.
+Future<String?> deviceIdentityLabel() async {
+  final parts = <String>[];
+  final ips = await _ipv4Addresses();
+  if (ips.isNotEmpty) parts.add('IP ${ips.first}');
+  final androidId = await _androidId();
+  if (androidId != null && androidId.isNotEmpty) parts.add('ID $androidId');
+  return parts.isEmpty ? null : parts.join(' · ');
+}
+
+Future<String?> _androidId() async {
+  try {
+    return await _channel.invokeMethod<String>('androidId');
+  } on Object {
+    return null;
+  }
 }
 
 Future<List<String>> _ipv4Addresses() async {

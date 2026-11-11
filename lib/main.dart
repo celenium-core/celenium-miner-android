@@ -18,6 +18,7 @@ import 'screens/profile_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/wallet_screen.dart';
 import 'services/ad_units.dart';
+import 'services/battery_guard.dart';
 import 'services/bridge_api.dart';
 import 'services/cen_wallet.dart';
 import 'services/crash_log.dart';
@@ -137,6 +138,7 @@ class MinerHome extends StatefulWidget {
     this.language = AppLanguage.system,
     this.onLanguageChanged,
     this.client,
+    this.deviceIpOverride,
   });
 
   /// Which tab opens first. Set from the `--tab` argument so a screenshot run
@@ -153,6 +155,10 @@ class MinerHome extends StatefulWidget {
   /// Injected HTTP client so widget tests can feed bridge responses without a
   /// live celeniumd. Null in production, where a real client is used.
   final http.Client? client;
+
+  /// Pinned IP / Android ID label for the profile card. Production resolves it
+  /// from the device; screenshot tests pin it so the goldens stay byte-stable.
+  final String? deviceIpOverride;
 
   @override
   State<MinerHome> createState() => _MinerHomeState();
@@ -187,6 +193,10 @@ BackAction decideBackAction({
 class _MinerHomeState extends State<MinerHome> {
   final SettingsStore _settings = SettingsStore();
   final List<LogEntry> _log = [];
+
+  /// The battery-exemption dialog is offered once per app session, on the
+  /// first mining start; nagging on every start would be worse than the risk.
+  bool _batteryPrompted = false;
 
   Timer? _pollTimer;
   BridgeApi? _api;
@@ -624,6 +634,42 @@ class _MinerHomeState extends State<MinerHome> {
     );
   }
 
+  /// Starts or stops mining. The battery-exemption ask rides along with the
+  /// first start of a session, since that is when the 24-hour promise is on
+  /// the line.
+  Future<void> _onMiningToggle(bool enabled) async {
+    if (enabled) unawaited(_askBatteryExemption());
+    await _engine.setMining(enabled);
+  }
+
+  /// Offered once per app session. Each step is allowed to fail quietly:
+  /// mining starts either way, and the system dialog is the only ask.
+  Future<void> _askBatteryExemption() async {
+    if (_batteryPrompted) return;
+    _batteryPrompted = true;
+    if (await BatteryGuard.isExempt() || !mounted) return;
+
+    final l10n = l10nOf(context);
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.batteryTitle, style: TypeScale.headline(dialogContext)),
+        content: Text(l10n.batteryBody, style: TypeScale.label(dialogContext)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.batteryLater),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.batteryOpen),
+          ),
+        ],
+      ),
+    );
+    if (open ?? false) await BatteryGuard.requestExemption();
+  }
+
   Widget _buildTab(MinerSnapshot snapshot) {
     switch (_tab) {
       case _Tab.mine:
@@ -632,7 +678,7 @@ class _MinerHomeState extends State<MinerHome> {
           nodeAddress: '${MiningEngine.host}:${MiningEngine.port}',
           onOpenActivity: () => _open(_Route.activity),
           onConnectNode: () => _open(_Route.bridge),
-          onSetMining: _engine.setMining,
+          onSetMining: _onMiningToggle,
         );
       case _Tab.wallet:
         return WalletScreen(
@@ -641,7 +687,6 @@ class _MinerHomeState extends State<MinerHome> {
           onBackup: () => _open(_Route.backup),
           onOpenActivity: () => _open(_Route.activity),
           localAddress: _engine.address,
-          earnedPradha: _engine.earnedPradha,
         );
       case _Tab.profile:
         return ProfileScreen(
@@ -652,6 +697,7 @@ class _MinerHomeState extends State<MinerHome> {
           onOpenActivity: () => _open(_Route.activity),
           onOpenBackup: () => _open(_Route.backup),
           onOpenAbout: () => _open(_Route.about),
+          deviceIpOverride: widget.deviceIpOverride,
         );
     }
   }
