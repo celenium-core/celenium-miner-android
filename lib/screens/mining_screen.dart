@@ -324,7 +324,7 @@ class _DialCaption extends StatelessWidget {
         ],
         if (readout.earnedPradha != null) ...[
           Text(
-            l10n.walletMiningReward.toUpperCase(),
+            l10n.mineAcceptedLabel.toUpperCase(),
             textAlign: TextAlign.center,
             style: TypeScale.monoMuted(
               context,
@@ -333,7 +333,7 @@ class _DialCaption extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '≈ ${formatPradha(readout.earnedPradha!, locale: Localizations.localeOf(context).toString())}',
+            '${readout.earnedPradha} ${l10n.mineSharesUnit}',
             textAlign: TextAlign.center,
             style: TypeScale.mono(
               context,
