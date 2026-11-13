@@ -3,6 +3,7 @@
          user types in Node settings. Without this permission every poll
          fails with a socket error that looks like a dead bridge. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- The ad SDK checks connectivity before requesting a fill. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <!-- Foreground mining: wakelock keeps the CPU hashing, the service stays

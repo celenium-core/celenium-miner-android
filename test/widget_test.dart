@@ -569,7 +569,7 @@ void main() {
       expect(find.text('CEL'), findsNothing);
     });
 
-    testWidgets('the mining screen states CEN as the unit', (tester) async {
+    testWidgets('the mining screen reports accepted shares, not a coin unit', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: buildCenTheme(),
@@ -589,8 +589,8 @@ void main() {
       );
       await tester.pump();
 
-      // The only CEN text on the mining screen is the session estimate line.
-      expect(find.textContaining('CEN'), findsWidgets);
+      // Honest label: the session line counts accepted shares, not a coin figure.
+      expect(find.textContaining('shares'), findsWidgets);
       expect(find.text('CEL'), findsNothing);
     });
   });

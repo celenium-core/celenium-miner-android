@@ -77,83 +77,49 @@ class _SplashScreenState extends State<SplashScreen>
             Column(
               children: [
                 Expanded(
-                  child: SingleChildScrollView(
-                    // On a desktop window the splash column would otherwise
-                    // stretch to 1280px and read as a banner. Capping it and
-                    // centring keeps the boot screen phone-proportioned, which
-                    // is what the emblem and the ticker were sized for.
-                    child: Center(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 520),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: Palette.xl,
-                          ),
-                          child: Column(
-                            children: [
-                              const SizedBox(height: Palette.xxl),
-                              // The wordmark glitches once as it lands, then
-                              // settles so it stays readable.
-                              GlitchText(
-                                text: 'CELENIUM',
-                                style: TypeScale.wordmark(context),
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 520),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: Palette.xl,
+                                vertical: Palette.lg,
                               ),
-                              const SizedBox(height: Palette.sm),
-                              Text(
-                                'C E L E N I U M   C O R E',
-                                style: TypeScale.monoMuted(context, size: 9),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  GlitchText(
+                                    text: 'CELENIUM',
+                                    style: TypeScale.wordmark(context),
+                                  ),
+                                  const SizedBox(height: Palette.sm),
+                                  Text(
+                                    'C E L E N I U M   C O R E',
+                                    style: TypeScale.monoMuted(context, size: 9),
+                                  ),
+                                  const SizedBox(height: Palette.xl),
+                                  const _BinaryRain(running: true),
+                                  const SizedBox(height: Palette.xxl),
+                                  _Emblem(progress: _controller),
+                                  const SizedBox(height: Palette.md),
+                                  const _TickerGlitch(text: 'C . E . N'),
+                                  const SizedBox(height: Palette.lg),
+                                  _EnterButton(
+                                    onTap: () {
+                                      HapticFeedback.mediumImpact();
+                                      widget.onDone();
+                                    },
+                                    fade: _entry,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: Palette.xl),
-                              // The rain runs for as long as the splash is up.
-                              // It used to stop once the readout began typing,
-                              // which left the screen plain for the whole time
-                              // the user spent on this screen; the boot texture
-                              // is the point of the splash, and the band sits
-                              // clear of everything below it.
-                              const _BinaryRain(running: true),
-                              // The emblem follows the rain directly. The bridge
-                              // readout that used to sit between them is gone:
-                              // it reported a network label and nothing else
-                              // useful before the bridge answers, which is
-                              // exactly when this screen is on screen.
-                              const SizedBox(height: Palette.xxl),
-                              _Emblem(progress: _controller),
-                              const SizedBox(height: Palette.md),
-                              // The ticker glitches on a slow loop rather than
-                              // once: the splash is up for as long as the user
-                              // takes to enter, so a single glitch would be over
-                              // before most people looked.
-                              const _TickerGlitch(text: 'C . E . N'),
-                              const SizedBox(height: Palette.xxl),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-                // The button keeps the same cap as the content above it, so
-                // the pill stays centred under the emblem instead of drifting
-                // to the left edge of a wide window.
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        Palette.xl,
-                        0,
-                        Palette.xl,
-                        Palette.lg,
-                      ),
-                      child: _EnterButton(
-                        onTap: () {
-                          // The one deliberate act on this screen. A silent
-                          // tap reads as a dead button, so it answers to touch
-                          // before the route change lands.
-                          HapticFeedback.mediumImpact();
-                          widget.onDone();
-                        },
-                        fade: _entry,
                       ),
                     ),
                   ),

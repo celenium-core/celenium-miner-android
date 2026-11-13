@@ -337,8 +337,8 @@ class _DialCaption extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TypeScale.mono(
               context,
-              size: 14,
-            ).copyWith(color: Palette.goldLight, fontWeight: FontWeight.w800),
+              size: 15,
+            ).copyWith(color: Palette.gold, fontWeight: FontWeight.w700),
           ),
         ],
       ],
@@ -368,10 +368,12 @@ class _ActiveTimeCell extends StatelessWidget {
           child: Text(
             _uptime(readout.sessionUptime),
             maxLines: 1,
-            style: TypeScale.digital(
+            style: TypeScale.mono(
               context,
-              size: 15,
+              size: 14,
+            ).copyWith(
               color: mining ? Palette.greenDim : Palette.slateLight,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -400,11 +402,12 @@ class _MiningStatusCell extends StatelessWidget {
       children: [
         Text(
           mining ? 'ON' : 'OFF',
-          style: TypeScale.digital(
+          style: TypeScale.mono(
             context,
-            size: 15,
+            size: 14,
+          ).copyWith(
             color: mining ? Palette.green : Palette.slateLight,
-            weight: FontWeight.w700,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 3),
