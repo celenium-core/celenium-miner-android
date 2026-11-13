@@ -41,6 +41,14 @@ Future<String?> _androidId() async {
   }
 }
 
+/// The Android ID over the platform channel, or null when unavailable. Exposed
+/// so the faucet claim can anchor its per-device account cap without
+/// duplicating the platform read.
+Future<String?> androidId() async {
+  final id = await _androidId();
+  return (id != null && id.isNotEmpty) ? id : null;
+}
+
 Future<List<String>> _ipv4Addresses() async {
   final out = <String>[];
   try {

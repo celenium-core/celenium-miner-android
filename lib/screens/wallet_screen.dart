@@ -8,6 +8,7 @@ import '../models/bridge.dart';
 import '../services/block_time.dart';
 import '../services/bridge_api.dart';
 import '../services/cen_wallet.dart';
+import '../services/device_identity.dart';
 import '../services/keystore.dart';
 import '../services/mining_readout.dart';
 import '../services/settings_store.dart';
@@ -559,7 +560,8 @@ class _FaucetCardState extends State<_FaucetCard> {
     setState(() => _busy = true);
     final l10n = l10nOf(context);
     try {
-      final result = await api.claimFaucet(widget.address);
+      final deviceId = await androidId() ?? '';
+      final result = await api.claimFaucet(widget.address, deviceId);
       if (!mounted) return;
       final String msg = result.ok
           ? l10n.faucetClaimed(result.rewardPradha)

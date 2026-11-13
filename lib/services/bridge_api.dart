@@ -95,8 +95,11 @@ class BridgeApi {
   }
 
   /// `POST /api/faucet/claim` — claim the daily participation reward.
-  Future<FaucetClaimResult> claimFaucet(String address) async {
-    final body = await _post('/api/faucet/claim', {'address': address});
+  ///
+  /// [deviceId] is the Android ID: the faucet caps how many distinct wallets a
+  /// single device may register (anti-sybil). It is sent raw, never stored.
+  Future<FaucetClaimResult> claimFaucet(String address, String deviceId) async {
+    final body = await _post('/api/faucet/claim', {'address': address, 'deviceId': deviceId});
     final parsed = FaucetClaimResult.tryParse(body);
     if (parsed == null) {
       throw const FormatException('Bridge returned an unexpected faucet body');
