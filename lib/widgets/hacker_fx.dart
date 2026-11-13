@@ -25,12 +25,17 @@ class BinaryRain extends StatefulWidget {
     this.columns = 9,
     this.color = Palette.greenDim,
     this.expand = false,
+    this.fontSize = 13.0,
   });
 
   final bool running;
   final double height;
   final int columns;
   final Color color;
+
+  /// Glyph height for the falling digits (default 13). Reduced for the
+  /// full-screen splash rain so the digits read as texture, not text.
+  final double fontSize;
 
   /// Fill the space offered instead of taking [height].
   ///
@@ -86,6 +91,7 @@ class _BinaryRainState extends State<BinaryRain>
           progress: _controller.value,
           columns: _cols,
           color: widget.color,
+          fontSize: widget.fontSize,
         ),
         size: Size.infinite,
       ),
@@ -113,24 +119,25 @@ class _RainPainter extends CustomPainter {
     required this.progress,
     required this.columns,
     required this.color,
+    this.fontSize = 13.0,
   });
 
   final double progress;
   final List<_Column> columns;
   final Color color;
+  final double fontSize;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
 
-    const fontSize = 13.0;
     final columnWidth = size.width / columns.length;
     const glyphs = '01';
     final rng = math.Random(7);
 
     // Characters are spaced by the line height so they read as separate
     // digits. Packing them tighter turns the column into a solid streak.
-    const step = fontSize * 1.35;
+    final step = fontSize * 1.35;
 
     for (var i = 0; i < columns.length; i++) {
       final col = columns[i];
@@ -170,7 +177,8 @@ class _RainPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RainPainter old) => old.progress != progress;
+  bool shouldRepaint(_RainPainter old) =>
+      old.progress != progress || old.fontSize != fontSize;
 }
 
 /// Text that types itself out, one character at a time.

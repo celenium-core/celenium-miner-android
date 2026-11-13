@@ -64,67 +64,53 @@ class _SplashScreenState extends State<SplashScreen>
       body: SafeArea(
         child: Stack(
           children: [
-            // CRT scanlines over the whole splash. Stronger here than in
-            // the tabs: the boot screen is where the console identity is
-            // established, so the texture is allowed to be assertive. The
-            // spacing is tightened to two pixels and the opacity raised
-            // until the raster actually reads on a dark field, where a
-            // faint line would disappear entirely.
+            // Rain first (bottom layer): the whole screen is a quiet terminal
+            // texture, and every reading on top of it stays legible.
+            const Positioned.fill(child: _BinaryRain(running: true)),
+            // CRT scanlines over the rain, still behind the content.
             Positioned.fill(child: ScanlineOverlay(opacity: 0.32, spacing: 2)),
-            // The button is pinned to the foot rather than sitting in the
-            // scroll, so it never drifts with the content and the emblem
-            // above it owns the whole remaining height.
-            Column(
-              children: [
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => SingleChildScrollView(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 520),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: Palette.xl,
-                                vertical: Palette.lg,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GlitchText(
-                                    text: 'CELENIUM',
-                                    style: TypeScale.wordmark(context),
-                                  ),
-                                  const SizedBox(height: Palette.sm),
-                                  Text(
-                                    'C E L E N I U M   C O R E',
-                                    style: TypeScale.monoMuted(context, size: 9),
-                                  ),
-                                  const SizedBox(height: Palette.xl),
-                                  const _BinaryRain(running: true),
-                                  const SizedBox(height: Palette.xxl),
-                                  _Emblem(progress: _controller),
-                                  const SizedBox(height: Palette.md),
-                                  const _TickerGlitch(text: 'C . E . N'),
-                                  const SizedBox(height: Palette.lg),
-                                  _EnterButton(
-                                    onTap: () {
-                                      HapticFeedback.mediumImpact();
-                                      widget.onDone();
-                                    },
-                                    fade: _entry,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+            // Content pinned to the top: the emblem sits right under the
+            // wordmark, and the boot text reads top-down like a console.
+            SingleChildScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Palette.xl,
+                      Palette.xxl,
+                      Palette.xl,
+                      Palette.lg,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GlitchText(
+                          text: 'CELENIUM',
+                          style: TypeScale.wordmark(context),
                         ),
-                      ),
+                        const SizedBox(height: Palette.sm),
+                        Text(
+                          'C E L E N I U M   C O R E',
+                          style: TypeScale.monoMuted(context, size: 9),
+                        ),
+                        const SizedBox(height: Palette.xl),
+                        _Emblem(progress: _controller),
+                        const SizedBox(height: Palette.md),
+                        const _TickerGlitch(text: 'C . E . N'),
+                        const SizedBox(height: Palette.lg),
+                        _EnterButton(
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            widget.onDone();
+                          },
+                          fade: _entry,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ],
         ),
@@ -268,11 +254,10 @@ class _TickerGlitchState extends State<_TickerGlitch>
   }
 }
 
-/// Columns of binary. Decorative only: it marks the boot moment and carries no
-/// Falling binary, played for as long as the splash is up.
+/// Full-screen binary rain drawn behind every other element.
 ///
-/// The band sits clear of the readout below it, so the rain can run for the
-/// whole time the user spends on this screen without obscuring anything.
+/// It is the bottom layer of the splash stack, so it runs for the whole boot
+/// without obscuring the title, emblem or button above it.
 class _BinaryRain extends StatelessWidget {
   const _BinaryRain({required this.running});
 
@@ -280,9 +265,14 @@ class _BinaryRain extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Denser and taller than the ambient rain in the tabs: the splash is the
-    // one screen whose whole job is to look like a terminal booting.
-    return BinaryRain(running: running, height: 150, columns: 11);
+    // Sparse and small-print so it reads as texture rather than as text:
+    // enough columns to fill the width, loose spacing, small glyphs.
+    return BinaryRain(
+      running: running,
+      expand: true,
+      fontSize: 9,
+      columns: 28,
+    );
   }
 }
 
