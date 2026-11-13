@@ -1105,6 +1105,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Created by'**
   String get aboutCreatedBy;
+
+  /// No description provided for @faucetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Participation rewards'**
+  String get faucetTitle;
+
+  /// No description provided for @faucetClaim.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim daily'**
+  String get faucetClaim;
+
+  /// No description provided for @faucetClaiming.
+  ///
+  /// In en, this message translates to:
+  /// **'Claiming…'**
+  String get faucetClaiming;
+
+  /// No description provided for @faucetClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimed +{count} pradha'**
+  String faucetClaimed(int count);
+
+  /// No description provided for @faucetClaimFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim failed'**
+  String get faucetClaimFailed;
+
+  /// No description provided for @faucetAlreadyClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Already claimed today'**
+  String get faucetAlreadyClaimed;
 }
 
 class _AppLocalizationsDelegate

@@ -559,4 +559,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutCreatedBy => 'Created by';
+
+  @override
+  String get faucetTitle => 'Participation rewards';
+
+  @override
+  String get faucetClaim => 'Claim daily';
+
+  @override
+  String get faucetClaiming => 'Claiming…';
+
+  @override
+  String faucetClaimed(int count) {
+    return 'Claimed +$count pradha';
+  }
+
+  @override
+  String get faucetClaimFailed => 'Claim failed';
+
+  @override
+  String get faucetAlreadyClaimed => 'Already claimed today';
 }

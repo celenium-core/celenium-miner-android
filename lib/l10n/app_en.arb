@@ -255,5 +255,19 @@
   "aboutWhatTitle": "What this app does",
   "aboutWhatBody": "It reads mining results from a Celenium bridge and shows them on your phone. It holds no account, no database, and no coins: the results live on the blockchain and the bridge, and this app is a window onto them.",
   "aboutVersion": "Version",
-  "aboutCreatedBy": "Created by"
+  "aboutCreatedBy": "Created by",
+  "faucetTitle": "Participation rewards",
+  "faucetClaim": "Claim daily",
+  "faucetClaiming": "Claiming…",
+  "faucetClaimed": "Claimed +{count} pradha",
+  "@faucetClaimed": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1000"
+      }
+    }
+  },
+  "faucetClaimFailed": "Claim failed",
+  "faucetAlreadyClaimed": "Already claimed today"
 }

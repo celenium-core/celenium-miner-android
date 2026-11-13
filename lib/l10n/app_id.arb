@@ -255,5 +255,19 @@
   "aboutWhatTitle": "Fungsi aplikasi ini",
   "aboutWhatBody": "Aplikasi ini membaca hasil mining dari sebuah bridge Celenium dan menampilkannya di ponsel kamu. Tidak ada akun, basis data, maupun koin yang disimpan di sini: hasilnya berada di blockchain dan di bridge, dan aplikasi ini hanya jendela untuk melihatnya.",
   "aboutVersion": "Versi",
-  "aboutCreatedBy": "Dibuat oleh"
+  "aboutCreatedBy": "Dibuat oleh",
+  "faucetTitle": "Rewards partisipasi",
+  "faucetClaim": "Klaim harian",
+  "faucetClaiming": "Mengklaim…",
+  "faucetClaimed": "+{count} pradha diklaim",
+  "@faucetClaimed": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1000"
+      }
+    }
+  },
+  "faucetClaimFailed": "Klaim gagal",
+  "faucetAlreadyClaimed": "Sudah klaim hari ini"
 }

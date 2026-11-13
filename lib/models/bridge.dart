@@ -333,3 +333,66 @@ class SendResult {
     return SendResult(txid: txid, error: error);
   }
 }
+
+/// `GET /api/faucet/balance` — the off-chain faucet participation balance.
+///
+/// Claimed rewards accrue here until an on-chain withdrawal; the faucet is a
+/// participation signal, not mining (see `docs/faucet-reservoir-spec.md`).
+class FaucetBalance {
+  final int balancePradha;
+  final int totalClaimedPradha;
+  final bool canClaimToday;
+
+  const FaucetBalance({
+    required this.balancePradha,
+    required this.totalClaimedPradha,
+    required this.canClaimToday,
+  });
+
+  /// `null` when the bridge is not ready or the body is not the expected shape.
+  static FaucetBalance? tryParse(Object? json) {
+    if (json is! Map<String, dynamic>) return null;
+    if (json.containsKey('error')) return null;
+    final balance = json['balancePradha'];
+    final total = json['totalClaimedPradha'];
+    final can = json['canClaimToday'];
+    if (balance is! num || total is! num || can is! bool) return null;
+    return FaucetBalance(
+      balancePradha: balance.toInt(),
+      totalClaimedPradha: total.toInt(),
+      canClaimToday: can,
+    );
+  }
+}
+
+/// `POST /api/faucet/claim` — either the credited balance or the bridge's error
+/// text (already claimed today / daily cap / empty address).
+class FaucetClaimResult {
+  final int balancePradha;
+  final int rewardPradha;
+  final String? error;
+
+  const FaucetClaimResult.success({
+    required this.balancePradha,
+    required this.rewardPradha,
+  }) : error = null;
+
+  const FaucetClaimResult.failure({required String this.error})
+      : balancePradha = 0,
+        rewardPradha = 0;
+
+  bool get ok => error == null;
+
+  static FaucetClaimResult? tryParse(Object? json) {
+    if (json is! Map<String, dynamic>) return null;
+    final error = json['error'];
+    if (error is String) return FaucetClaimResult.failure(error: error);
+    final balance = json['balancePradha'];
+    final reward = json['rewardPradha'];
+    if (json['ok'] != true || balance is! num || reward is! num) return null;
+    return FaucetClaimResult.success(
+      balancePradha: balance.toInt(),
+      rewardPradha: reward.toInt(),
+    );
+  }
+}

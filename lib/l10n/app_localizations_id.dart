@@ -560,4 +560,24 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get aboutCreatedBy => 'Dibuat oleh';
+
+  @override
+  String get faucetTitle => 'Rewards partisipasi';
+
+  @override
+  String get faucetClaim => 'Klaim harian';
+
+  @override
+  String get faucetClaiming => 'Mengklaim…';
+
+  @override
+  String faucetClaimed(int count) {
+    return '+$count pradha diklaim';
+  }
+
+  @override
+  String get faucetClaimFailed => 'Klaim gagal';
+
+  @override
+  String get faucetAlreadyClaimed => 'Sudah klaim hari ini';
 }

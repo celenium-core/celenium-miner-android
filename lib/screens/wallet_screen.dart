@@ -110,6 +110,10 @@ class _WalletScreenState extends State<WalletScreen> {
             onBackup: widget.onBackup,
             onSent: () => setState(() => _balanceEpoch++),
           ),
+          if (address != null) ...[
+            const SizedBox(height: Palette.lg),
+            _FaucetCard(address: address, api: widget.api),
+          ],
           const SizedBox(height: Palette.xl),
           Row(
             children: [
@@ -504,6 +508,107 @@ class _RevealButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Off-chain faucet card: the participation balance and the daily claim. It is
+/// a participation signal (1000 pradha/day), not mining, and it stays off-chain
+/// until the amount is withdrawn.
+class _FaucetCard extends StatefulWidget {
+  const _FaucetCard({required this.address, required this.api});
+
+  final String address;
+  final BridgeApi? api;
+
+  @override
+  State<_FaucetCard> createState() => _FaucetCardState();
+}
+
+class _FaucetCardState extends State<_FaucetCard> {
+  FaucetBalance? _balance;
+  bool _busy = false;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final api = widget.api;
+    if (api == null) return;
+    try {
+      final b = await api.fetchFaucetBalance(widget.address);
+      if (mounted && b != null) {
+        setState(() {
+          _balance = b;
+          _failed = false;
+        });
+      }
+    } on Object {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  Future<void> _claim() async {
+    final api = widget.api;
+    if (api == null) return;
+    setState(() => _busy = true);
+    final l10n = l10nOf(context);
+    try {
+      final result = await api.claimFaucet(widget.address);
+      if (!mounted) return;
+      final String msg = result.ok
+          ? l10n.faucetClaimed(result.rewardPradha)
+          : (result.error == 'already claimed today'
+              ? l10n.faucetAlreadyClaimed
+              : l10n.faucetClaimFailed);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      await _refresh();
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.faucetClaimFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = l10nOf(context);
+    final b = _balance;
+    final canClaim = b?.canClaimToday ?? false;
+    return CenCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Eyebrow(l10n.faucetTitle),
+          const SizedBox(height: Palette.sm),
+          Row(
+            children: [
+              Text(
+                b == null
+                    ? (_failed ? '\u2014' : '\u2026')
+                    : '${b.balancePradha} pradha',
+                style: TypeScale.mono(context, size: 15).copyWith(
+                  color: Palette.goldLight,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: _busy || !canClaim ? null : _claim,
+                icon: const Icon(Icons.emoji_events_outlined, size: 16),
+                label: Text(_busy ? l10n.faucetClaiming : l10n.faucetClaim),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -88,6 +88,22 @@ class BridgeApi {
     return fee is num ? fee.toInt() : null;
   }
 
+  /// `GET /api/faucet/balance?address=...` — off-chain participation balance.
+  Future<FaucetBalance?> fetchFaucetBalance(String address) async {
+    final body = await _get('/api/faucet/balance?address=$address');
+    return FaucetBalance.tryParse(body);
+  }
+
+  /// `POST /api/faucet/claim` — claim the daily participation reward.
+  Future<FaucetClaimResult> claimFaucet(String address) async {
+    final body = await _post('/api/faucet/claim', {'address': address});
+    final parsed = FaucetClaimResult.tryParse(body);
+    if (parsed == null) {
+      throw const FormatException('Bridge returned an unexpected faucet body');
+    }
+    return parsed;
+  }
+
   /// `POST /api/send` — submit a signed transfer and return its transaction id.
   ///
   /// The bridge signs with [privateKeyHex] (the local wallet's secret, supplied
