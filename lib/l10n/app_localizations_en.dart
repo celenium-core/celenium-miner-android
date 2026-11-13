@@ -289,6 +289,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter a valid amount (up to 8 decimal places).';
 
   @override
+  String get walletSendBelowFee => 'Amount is less than the network fee';
+
+  @override
   String get walletSendNoKey =>
       'No recovery words on this device. Back them up first.';
 

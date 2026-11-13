@@ -120,6 +120,7 @@
   "walletSendSending": "Mengirim…",
   "walletSendNeedRecipient": "Masukkan alamat tujuan.",
   "walletSendInvalidAmount": "Masukkan jumlah yang valid (maksimal 8 angka desimal).",
+  "walletSendBelowFee": "Jumlah lebih kecil dari biaya jaringan",
   "walletSendNoKey": "Belum ada kata pemulihan di perangkat ini. Buat cadangannya dulu.",
   "walletSendKeyMismatch": "Kata pemulihan di perangkat ini bukan pemilik alamat mining tersebut. Impor kata yang sesuai dulu.",
   "walletSendFailed": "Node menolak transaksi ini.",

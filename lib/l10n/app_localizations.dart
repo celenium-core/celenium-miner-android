@@ -626,6 +626,12 @@ abstract class AppLocalizations {
   /// **'Enter a valid amount (up to 8 decimal places).'**
   String get walletSendInvalidAmount;
 
+  /// No description provided for @walletSendBelowFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount is less than the network fee'**
+  String get walletSendBelowFee;
+
   /// No description provided for @walletSendNoKey.
   ///
   /// In en, this message translates to:

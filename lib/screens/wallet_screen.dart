@@ -1098,6 +1098,11 @@ class _SendSheetState extends State<_SendSheet> {
         if (mounted) setState(() => _error = l10n.walletSendFailed);
         return;
       }
+      // Below-fee sends are pure fee burn — warn instead of silently sending.
+      if (amountPradha < fee) {
+        if (mounted) setState(() => _error = l10n.walletSendBelowFee);
+        return;
+      }
       final result = await widget.api.sendCoins(
         from: widget.from,
         to: to,

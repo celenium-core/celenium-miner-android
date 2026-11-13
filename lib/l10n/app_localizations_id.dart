@@ -289,6 +289,9 @@ class AppLocalizationsId extends AppLocalizations {
       'Masukkan jumlah yang valid (maksimal 8 angka desimal).';
 
   @override
+  String get walletSendBelowFee => 'Jumlah lebih kecil dari biaya jaringan';
+
+  @override
   String get walletSendNoKey =>
       'Belum ada kata pemulihan di perangkat ini. Buat cadangannya dulu.';
 
