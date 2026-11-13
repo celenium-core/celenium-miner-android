@@ -44,7 +44,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get batteryBody =>
-      'Android can stop mining while the screen is off. Exempt Celenium Miner from battery optimisation so the 24-hour session is not cut short.';
+      'Android can stop mining while the screen is off. Exempt Celenium Miner from battery optimisation so the 12-hour session is not cut short.';
 
   @override
   String get batteryOpen => 'Open settings';
@@ -169,7 +169,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineNeedsWallet => 'RESTART TO CREATE WALLET';
 
   @override
-  String get mineLimitReached => '24H LIMIT REACHED';
+  String get mineLimitReached => '12H LIMIT REACHED';
 
   @override
   String get mineError => 'MINER ERROR';

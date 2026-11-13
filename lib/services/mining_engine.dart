@@ -14,7 +14,7 @@ import 'mining_service.dart';
 
 /// The local mining engine: drives the foreground service that runs the native
 /// `celenium_scan` worker, tracks share counts and session state, and enforces
-/// the 24-hour session hard-stop.
+/// the 12-hour session hard-stop.
 ///
 /// This is the real miner. It replaces the dead HTTP bridge path
 /// (`POST /api/mining`) that the screen used to drive: the phone hashes against
@@ -44,9 +44,9 @@ class MiningEngine extends ChangeNotifier {
 
   /// The session hard-stop. After this the service is stopped and the toggle
   /// returns to OFF; the user must tap again to open a fresh session.
-  static const Duration sessionLimit = Duration(hours: 24);
+  static const Duration sessionLimit = Duration(hours: 12);
 
-  /// SharedPreferences key for the session start, so the 24-hour hard-stop
+  /// SharedPreferences key for the session start, so the 12-hour hard-stop
   /// survives the app being swiped away: the timer lives in this isolate, but
   /// the start time must outlive it for [resume] to re-enforce the limit.
   static const String _sessionStartPref = 'mining_session_start_ms';
@@ -130,7 +130,7 @@ class MiningEngine extends ChangeNotifier {
         if (start != null &&
             DateTime.now().millisecondsSinceEpoch - start >=
                 sessionLimit.inMilliseconds) {
-          // The service outlived its 24-hour window while the app was closed.
+          // The service outlived its 12-hour window while the app was closed.
           // Stop it now and surface the same "limit reached" state the timer
           // would have produced, leaving the toggle OFF for a re-tap.
           _mining = false;

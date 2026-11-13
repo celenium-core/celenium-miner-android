@@ -44,7 +44,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get batteryBody =>
-      'Android bisa menghentikan mining saat layar mati. Kecualikan Celenium Miner dari penghemat baterai supaya sesi 24 jam tidak terputus.';
+      'Android bisa menghentikan mining saat layar mati. Kecualikan Celenium Miner dari penghemat baterai supaya sesi 12 jam tidak terputus.';
 
   @override
   String get batteryOpen => 'Buka pengaturan';
@@ -169,7 +169,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get mineNeedsWallet => 'RESTART UNTUK BUAT DOMPET';
 
   @override
-  String get mineLimitReached => 'BATAS 24 JAM';
+  String get mineLimitReached => 'BATAS 12 JAM';
 
   @override
   String get mineError => 'MINER GALAT';

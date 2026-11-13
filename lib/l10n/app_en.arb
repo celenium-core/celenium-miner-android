@@ -11,7 +11,7 @@
   "commonCopy": "Copy",
   "commonGotIt": "Got it",
   "batteryTitle": "Keep mining running",
-  "batteryBody": "Android can stop mining while the screen is off. Exempt Celenium Miner from battery optimisation so the 24-hour session is not cut short.",
+  "batteryBody": "Android can stop mining while the screen is off. Exempt Celenium Miner from battery optimisation so the 12-hour session is not cut short.",
   "batteryOpen": "Open settings",
   "batteryLater": "Not now",
   "commonToday": "TODAY",
@@ -67,7 +67,7 @@
   "mineStatus": "Status",
   "mineConnecting": "CONNECTING",
   "mineNeedsWallet": "RESTART TO CREATE WALLET",
-  "mineLimitReached": "24H LIMIT REACHED",
+  "mineLimitReached": "12H LIMIT REACHED",
   "mineError": "MINER ERROR",
   "mineAcceptedCount": "ACCEPTED {count}",
   "@mineAcceptedCount": {

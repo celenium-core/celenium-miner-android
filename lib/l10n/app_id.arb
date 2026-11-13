@@ -11,7 +11,7 @@
   "commonCopy": "Salin",
   "commonGotIt": "Mengerti",
   "batteryTitle": "Agar mining jalan terus",
-  "batteryBody": "Android bisa menghentikan mining saat layar mati. Kecualikan Celenium Miner dari penghemat baterai supaya sesi 24 jam tidak terputus.",
+  "batteryBody": "Android bisa menghentikan mining saat layar mati. Kecualikan Celenium Miner dari penghemat baterai supaya sesi 12 jam tidak terputus.",
   "batteryOpen": "Buka pengaturan",
   "batteryLater": "Nanti saja",
   "commonToday": "HARI INI",
@@ -67,7 +67,7 @@
   "mineStatus": "Status",
   "mineConnecting": "MENGHUBUNGKAN",
   "mineNeedsWallet": "RESTART UNTUK BUAT DOMPET",
-  "mineLimitReached": "BATAS 24 JAM",
+  "mineLimitReached": "BATAS 12 JAM",
   "mineError": "MINER GALAT",
   "mineAcceptedCount": "DITERIMA {count}",
   "@mineAcceptedCount": {
