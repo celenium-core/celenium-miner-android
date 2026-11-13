@@ -884,9 +884,10 @@ class _SendSheet extends StatefulWidget {
 class _SendSheetState extends State<_SendSheet> {
   static const int _pradhaPerCen = 100000000;
 
-  /// Fixed fee, matching the proven `--fee` default in `tx_e2e`: 0.01 CEN.
-  static const int feePradha = 1000000;
-  static const String _feeDisplay = '0.01 CEN';
+  /// Current network fee in pradha, fetched from the bridge's `/api/fee` so it
+  /// tracks the node's live fee policy instead of a hardcoded 0.01 CEN. Null
+  /// until the estimate arrives.
+  int? _feePradha;
 
   /// Highest spendable value (i64 max). The chain's u64 range is wider, but a
   /// real amount cannot approach either bound: total supply is 34.5M CEN.
@@ -900,6 +901,30 @@ class _SendSheetState extends State<_SendSheet> {
   bool _busy = false;
   String? _error;
   String? _txid;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFee();
+  }
+
+  Future<void> _loadFee() async {
+    try {
+      final fee = await widget.api.fetchFee();
+      if (mounted && fee != null) {
+        setState(() => _feePradha = fee);
+      }
+    } on Object {
+      // Leave _feePradha null; the submit path surfaces a clear error instead.
+    }
+  }
+
+  /// The fee as a human-readable CEN amount, or an ellipsis while loading.
+  String get _feeDisplay {
+    final fee = _feePradha;
+    if (fee == null) return '…';
+    return '${AccountBalance(address: '', pradha: fee).formattedCen} CEN';
+  }
 
   @override
   void dispose() {
@@ -958,11 +983,19 @@ class _SendSheetState extends State<_SendSheet> {
         if (mounted) setState(() => _error = l10n.walletSendKeyMismatch);
         return;
       }
+      if (_feePradha == null) {
+        await _loadFee();
+      }
+      final fee = _feePradha;
+      if (fee == null) {
+        if (mounted) setState(() => _error = l10n.walletSendFailed);
+        return;
+      }
       final result = await widget.api.sendCoins(
         from: widget.from,
         to: to,
         amountPradha: amountPradha,
-        feePradha: feePradha,
+        feePradha: fee,
         privateKeyHex: wallet.privateKeyHex,
       );
       if (!mounted) return;

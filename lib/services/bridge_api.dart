@@ -79,6 +79,15 @@ class BridgeApi {
     return AccountBalance.tryParse(body);
   }
 
+  /// `GET /api/fee` — the bridge's current minimum fee for a standard transfer,
+  /// in pradha. Returns `null` when the node/bridge cannot estimate yet.
+  Future<int?> fetchFee() async {
+    final body = await _get('/api/fee');
+    if (body is! Map<String, dynamic>) return null;
+    final fee = body['feePradha'];
+    return fee is num ? fee.toInt() : null;
+  }
+
   /// `POST /api/send` — submit a signed transfer and return its transaction id.
   ///
   /// The bridge signs with [privateKeyHex] (the local wallet's secret, supplied
@@ -88,8 +97,8 @@ class BridgeApi {
     required String from,
     required String to,
     required int amountPradha,
+    required int feePradha,
     required String privateKeyHex,
-    int feePradha = 1000000,
   }) async {
     final body = await _post('/api/send', {
       'from': from,

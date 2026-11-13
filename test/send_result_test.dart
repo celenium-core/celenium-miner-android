@@ -56,6 +56,7 @@ void main() {
         from: from,
         to: to,
         amountPradha: 500000000,
+        feePradha: 25000,
         // Fake key: the mock bridge never validates the secret.
         privateKeyHex: '1'.padLeft(64, '0'),
       );
@@ -69,7 +70,7 @@ void main() {
       expect(body['from'], from);
       expect(body['to'], to);
       expect(body['amountPradha'], 500000000);
-      expect(body['feePradha'], 1000000); // the fixed 0.01 CEN fee default
+      expect(body['feePradha'], 25000); // caller-supplied dynamic fee estimate
       expect(body['privateKeyHex'], isNotEmpty);
     });
 
@@ -87,6 +88,7 @@ void main() {
         from: from,
         to: to,
         amountPradha: 1,
+        feePradha: 25000,
         privateKeyHex: '1'.padLeft(64, '0'),
       );
 
@@ -105,6 +107,7 @@ void main() {
           from: from,
           to: to,
           amountPradha: 1,
+          feePradha: 25000,
           privateKeyHex: '1'.padLeft(64, '0'),
         ),
         throwsFormatException,
@@ -122,6 +125,7 @@ void main() {
           from: from,
           to: to,
           amountPradha: 1,
+          feePradha: 25000,
           privateKeyHex: '1'.padLeft(64, '0'),
         ),
         throwsA(isA<HttpException>()),
